@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CLionExternalBuildManager">
+    <target id="1f4ad0fa-7d65-47ba-827c-76855d9754ae" name="release" defaultType="MAKE">
+      <configuration id="ff2790c3-7af4-4709-8b52-a31246f60266" name="release">
+        <build type="MAKE">
+          <make targetName="CONF=release all" />
+        </build>
+        <clean type="MAKE">
+          <make targetName="clean" />
+        </clean>
+      </configuration>
+    </target>
+    <target id="68021874-0568-4cee-b443-d20427776d66" name="debug" defaultType="MAKE">
+      <configuration id="133cdcb4-d50e-4a11-a71a-54ff5b309678" name="debug">
+        <build type="MAKE">
+          <make targetName="CONF=debug all" />
+        </build>
+        <clean type="MAKE">
+          <make targetName="clean" />
+        </clean>
+      </configuration>
+    </target>
+    <target id="1bcc44c5-d6e4-4dd9-8d14-dd856b6c7223" name="debug_check" defaultType="MAKE">
+      <configuration id="f5e87c02-d1b4-4d25-ad54-e623e0aaac7a" name="debug_check">
+        <build type="MAKE">
+          <make targetName="CONF=debug_check all" />
+        </build>
+        <clean type="MAKE">
+          <make targetName="clean" />
+        </clean>
+      </configuration>
+    </target>
+    <target id="3a1baa45-f598-491e-a378-fe51fd7af0fe" name="profile" defaultType="MAKE">
+      <configuration id="702f523d-1d9d-4e10-ad0f-a286a967b42e" name="profile">
+        <build type="MAKE">
+          <make targetName="CONF=profile all" />
+        </build>
+        <clean type="MAKE">
+          <make targetName="clean" />
+        </clean>
+      </configuration>
+    </target>
+    <target id="187cc1ae-57d8-4935-9c14-c25684f69d91" name="UnitTest_Release" defaultType="MAKE">
+      <configuration id="56055d8b-f8d2-43b4-9d1f-564e5dc56fd9" name="UnitTest_Release">
+        <build type="MAKE">
+          <make targetName="CONF=release test_libstreetmap" />
+        </build>
+        <clean type="MAKE">
+          <make targetName="clean" />
+        </clean>
+      </configuration>
+    </target>
+    <target id="f1d1d232-4e6f-425c-951a-73b507d1569d" name="UnitTest_Debug" defaultType="MAKE">
+      <configuration id="779c0abc-2290-46a6-a729-5ad63dccf14c" name="UnitTest_Debug">
+        <build type="MAKE">
+          <make targetName="CONF=debug test_libstreetmap" />
+        </build>
+        <clean type="MAKE">
+          <make targetName="clean" />
+        </clean>
+      </configuration>
+    </target>
+    <target id="eb0ccc55-00cc-4a4a-8add-37cd701c0923" name="UnitTest_DebugCheck" defaultType="MAKE">
+      <configuration id="9954b413-3e48-4d56-8b68-ecd5e9bb3c6c" name="UnitTest_DebugCheck">
+        <build type="MAKE">
+          <make targetName="CONF=debug_check test_libstreetmap" />
+        </build>
+        <clean type="MAKE">
+          <make targetName="clean" />
+        </clean>
+      </configuration>
+    </target>
+  </component>
+</project>

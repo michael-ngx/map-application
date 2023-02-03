@@ -1,0 +1,46 @@
+{
+    "makefile.configurations": [
+
+    {
+        "name": "Release",
+        "makeArgs": ["CONF=release"]
+    },
+    {
+        "name": "Debug",
+        "makeArgs": ["CONF=debug"]
+    },
+    {
+        "name": "DebugCheck",
+        "makeArgs": ["CONF=debug_check"]
+    },
+    {
+        "name": "Profile",
+        "makeArgs": ["CONF=profile"]
+    },
+    {
+        "name": "UnitTest_Release",
+        "makeArgs": ["CONF=release"]
+    },
+    {
+        "name": "UnitTest_Debug",
+        "makeArgs": ["CONF=debug"]
+    },
+    {
+        "name": "UnitTest_DebugCheck",
+        "makeArgs": ["CONF=debug_check"]
+    }
+    ],
+    "makefile.launchConfigurations": [
+        {
+            "cwd": "${workspaceFolder}",
+            "binaryPath": "./mapper",
+            "binaryArgs": []
+        },
+        {
+            "cwd": "${workspaceFolder}",
+            "binaryPath": "./test_libstreetmap",
+            "binaryArgs": []
+        }
+    ],
+    "C_Cpp.default.configurationProvider": "ms-vscode.makefile-tools"
+}

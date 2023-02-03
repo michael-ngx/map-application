@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="MakefileBuildTargetsManager">
+    <user-build-targets>
+      <build-target name="CONF=release all">
+        <build-configurations>
+          <build-configuration>
+            <make-targets>
+              <make-target>CONF=release</make-target>
+              <make-target>all</make-target>
+            </make-targets>
+          </build-configuration>
+        </build-configurations>
+      </build-target>
+      <build-target name="CONF=debug all">
+        <build-configurations>
+          <build-configuration>
+            <make-targets>
+              <make-target>CONF=debug</make-target>
+              <make-target>all</make-target>
+            </make-targets>
+          </build-configuration>
+        </build-configurations>
+      </build-target>
+      <build-target name="CONF=debug_check all">
+        <build-configurations>
+          <build-configuration>
+            <make-targets>
+              <make-target>CONF=debug_check</make-target>
+              <make-target>all</make-target>
+            </make-targets>
+          </build-configuration>
+        </build-configurations>
+      </build-target>
+      <build-target name="CONF=profile all">
+        <build-configurations>
+          <build-configuration>
+            <make-targets>
+              <make-target>CONF=profile</make-target>
+              <make-target>all</make-target>
+            </make-targets>
+          </build-configuration>
+        </build-configurations>
+      </build-target>
+      <build-target name="CONF=release test_libstreetmap">
+        <build-configurations>
+          <build-configuration>
+            <make-targets>
+              <make-target>CONF=release</make-target>
+              <make-target>test_libstreetmap</make-target>
+            </make-targets>
+          </build-configuration>
+        </build-configurations>
+      </build-target>
+      <build-target name="CONF=debug test_libstreetmap">
+        <build-configurations>
+          <build-configuration>
+            <make-targets>
+              <make-target>CONF=debug</make-target>
+              <make-target>test_libstreetmap</make-target>
+            </make-targets>
+          </build-configuration>
+        </build-configurations>
+      </build-target>
+      <build-target name="CONF=debug_check test_libstreetmap">
+        <build-configurations>
+          <build-configuration>
+            <make-targets>
+              <make-target>CONF=debug_check</make-target>
+              <make-target>test_libstreetmap</make-target>
+            </make-targets>
+          </build-configuration>
+        </build-configurations>
+      </build-target>
+      <build-target name="clean">
+        <build-configurations>
+          <build-configuration>
+            <make-targets>
+              <make-target>clean</make-target>
+            </make-targets>
+          </build-configuration>
+        </build-configurations>
+      </build-target>
+    </user-build-targets>
+  </component>
+</project>
