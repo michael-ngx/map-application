@@ -35,22 +35,45 @@
 // name of the ".osm.bin" file that matches your map -- just change 
 // ".streets" to ".osm" in the map_streets_database_filename to get the proper
 // name.
+
+// Global variables
+std::vector<std::vector<StreetSegmentIdx>> intersection_street_segments;
+
 bool loadMap(std::string map_streets_database_filename) {
     bool load_successful = false; //Indicates whether the map has loaded 
                                   //successfully
-
+    
     std::cout << "loadMap: " << map_streets_database_filename << std::endl;
 
     //
     // Load your map related data structures here.
+    load_successful = loadStreetsDatabaseBIN(map_streets_database_filename);
+    
+    //for(auto i : getNumIntersections()){
+        //for(auto j : getNumStreetSegments()){
+    for(int i; i < getNumIntersections(); i++){
+        for(int j; j < getNumStreetSegments(); j++){
+            intersection_street_segments[i].push_back(getIntersectionStreetSegment(i, j));
+        }
+    }
+    
     //
 
-    
-
-    load_successful = true; //Make sure this is updated to reflect whether
+    //load_successful = true; //Make sure this is updated to reflect whether
                             //loading the map succeeded or failed
 
     return load_successful;
+}
+
+std::vector<StreetSegmentIdx> findStreetSegmentsOfIntersection(IntersectionIdx intersection_id){
+    std::vector<StreetSegmentIdx> ss_ids;
+    //for(auto i : getNumIntersectionStreetSegment(intersection_id)){
+    for(int i = 0; i < getNumIntersectionStreetSegment(intersection_id); i++){
+        int ss_id = intersection_street_segments[intersection_id][i];
+        ss_ids.push_back(ss_id);
+    }
+    
+    return ss_ids;
 }
 
 void closeMap() {
