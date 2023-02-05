@@ -22,6 +22,7 @@
 #include "m1.h"
 #include "StreetsDatabaseAPI.h"
 #include <vector>
+#include <unordered_map>
 #include <list>
 using namespace std;
 // loadMap will be called with the name of the file that stores the "layer-2"
@@ -61,22 +62,28 @@ public:
     //IntersectionDistance();
 };
 
-vector<StreetInfo> streets;
+std::vector<IntersectionIdx> intersectionIndex;
+std::vector<StreetSegmentIdx> StreetSegmentIndex;
+std::unordered_map<StreetIdx, vector<IntersectionIdx>> streets;
 
-/*void m1_init(){
+
+void m1_init(){
     st_segmentNum = getNumStreetSegments();
-    int a = getNumStreets();
     
     for(int i = 0; i < st_segmentNum; i++){
         StreetSegmentInfo info = getStreetSegmentInfo(i);
         st_segment_info.push_back(info);
         StreetIdx stIdx = info.streetID;
         
-        LatLon from = getIntersectionPosition(info.from);
-        LatLon to = getIntersectionPosition(info.to);
-        streets[info.streetID].
+        IntersectionIdx from = info.from;
+        IntersectionIdx to = info.to;
+    
+        intersectionIndex.push_back(from);
+        intersectionIndex.push_back(to);
+        
+        streets[stIdx] = intersectionIndex; //street information that stores corresponding intersections       
     }
-}*/
+}
 
 bool loadMap(std::string map_streets_database_filename) {
     bool load_successful = false; //Indicates whether the map has loaded 
@@ -143,8 +150,7 @@ IntersectionIdx findClosestIntersection(LatLon my_position){
     
     //get distance from every intersection to IntersectionPosition
     for(int i = 0; i < intersectionNum; i++){
-        LatLon position = getIntersectionPosition(i);
-        int distance = findDistanceBetweenTwoPoints(position, i);
+        int distance = findDistanceBetweenTwoPoints(getIntersectionPosition(i), my_position);
         IntersectionDistance intersectionDistance;
         intersectionDistance.distance = distance;
         intersectionDistance.intersectionId = i;
@@ -152,7 +158,7 @@ IntersectionIdx findClosestIntersection(LatLon my_position){
     }
     
     IntersectionDistance shortestDistance; 
-    shortestDistance = *distanceContainer[0];
+    shortestDistance = *distanceContainer.begin();
     // choose the nearest position
     for(auto& i : distanceContainer)
         if(i.distance < shortestDistance.distance)
@@ -196,7 +202,12 @@ std::vector<IntersectionIdx> findIntersectionsOfStreet(StreetIdx street_id){
 // There should be no duplicate intersections in the returned vector.
 // Speed Requirement --> high
 std::vector<IntersectionIdx> findIntersectionsOfTwoStreets(StreetIdx street_id1, StreetIdx street_id2){
-    
+    std::vector<IntersectionIdx> intersectionTwoSt;
+    for(auto& i : streets[street_id1]){
+        for(auto& j : streets[street_id2])
+            if(i == j)
+                intersectionTwoSt.push_back(streets[street_id2][j]);
+    }
 }
 
 // Returns all street ids corresponding to street names that start with the 
