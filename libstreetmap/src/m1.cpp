@@ -22,6 +22,7 @@
 #include "m1.h"
 #include "StreetsDatabaseAPI.h"
 #include <vector>
+#include <list>
 using namespace std;
 // loadMap will be called with the name of the file that stores the "layer-2"
 // map data accessed through StreetsDatabaseAPI: the street and intersection 
@@ -37,9 +38,45 @@ using namespace std;
 // name.
 
 // Global variables
+vector<vector<StreetSegmentIdx>> intersection_street_segments;
 
-std::vector<std::vector<StreetSegmentIdx>> intersection_street_segments;
+std::vector<StreetSegmentInfo> st_segment_info;
 
+IntersectionIdx intersectionNum = getNumIntersections();
+
+int st_segmentNum;
+// class for street information
+class StreetInfo{
+public:
+    string name;
+    vector<IntersectionIdx> intersectionId;
+    vector<StreetSegmentIdx> segmentId;
+};
+
+// class of distance from intersection to a location
+class IntersectionDistance{
+public:
+    int intersectionId;
+    int distance;
+    //IntersectionDistance();
+};
+
+vector<StreetInfo> streets;
+
+/*void m1_init(){
+    st_segmentNum = getNumStreetSegments();
+    int a = getNumStreets();
+    
+    for(int i = 0; i < st_segmentNum; i++){
+        StreetSegmentInfo info = getStreetSegmentInfo(i);
+        st_segment_info.push_back(info);
+        StreetIdx stIdx = info.streetID;
+        
+        LatLon from = getIntersectionPosition(info.from);
+        LatLon to = getIntersectionPosition(info.to);
+        streets[info.streetID].
+    }
+}*/
 
 bool loadMap(std::string map_streets_database_filename) {
     bool load_successful = false; //Indicates whether the map has loaded 
@@ -51,9 +88,8 @@ bool loadMap(std::string map_streets_database_filename) {
     // Load your map related data structures here.
     load_successful = loadStreetsDatabaseBIN(map_streets_database_filename);
     
-    //for(auto i : getNumIntersections()){
-        //for(auto j : getNumStreetSegments()){
-    /*for(int i = 0; i < getNumIntersections(); i++){
+    /*IntersectionIdx NumIntersections = getNumIntersections();
+    for(IntersectionIdx i = 0; i < NumIntersections(); i++){
         for(int j = 0; j < getNumStreetSegments(); j++){
             intersection_street_segments[i][j].push_back(getIntersectionStreetSegment(i, j));
         }
@@ -103,6 +139,26 @@ std::vector<IntersectionIdx> findAdjacentIntersections(IntersectionIdx intersect
 // the given position
 // Speed Requirement --> none
 IntersectionIdx findClosestIntersection(LatLon my_position){
+    list<IntersectionDistance> distanceContainer;
+    
+    //get distance from every intersection to IntersectionPosition
+    for(int i = 0; i < intersectionNum; i++){
+        LatLon position = getIntersectionPosition(i);
+        int distance = findDistanceBetweenTwoPoints(position, i);
+        IntersectionDistance intersectionDistance;
+        intersectionDistance.distance = distance;
+        intersectionDistance.intersectionId = i;
+        distanceContainer.push_back(intersectionDistance);
+    }
+    
+    IntersectionDistance shortestDistance; 
+    shortestDistance = *distanceContainer[0];
+    // choose the nearest position
+    for(auto& i : distanceContainer)
+        if(i.distance < shortestDistance.distance)
+            shortestDistance.distance = i.distance;
+    
+    return shortestDistance.distance;
     
 }
 
@@ -128,7 +184,7 @@ std::vector<StreetSegmentIdx> findStreetSegmentsOfIntersection(IntersectionIdx i
 // There should be no duplicate intersections in the returned vector.
 // Speed Requirement --> high
 std::vector<IntersectionIdx> findIntersectionsOfStreet(StreetIdx street_id){
-
+    
     
 }
 
