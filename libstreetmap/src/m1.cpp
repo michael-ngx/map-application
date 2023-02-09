@@ -70,7 +70,7 @@ std::vector<StreetSegmentIdx> StreetSegmentIndices;
 std::vector<std::vector<StreetSegmentIdx>> streetsSegment;
 std::vector<StreetIdx> streets;
 std::unordered_map<StreetSegmentIdx, std::vector<IntersectionIdx>> streetSegmentsIntersection;
-std::unordered_map<StreetIdx, std::vector<StreetSegmentIdx>> streetSegs;
+std::unordered_map<StreetIdx, std::vector<StreetSegmentIdx>> streetSegmentIDs;
 
 /*********************************************************************************
  * HELPER FUNCTIONS
@@ -101,15 +101,16 @@ void m1_init(){
         streetSegmentsIntersection[i] = new_intersectionIndex; // the beginning and end of intersections of street segment stored
         streetsSegment[stIdx].push_back(i); //street information that stores corresponding segments       
     }
+    
     for(int j = 0; j < st_segmentNum; ++j){
         StreetSegmentInfo tempInfo = getStreetSegmentInfo(j);
-        if (streetSegs.find(tempInfo.streetID) == streetSegs.end()){
+        if (streetSegmentIDs.find(tempInfo.streetID) == streetSegmentIDs.end()){
             std::vector<StreetSegmentIdx> streetSegmentIndex;
             streetSegmentIndex.push_back(j);
-            streetSegs.insert(std::make_pair(tempInfo.streetID, streetSegmentIndex));
+            streetSegmentIDs.insert(std::make_pair(tempInfo.streetID, streetSegmentIndex));
         }
         else {
-            streetSegs.at(tempInfo.streetID).push_back(j);
+            streetSegmentIDs.at(tempInfo.streetID).push_back(j);
         }
     }
 }
@@ -272,7 +273,7 @@ std::vector<StreetIdx> findStreetIdsFromPartialStreetName(std::string street_pre
 // Returns the length of a given street in meters
 // Speed Requirement --> high 
 double findStreetLength(StreetIdx street_id){
-    std::vector<StreetSegmentIdx> strIntID = streetSegs.at(street_id);
+    std::vector<StreetSegmentIdx> strIntID = streetSegmentIDs.at(street_id);
     LatLon tempLatLonA, tempLatLonB;
     double streetLength = 0;
     int x1, x2, y1, y2;
