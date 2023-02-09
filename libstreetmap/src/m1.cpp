@@ -22,6 +22,7 @@
 #include "m1.h"
 #include "StreetsDatabaseAPI.h"
 #include <vector>
+#include <set>
 #include <unordered_map>
 #include <list>
 using namespace std;
@@ -203,16 +204,23 @@ std::vector<StreetSegmentIdx> findStreetSegmentsOfIntersection(IntersectionIdx i
 // There should be no duplicate intersections in the returned vector.
 // Speed Requirement --> high
 std::vector<IntersectionIdx> findIntersectionsOfStreet(StreetIdx street_id){
-    std::vector<IntersectionIdx> IntersectionsOfStreet;
+    std::vector<IntersectionIdx> IntersectionsOfStreet;    
     
     for(auto i : streetsSegment[street_id]){
-        std::vector<IntersectionIdx> intersections = streetSegmentsIntersection[i];
-        //IntersectionsOfStreet.push_back(intersections[1]);
+        std::vector<IntersectionIdx> intersections = streetSegmentsIntersection[i];       
         for(auto j : intersections){ 
             IntersectionsOfStreet.push_back(j);             
         }       
     }
-            
+    
+    //sort + unique to remove all the duplicates
+    sort(IntersectionsOfStreet.begin(), IntersectionsOfStreet.end());
+    IntersectionsOfStreet.erase(unique(IntersectionsOfStreet.begin(), IntersectionsOfStreet.end()), IntersectionsOfStreet.end());
+    
+    //using set to remove duplicates (somehow slower than the first method)
+//    std::set<IntersectionIdx> IntersectionsOfStreetSet (IntersectionsOfStreet.begin(), IntersectionsOfStreet.end());
+//    IntersectionsOfStreet.assign(IntersectionsOfStreetSet.begin(), IntersectionsOfStreetSet.end());
+    
     return IntersectionsOfStreet;
     
 }
