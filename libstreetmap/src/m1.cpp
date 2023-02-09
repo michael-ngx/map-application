@@ -21,13 +21,10 @@
 #include <iostream>
 #include "m1.h"
 #include "StreetsDatabaseAPI.h"
-#include <vector>
 #include <set>
 #include <unordered_map>
 #include <list>
 #include <cmath>
-#include <string>
-using namespace std;
 // loadMap will be called with the name of the file that stores the "layer-2"
 // map data accessed through StreetsDatabaseAPI: the street and intersection 
 // data that is higher-level than the raw OSM data). 
@@ -45,7 +42,6 @@ using namespace std;
  * GLOBAL VARIABLES
  */
 std::vector<std::vector<StreetSegmentIdx>> intersection_street_segments;
-
 std::vector<StreetSegmentInfo> st_segment_info;
 
 int intersectionNum;
@@ -54,7 +50,7 @@ int stNum;
 // class for street information
 class StreetInfo{
 public:
-    string name;
+    std::string name;
     std::vector<IntersectionIdx> intersectionId;
     std::vector<StreetSegmentIdx> segmentId;
 };
@@ -140,14 +136,28 @@ bool loadMap(std::string map_streets_database_filename) {
         }
     }*/
 
-
     return load_successful;
 }
 
 // Returns the distance between two (lattitude,longitude) coordinates in meters
 // Speed Requirement --> moderate
 double findDistanceBetweenTwoPoints(LatLon point_1, LatLon point_2){
-    return 0.0;
+    double lat1, lon1, lat2, lon2, latavg;
+    double x1, y1, x2, y2;
+    // Get latitude and longitude, in radians
+    lat1 = point_1.latitude() * kDegreeToRadian;
+    lon1 = point_1.longitude() * kDegreeToRadian;
+    lat2 = point_2.latitude() * kDegreeToRadian;
+    lon2 = point_2.longitude() * kDegreeToRadian;
+    latavg = (lat1 + lat2)/2;
+    
+    x1 = kEarthRadiusInMeters * lon1 * cos(latavg);
+    y1 = kEarthRadiusInMeters * lat1;
+    x2 = kEarthRadiusInMeters * lon2 * cos(latavg);
+    y2 = kEarthRadiusInMeters * lat2;
+    // Find distance between (x1, y1) and (x2, y2)
+    double distance = sqrt(pow((y2-y1),2) + pow((x2-x1),2));
+    return distance;
 }
 
 // Returns the length of the given street segment in meters
@@ -181,7 +191,7 @@ std::vector<IntersectionIdx> findAdjacentIntersections(IntersectionIdx intersect
 // the given position
 // Speed Requirement --> none
 IntersectionIdx findClosestIntersection(LatLon my_position){
-    list<IntersectionDistance> distanceContainer;
+    std::list<IntersectionDistance> distanceContainer;
     
     //get distance from every intersection to IntersectionPosition
     for(int i = 0; i < intersectionNum; i++){
