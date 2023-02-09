@@ -26,7 +26,8 @@
 #include <unordered_map>
 #include <list>
 #include <cmath>
-
+#include <string>
+using namespace std;
 // loadMap will be called with the name of the file that stores the "layer-2"
 // map data accessed through StreetsDatabaseAPI: the street and intersection 
 // data that is higher-level than the raw OSM data). 
