@@ -45,7 +45,7 @@ std::vector<std::vector<StreetSegmentIdx>> intersection_street_segments;
 
 std::vector<StreetSegmentInfo> st_segment_info;
 
-IntersectionIdx intersectionNum;
+int intersectionNum;
 int st_segmentNum;
 int stNum;
 // class for street information
@@ -77,24 +77,25 @@ void m1_init(){
     st_segmentNum = getNumStreetSegments();
     stNum = getNumStreets();
     intersectionNum = getNumIntersections();
-    
+//    
     for(int i = 0; i < stNum; i++){
-        streets.push_back(i);
+        std::vector<StreetSegmentIdx> streetsSegmentPlaceHolder;
+        streetsSegment.push_back(streetsSegmentPlaceHolder);
     }
-    
+//    
     for(int i = 0; i < st_segmentNum; i++){
         StreetSegmentInfo info = getStreetSegmentInfo(i);
         st_segment_info.push_back(info);
         StreetIdx stIdx = info.streetID;
-        
+//        
         IntersectionIdx from = info.from;
         IntersectionIdx to = info.to;
         StreetSegmentIndices.push_back(i); // contains all the relevent street segment's index
-        
+//        
         std::vector<IntersectionIdx> new_intersectionIndex;
         new_intersectionIndex.push_back(from);
         new_intersectionIndex.push_back(to);
-        
+//        
         streetSegmentsIntersection[i] = new_intersectionIndex; // the beginning and end of intersections of street segment stored
         streetsSegment[stIdx].push_back(i); //street information that stores corresponding segments       
     }
@@ -114,7 +115,8 @@ bool loadMap(std::string map_streets_database_filename) {
     //
     load_successful = loadStreetsDatabaseBIN(map_streets_database_filename);
     
-    m1_init();
+    if(load_successful)
+        m1_init();
     /*IntersectionIdx NumIntersections = getNumIntersections();
     for(IntersectionIdx i = 0; i < NumIntersections(); i++){
         for(int j = 0; j < getNumStreetSegments(); j++){
@@ -201,8 +203,17 @@ std::vector<StreetSegmentIdx> findStreetSegmentsOfIntersection(IntersectionIdx i
 // There should be no duplicate intersections in the returned vector.
 // Speed Requirement --> high
 std::vector<IntersectionIdx> findIntersectionsOfStreet(StreetIdx street_id){
-    std::vector<StreetSegmentIdx> stub;
-    return stub;
+    std::vector<IntersectionIdx> IntersectionsOfStreet;
+    
+    for(auto i : streetsSegment[street_id]){
+        std::vector<IntersectionIdx> intersections = streetSegmentsIntersection[i];
+        //IntersectionsOfStreet.push_back(intersections[1]);
+        for(auto j : intersections){ 
+            IntersectionsOfStreet.push_back(j);             
+        }       
+    }
+            
+    return IntersectionsOfStreet;
     
 }
 
@@ -215,11 +226,16 @@ std::vector<IntersectionIdx> findIntersectionsOfStreet(StreetIdx street_id){
 // Speed Requirement --> high
 std::vector<IntersectionIdx> findIntersectionsOfTwoStreets(StreetIdx street_id1, StreetIdx street_id2){
     std::vector<IntersectionIdx> intersectionTwoSt;
-    for(auto& i : streets[street_id1]){
-        for(auto& j : streets[street_id2])
-            if(i == j)
-                intersectionTwoSt.push_back(streets[street_id2][j]);
-    }
+    
+    std::vector<IntersectionIdx> street1Intersection = findIntersectionsOfStreet(street_id1);
+    std::vector<IntersectionIdx> street2Intersection = findIntersectionsOfStreet(street_id2);
+    
+     for(auto& i : street1Intersection){
+         for(auto& j : street2Intersection)
+             if(i == j)
+                 intersectionTwoSt.push_back(street2Intersection[j]);
+     }
+    
     return intersectionTwoSt;
 }
 
