@@ -39,19 +39,19 @@ using namespace std;
 // name.
 
 // Global variables
-vector<vector<StreetSegmentIdx>> intersection_street_segments;
+std::vector<std::vector<StreetSegmentIdx>> intersection_street_segments;
 
 std::vector<StreetSegmentInfo> st_segment_info;
 
-IntersectionIdx intersectionNum = getNumIntersections();
-
+IntersectionIdx intersectionNum;
 int st_segmentNum;
+int stNum;
 // class for street information
 class StreetInfo{
 public:
     string name;
-    vector<IntersectionIdx> intersectionId;
-    vector<StreetSegmentIdx> segmentId;
+    std::vector<IntersectionIdx> intersectionId;
+    std::vector<StreetSegmentIdx> segmentId;
 };
 
 // class of distance from intersection to a location
@@ -63,12 +63,19 @@ public:
 };
 
 std::vector<IntersectionIdx> intersectionIndex;
-std::vector<StreetSegmentIdx> StreetSegmentIndex;
-std::unordered_map<StreetIdx, vector<IntersectionIdx>> streets;
-
+std::vector<StreetSegmentIdx> StreetSegmentIndices;
+std::vector<std::vector<StreetSegmentIdx>> streetsSegment;
+std::vector<StreetIdx> streets;
+std::unordered_map<StreetSegmentIdx, std::vector<IntersectionIdx>> streetSegmentsIntersection;
 
 void m1_init(){
     st_segmentNum = getNumStreetSegments();
+    stNum = getNumStreets();
+    intersectionNum = getNumIntersections();
+    
+    for(int i = 0; i < stNum; i++){
+        streets.push_back(i);
+    }
     
     for(int i = 0; i < st_segmentNum; i++){
         StreetSegmentInfo info = getStreetSegmentInfo(i);
@@ -77,11 +84,14 @@ void m1_init(){
         
         IntersectionIdx from = info.from;
         IntersectionIdx to = info.to;
-    
-        intersectionIndex.push_back(from);
-        intersectionIndex.push_back(to);
+        StreetSegmentIndices.push_back(i); // contains all the relevent street segment's index
         
-        streets[stIdx] = intersectionIndex; //street information that stores corresponding intersections       
+        std::vector<IntersectionIdx> new_intersectionIndex;
+        new_intersectionIndex.push_back(from);
+        new_intersectionIndex.push_back(to);
+        
+        streetSegmentsIntersection[i] = new_intersectionIndex; // the beginning and end of intersections of street segment stored
+        streetsSegment[stIdx].push_back(i); //street information that stores corresponding segments       
     }
 }
 
@@ -95,6 +105,7 @@ bool loadMap(std::string map_streets_database_filename) {
     // Load your map related data structures here.
     load_successful = loadStreetsDatabaseBIN(map_streets_database_filename);
     
+    m1_init();
     /*IntersectionIdx NumIntersections = getNumIntersections();
     for(IntersectionIdx i = 0; i < NumIntersections(); i++){
         for(int j = 0; j < getNumStreetSegments(); j++){
