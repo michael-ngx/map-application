@@ -25,6 +25,7 @@
 #include <set>
 #include <unordered_map>
 #include <list>
+#include <cmath>
 using namespace std;
 // loadMap will be called with the name of the file that stores the "layer-2"
 // map data accessed through StreetsDatabaseAPI: the street and intersection 
@@ -70,6 +71,7 @@ std::vector<StreetSegmentIdx> StreetSegmentIndices;
 std::vector<std::vector<StreetSegmentIdx>> streetsSegment;
 std::vector<StreetIdx> streets;
 std::unordered_map<StreetSegmentIdx, std::vector<IntersectionIdx>> streetSegmentsIntersection;
+std::unordered_map<StreetIdx, std::vector<StreetSegmentIdx>> streetSegmentIDs;
 
 /*********************************************************************************
  * HELPER FUNCTIONS
@@ -99,6 +101,18 @@ void m1_init(){
 //        
         streetSegmentsIntersection[i] = new_intersectionIndex; // the beginning and end of intersections of street segment stored
         streetsSegment[stIdx].push_back(i); //street information that stores corresponding segments       
+    }
+    
+    for(int j = 0; j < st_segmentNum; ++j){
+        StreetSegmentInfo tempInfo = getStreetSegmentInfo(j);
+        if (streetSegmentIDs.find(tempInfo.streetID) == streetSegmentIDs.end()){
+            std::vector<StreetSegmentIdx> streetSegmentIndex;
+            streetSegmentIndex.push_back(j);
+            streetSegmentIDs.insert(std::make_pair(tempInfo.streetID, streetSegmentIndex));
+        }
+        else {
+            streetSegmentIDs.at(tempInfo.streetID).push_back(j);
+        }
     }
 }
 
@@ -267,7 +281,55 @@ std::vector<StreetIdx> findStreetIdsFromPartialStreetName(std::string street_pre
 // Returns the length of a given street in meters
 // Speed Requirement --> high 
 double findStreetLength(StreetIdx street_id){
-    return 0.0;
+    std::vector<StreetSegmentIdx> strIntID = streetSegmentIDs.at(street_id);
+    LatLon tempLatLonA, tempLatLonB;
+    double streetLength = 0;
+    int x1, x2, y1, y2;
+    for (auto it = strIntID.begin(); it != strIntID.end(); ++it){
+        auto strInfo = getStreetSegmentInfo(*it);
+        if (strInfo.numCurvePoints == 0){
+            tempLatLonA = getIntersectionPosition(strInfo.from);
+            tempLatLonB = getIntersectionPosition(strInfo.to);
+            x1 = kEarthRadiusInMeters*tempLatLonA.longitude() * 
+                     cos((tempLatLonA.latitude() + tempLatLonB.latitude()) / 2);
+            y1 = kEarthRadiusInMeters*tempLatLonA.latitude();
+            x2 = kEarthRadiusInMeters*tempLatLonB.longitude() * 
+                     cos((tempLatLonA.latitude() + tempLatLonB.latitude()) / 2);
+            y2 = kEarthRadiusInMeters*tempLatLonB.latitude();
+            streetLength += sqrt(pow(y2 - y1, 2) + pow(x2 - x1, 2));
+        } else {
+            tempLatLonA = getIntersectionPosition(strInfo.from);
+            tempLatLonB = getStreetSegmentCurvePoint(*it, 0);
+            x1 = kEarthRadiusInMeters*tempLatLonA.longitude() * 
+                     cos((tempLatLonA.latitude() + tempLatLonB.latitude()) / 2);
+            y1 = kEarthRadiusInMeters*tempLatLonA.latitude();
+            x2 = kEarthRadiusInMeters*tempLatLonB.longitude() * 
+                     cos((tempLatLonA.latitude() + tempLatLonB.latitude()) / 2);
+            y2 = kEarthRadiusInMeters*tempLatLonB.latitude();
+            streetLength += sqrt(pow(y2 - y1, 2) + pow(x2 - x1, 2));
+            for (int i = 0; i < strInfo.numCurvePoints - 1; ++i){
+                tempLatLonA = getStreetSegmentCurvePoint(*it, i);
+                tempLatLonB = getStreetSegmentCurvePoint(*it, i+1);
+                x1 = kEarthRadiusInMeters*tempLatLonA.longitude() * 
+                         cos((tempLatLonA.latitude() + tempLatLonB.latitude()) / 2);
+                y1 = kEarthRadiusInMeters*tempLatLonA.latitude();
+                x2 = kEarthRadiusInMeters*tempLatLonB.longitude() * 
+                         cos((tempLatLonA.latitude() + tempLatLonB.latitude()) / 2);
+                y2 = kEarthRadiusInMeters*tempLatLonB.latitude();
+                streetLength += sqrt(pow(y2 - y1, 2) + pow(x2 - x1, 2));
+            }
+            tempLatLonA = getStreetSegmentCurvePoint(*it, strInfo.numCurvePoints - 1);
+            tempLatLonB = getIntersectionPosition(strInfo.to);
+            x1 = kEarthRadiusInMeters*tempLatLonA.longitude() * 
+                     cos((tempLatLonA.latitude() + tempLatLonB.latitude()) / 2);
+            y1 = kEarthRadiusInMeters*tempLatLonA.latitude();
+            x2 = kEarthRadiusInMeters*tempLatLonB.longitude() * 
+                     cos((tempLatLonA.latitude() + tempLatLonB.latitude()) / 2);
+            y2 = kEarthRadiusInMeters*tempLatLonB.latitude();
+            streetLength += sqrt(pow(y2 - y1, 2) + pow(x2 - x1, 2));
+        }
+    }
+    return streetLength;
 }
 
 // Returns the nearest point of interest of the given type (e.g. "restaurant") 
