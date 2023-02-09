@@ -256,7 +256,7 @@ std::vector<IntersectionIdx> findIntersectionsOfTwoStreets(StreetIdx street_id1,
      for(auto& i : street1Intersection){
          for(auto& j : street2Intersection)
              if(i == j)
-                 intersectionTwoSt.push_back(street2Intersection[j]);
+                 intersectionTwoSt.push_back(j);
      }
     
     return intersectionTwoSt;
