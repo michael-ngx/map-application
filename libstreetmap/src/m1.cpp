@@ -27,6 +27,7 @@
 #include <list>
 #include <cmath>
 #include <bits/stdc++.h>
+#include <cctype>
 // loadMap will be called with the name of the file that stores the "layer-2"
 // map data accessed through StreetsDatabaseAPI: the street and intersection 
 // data that is higher-level than the raw OSM data). 
@@ -109,7 +110,7 @@ class Node{
     public:
         std::unordered_map<char, Node*> child;  // O(1) next char lookup
         bool terminal;                          // Determines the end of a word
-        StreetIdx id;                    // Street Ids. Has correct value at terminal nodes. Else, -1
+        StreetIdx id;                           // Street Ids. Has correct value at terminal nodes. Else, -1
 
         Node(){
             terminal = false;
@@ -147,7 +148,7 @@ class PrefixTree{
         }
 
         void collectSuffix (Node* curr, std::vector<StreetIdx> &result){
-            if (curr -> terminal) result.push_back(curr -> id);            // Adds streetid to result whenever a full street name is found
+            if (curr -> terminal) result.push_back(curr -> id);     // Adds streetid to result whenever a full street name is found
             for (int i = 0; i < 26; ++i){
                 char c = 'a' + i;
                 if (curr -> child[c] != nullptr){
@@ -156,7 +157,7 @@ class PrefixTree{
             }
         }
 
-        std::vector<StreetIdx> getWords (std::string str){
+        std::vector<StreetIdx> getStreets (std::string str){
             std::vector<StreetIdx> result;
             Node* curr = root;
             for (int i = 0; i < str.length(); i++){
@@ -168,6 +169,8 @@ class PrefixTree{
             return result;
         }
 };
+// Initialize global StreetsTrie
+PrefixTree StreetsTrie;
 
 /*********************************************************************************
  * HELPER FUNCTIONS
@@ -259,7 +262,18 @@ void m1_init(){
         }
     }
 
-    // Trie for streets
+    // Populate StreetsTrie
+    for (auto it = Streets_AllSegments.begin(); it != Streets_AllSegments.end(); it++){
+        std::string str = getStreetName(it->first);
+        // Save street names in Trie as lowercase, no space
+        std::string streetName = "";
+        for (auto& c : str){
+            if (c == ' ') continue;
+            streetName.push_back(char(tolower(c)));
+        }
+        StreetIdx streetIdx = it->first;
+        StreetsTrie.insert(streetName, streetIdx);
+    }
 }
 
 /*********************************************************************************
@@ -450,8 +464,14 @@ std::vector<IntersectionIdx> findIntersectionsOfTwoStreets(StreetIdx street_id1,
 // length 0 string.
 // Speed Requirement --> high 
 std::vector<StreetIdx> findStreetIdsFromPartialStreetName(std::string street_prefix){
-    std::vector<StreetIdx> stub;
-    return stub;
+    // manipulate street_prefix
+    std::string str = "";
+    for (auto& c : street_prefix){
+        if (c == ' ') continue;
+        str.push_back(char(tolower(c)));
+    }
+    
+    return StreetsTrie.getStreets(str);
 }
 
 // Returns the length of a given street in meters
