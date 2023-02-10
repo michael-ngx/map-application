@@ -40,13 +40,11 @@
 
 /*********************************************************************************
  * GLOBAL VARIABLES
- */
+ **********************************************************************************/
+
 std::vector<std::vector<StreetSegmentIdx>> intersection_street_segments;
 std::vector<StreetSegmentInfo> st_segment_info;
 
-int intersectionNum;
-int segmentNum;
-int streetNum;
 // class for street information
 class StreetInfo{
 public:
@@ -68,21 +66,52 @@ std::vector<std::vector<StreetSegmentIdx>> streetsSegment;
 std::vector<StreetIdx> streets;
 std::unordered_map<StreetSegmentIdx, std::vector<IntersectionIdx>> streetSegmentsIntersection;
 
+// *********************************
+// Numbers
+// *********************************
 
-// Index: Intersection ids, Value: vector of all segments that cross through the intersection
+int intersectionNum;
+int segmentNum;
+int streetNum;
+
+//*********************************
+// Street Segments
+//*********************************
+
+// Processed information of each street segment
+class StreetSegmentDetailedInfo{
+    public:
+        IntersectionIdx from, to;  // intersection ID this segment runs from/to
+        double length;
+        double travel_time;
+};
+// Index: Segment id, Value: Processed information of the segment
+std::vector<StreetSegmentDetailedInfo> Segment_SegmentDetailedInfo;
+
+//*********************************
+// Intersections
+//*********************************
+
+// Index: Intersection id, Value: vector of all segments that cross through the intersection
 std::vector<std::vector<StreetSegmentIdx>> Intersection_AllStreetSegments;
 
-// Keys: Street ids, Value: vector of all segments corresponding to that Street
+//*********************************
+// Streets
+//*********************************
+
+// Keys: Street id, Value: vector of all segments corresponding to that Street
 std::unordered_map<StreetIdx, std::vector<StreetSegmentIdx>> Streets_AllSegments;
 
 /*********************************************************************************
  * HELPER FUNCTIONS
- */
+ **********************************************************************************/
 void m1_init(){
+
+    // Retrive total numbers from API
     segmentNum = getNumStreetSegments();
     streetNum = getNumStreets();
     intersectionNum = getNumIntersections();
-//    
+//
     for(int i = 0; i < streetNum; i++){
         std::vector<StreetSegmentIdx> streetsSegmentPlaceHolder;
         streetsSegment.push_back(streetsSegmentPlaceHolder);
@@ -105,6 +134,40 @@ void m1_init(){
         streetsSegment[stIdx].push_back(i); //street information that stores corresponding segments       
     }
     
+    // Vector of StreetSegmentDetailedInfo (StreetSegmentIdx - StreetSegmentDetailedInfo)
+    for (int segment = 0; segment < segmentNum; segment++){         // Corresponds to id of all street segments
+        StreetSegmentInfo rawInfo = getStreetSegmentInfo(segment);  // Raw info object
+        StreetSegmentDetailedInfo processedInfo;                    // Processed info object
+        
+        processedInfo.from = rawInfo.from;
+        processedInfo.to = rawInfo.to;
+
+        // Pre-calculate length of each street segments (including curve points)
+        if (rawInfo.numCurvePoints == 0){
+            LatLon point_1 = getIntersectionPosition(rawInfo.from);
+            LatLon point_2 = getIntersectionPosition(rawInfo.to);
+            processedInfo.length = findDistanceBetweenTwoPoints(point_1, point_2);
+        }
+        else{
+            LatLon point_1 = getIntersectionPosition(rawInfo.from);
+            processedInfo.length = 0.0; // Starting length
+            // Iterate through all curve points
+            for (int i = 0; i < rawInfo.numCurvePoints; i++){
+                LatLon point_2 = getStreetSegmentCurvePoint(segment, i);
+                double templength = findDistanceBetweenTwoPoints(point_1, point_2);
+                processedInfo.length += templength;
+                point_1 = point_2;
+            }
+        }
+
+        // Pre-calculate travel time of each street segments
+        processedInfo.travel_time = processedInfo.length/rawInfo.speedLimit;        // TODO: Optimize division
+
+        // Push processed info into vector
+        Segment_SegmentDetailedInfo.push_back(processedInfo);
+    }
+
+
     // Vector for Intersection (IntersectionIdx - Vector of Segments)
     for (IntersectionIdx intersection = 0; intersection < intersectionNum; intersection++){
         std::vector<StreetSegmentIdx> allSegments;
@@ -131,7 +194,7 @@ void m1_init(){
 
 /*********************************************************************************
  * STREET MAP LIBRARY
- */
+ **********************************************************************************/
 bool loadMap(std::string map_streets_database_filename) {
     bool load_successful = false; //Indicates whether the map has loaded 
                                   //successfully
@@ -172,7 +235,7 @@ double findDistanceBetweenTwoPoints(LatLon point_1, LatLon point_2){
 // Returns the length of the given street segment in meters
 // Speed Requirement --> moderate
 double findStreetSegmentLength(StreetSegmentIdx street_segment_id){
-    return 10.0;
+    return Segment_SegmentDetailedInfo[street_segment_id].length;
 }
 
 // Returns the travel time to drive from one end of a street segment 
@@ -180,7 +243,7 @@ double findStreetSegmentLength(StreetSegmentIdx street_segment_id){
 // Note: (time = distance/speed_limit)
 // Speed Requirement --> high 
 double findStreetSegmentTravelTime(StreetSegmentIdx street_segment_id){
-    return 0.0;
+    return Segment_SegmentDetailedInfo[street_segment_id].travel_time;
 }
 
 // Returns all intersections reachable by traveling down one street segment 
@@ -231,14 +294,23 @@ std::vector<StreetSegmentIdx> findStreetSegmentsOfIntersection(IntersectionIdx i
 // There should be no duplicate intersections in the returned vector.
 // Speed Requirement --> high
 std::vector<IntersectionIdx> findIntersectionsOfStreet(StreetIdx street_id){
-    std::vector<IntersectionIdx> IntersectionsOfStreet;    
+    // Vector to be returned
+    std::vector<IntersectionIdx> IntersectionsOfStreet;
+    // Get vector of all street segments in the street
+    std::vector<StreetSegmentIdx> allSegments = Streets_AllSegments.find(street_id)->second;
     
-    for(auto i : streetsSegment[street_id]){
-        std::vector<IntersectionIdx> intersections = streetSegmentsIntersection[i];       
-        for(auto j : intersections){ 
-            IntersectionsOfStreet.push_back(j);             
-        }       
+    // Get all intersections for each "segment", then push_back to IntersectionOfStreet
+    for (auto segment : allSegments){
+        IntersectionsOfStreet.push_back(Segment_SegmentDetailedInfo[segment].from);
+        IntersectionsOfStreet.push_back(Segment_SegmentDetailedInfo[segment].to);
     }
+
+    // for(auto i : streetsSegment[street_id]){
+    //     std::vector<IntersectionIdx> intersections = streetSegmentsIntersection[i];       
+    //     for(auto j : intersections){ 
+    //         IntersectionsOfStreet.push_back(j);             
+    //     }       
+    // }
     
     //sort + unique to remove all the duplicates
     sort(IntersectionsOfStreet.begin(), IntersectionsOfStreet.end());
