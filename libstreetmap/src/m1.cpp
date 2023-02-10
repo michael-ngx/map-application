@@ -21,6 +21,7 @@
 #include <iostream>
 #include "m1.h"
 #include "StreetsDatabaseAPI.h"
+#include "OSMDatabaseAPI.h"
 #include <set>
 #include <unordered_map>
 #include <list>
@@ -205,7 +206,9 @@ bool loadMap(std::string map_streets_database_filename) {
     //
     // Load your map related data structures here.
     //
-    load_successful = loadStreetsDatabaseBIN(map_streets_database_filename);
+    load_successful = loadStreetsDatabaseBIN(map_streets_database_filename)&&
+                      loadOSMDatabaseBIN(map_streets_database_filename);
+    
     
     if(load_successful) m1_init();
 
@@ -444,4 +447,5 @@ std::string getOSMNodeTagValue (OSMID OSMid, std::string key){
 void closeMap() {
     //Clean-up your map related data structures here
     closeStreetDatabase();
+    closeOSMDatabase();
 }
