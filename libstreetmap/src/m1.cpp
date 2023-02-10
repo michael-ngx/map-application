@@ -158,6 +158,8 @@ void m1_init(){
                 processedInfo.length += templength;
                 point_1 = point_2;
             }
+            LatLon point_2 = getIntersectionPosition(rawInfo.to);                   // Destination (to) point
+            processedInfo.length += findDistanceBetweenTwoPoints(point_1, point_2);
         }
 
         // Pre-calculate travel time of each street segments
@@ -166,7 +168,6 @@ void m1_init(){
         // Push processed info into vector
         Segment_SegmentDetailedInfo.push_back(processedInfo);
     }
-
 
     // Vector for Intersection (IntersectionIdx - Vector of Segments)
     for (IntersectionIdx intersection = 0; intersection < intersectionNum; intersection++){
