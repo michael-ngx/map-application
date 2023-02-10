@@ -206,8 +206,9 @@ bool loadMap(std::string map_streets_database_filename) {
     //
     // Load your map related data structures here.
     //
-    load_successful = loadStreetsDatabaseBIN(map_streets_database_filename)&&
-                      loadOSMDatabaseBIN(map_streets_database_filename);
+    load_successful = loadStreetsDatabaseBIN(map_streets_database_filename);
+    // &&
+    //                   loadOSMDatabaseBIN(map_streets_database_filename);
     
     
     if(load_successful) m1_init();
@@ -308,13 +309,6 @@ std::vector<IntersectionIdx> findIntersectionsOfStreet(StreetIdx street_id){
         IntersectionsOfStreet.push_back(Segment_SegmentDetailedInfo[segment].from);
         IntersectionsOfStreet.push_back(Segment_SegmentDetailedInfo[segment].to);
     }
-
-    // for(auto i : streetsSegment[street_id]){
-    //     std::vector<IntersectionIdx> intersections = streetSegmentsIntersection[i];       
-    //     for(auto j : intersections){ 
-    //         IntersectionsOfStreet.push_back(j);             
-    //     }       
-    // }
     
     //sort + unique to remove all the duplicates
     sort(IntersectionsOfStreet.begin(), IntersectionsOfStreet.end());
@@ -341,10 +335,26 @@ std::vector<IntersectionIdx> findIntersectionsOfTwoStreets(StreetIdx street_id1,
     std::vector<IntersectionIdx> street1Intersection = findIntersectionsOfStreet(street_id1);
     std::vector<IntersectionIdx> street2Intersection = findIntersectionsOfStreet(street_id2);
     
-     for(auto& i : street1Intersection){
-         for(auto& j : street2Intersection)
-             if(i == j)
-                 intersectionTwoSt.push_back(j);
+    // IntersectionIdx street1IntersectionNum = street1Intersection.size();
+    // IntersectionIdx street2IntersectionNum = street2Intersection.size();
+
+    // IntersectionIdx cmp_num = std::min(street1IntersectionNum, street2IntersectionNum);
+
+    // for(IntersectionIdx i = 0; i < cmp_num; i++){
+    //     for(IntersectionIdx j = 0; j < cmp_num; j++)
+    //         if(street1Intersection[i] == street2Intersection[j])
+    //             intersectionTwoSt.push_back(street2Intersection[j]);
+    // }
+    //  for(auto& i : street1Intersection){
+    //      for(auto& j : street2Intersection)
+    //          if(i == j)
+    //              intersectionTwoSt.push_back(j);
+    //  }
+
+    for(auto& i : street1Intersection){
+         auto it = std::find(street2Intersection.begin(), street2Intersection.end(), i);
+            if(it != street2Intersection.end())
+                intersectionTwoSt.push_back(i);
      }
     
     return intersectionTwoSt;
@@ -447,5 +457,5 @@ std::string getOSMNodeTagValue (OSMID OSMid, std::string key){
 void closeMap() {
     //Clean-up your map related data structures here
     closeStreetDatabase();
-    closeOSMDatabase();
+    //closeOSMDatabase();
 }
