@@ -59,7 +59,7 @@ public:
 class IntersectionDistance{
 public:
     int intersectionId;
-    int distance;
+    double distance;
     //IntersectionDistance();
 };
 
@@ -278,9 +278,9 @@ IntersectionIdx findClosestIntersection(LatLon my_position){
     std::list<IntersectionDistance> distanceContainer;
     
     //get distance from every intersection to IntersectionPosition
-    for(int i = 0; i < intersectionNum; i++){
-        int distance = findDistanceBetweenTwoPoints(getIntersectionPosition(i), my_position);
+    for(int i = 0; i < intersectionNum; i++){       
         IntersectionDistance intersectionDistance;
+        double distance = findDistanceBetweenTwoPoints(getIntersectionPosition(i), my_position);
         intersectionDistance.distance = distance;
         intersectionDistance.intersectionId = i;
         distanceContainer.push_back(intersectionDistance);
@@ -289,11 +289,14 @@ IntersectionIdx findClosestIntersection(LatLon my_position){
     IntersectionDistance shortestDistance; 
     shortestDistance = *distanceContainer.begin();
     // choose the nearest position
-    for(auto& i : distanceContainer)
-        if(i.distance < shortestDistance.distance)
+    for(auto& i : distanceContainer){
+        if(i.distance < shortestDistance.distance){
             shortestDistance.distance = i.distance;
-    
-    return shortestDistance.distance;
+            shortestDistance.intersectionId = i.intersectionId;
+          } 
+        }
+              
+    return shortestDistance.intersectionId;
 }
 
 // Returns the street segments that connect to the given intersection 
