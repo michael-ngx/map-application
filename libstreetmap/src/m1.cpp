@@ -262,7 +262,7 @@ void m1_init(){
         }
     }
 
-    // Populate StreetsTrie
+    //Populate StreetsTrie
     for (auto it = Streets_AllSegments.begin(); it != Streets_AllSegments.end(); it++){
         std::string str = getStreetName(it->first);
         // Save street names in Trie as lowercase, no space
@@ -348,8 +348,16 @@ double findStreetSegmentTravelTime(StreetSegmentIdx street_segment_id){
 // include the intersection in the returned vector (no special handling needed).
 // Speed Requirement --> high 
 std::vector<IntersectionIdx> findAdjacentIntersections(IntersectionIdx intersection_id){
-    std::vector<IntersectionIdx> stub;
-    return stub;
+    std::vector<IntersectionIdx> adjacentIntersections;
+    std::vector<StreetSegmentIdx> stSegments = findStreetSegmentsOfIntersection(intersection_id);
+
+    for(auto& i : stSegments){
+        adjacentIntersections.push_back(Segment_SegmentDetailedInfo[i].to);   
+    }
+    sort(adjacentIntersections.begin(), adjacentIntersections.end());
+    adjacentIntersections.erase(unique(adjacentIntersections.begin(), adjacentIntersections.end()), adjacentIntersections.end());
+    
+    return adjacentIntersections;
 }
 
 // Returns the geographically nearest intersection (i.e. as the crow flies) to 
