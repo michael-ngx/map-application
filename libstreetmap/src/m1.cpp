@@ -104,6 +104,71 @@ std::vector<std::vector<StreetSegmentIdx>> Intersection_AllStreetSegments;
 // Keys: Street id, Value: vector of all segments corresponding to that Street
 std::unordered_map<StreetIdx, std::vector<StreetSegmentIdx>> Streets_AllSegments;
 
+// PrefixTree class definition for prefix look up
+class Node{
+    public:
+        std::unordered_map<char, Node*> child;  // O(1) next char lookup
+        bool terminal;                          // Determines the end of a word
+        StreetIdx id;                    // Street Ids. Has correct value at terminal nodes. Else, -1
+
+        Node(){
+            terminal = false;
+            id = -1;
+            for (int i = 0; i < 26; i++){
+                child['a' + i] = nullptr;       // Initialize to nullptr
+            }
+        }
+
+        ~Node(){
+            for (int i = 0; i < 26; i++){
+                if (child[i]) delete child[i];
+            }
+        }
+};
+
+class PrefixTree{
+    public:
+        Node* root;
+
+        PrefixTree(){ root = new Node;}
+        ~PrefixTree(){ if(root) delete root; }      // Already deleted all nodes recursively
+
+        void insert(std::string word, StreetIdx id){
+            Node* curr = root;
+            for (int i = 0; i < word.length(); i++){
+                char c = word[i];
+                if (curr->child[c] == nullptr){
+                    curr->child[c] = new Node();    // Create new child if a linkage between 2 characters is never implemented
+                }
+                curr = curr -> child[c];
+            }
+            curr -> terminal = true;
+            curr -> id = id;
+        }
+
+        void collectSuffix (Node* curr, std::vector<StreetIdx> &result){
+            if (curr -> terminal) result.push_back(curr -> id);            // Adds streetid to result whenever a full street name is found
+            for (int i = 0; i < 26; ++i){
+                char c = 'a' + i;
+                if (curr -> child[c] != nullptr){
+                    collectSuffix (curr -> child[c], result);       // Recursively look for full street names
+                }
+            }
+        }
+
+        std::vector<StreetIdx> getWords (std::string str){
+            std::vector<StreetIdx> result;
+            Node* curr = root;
+            for (int i = 0; i < str.length(); i++){
+                char c = str[i];
+                if (curr -> child[c] == nullptr) return result;     // Returns empty vector if no words have str prefix
+                curr = curr -> child[c];                            // Stops at the end character of str
+            }
+            collectSuffix (curr, result);                      // Collect all words that have str prefix
+            return result;
+        }
+};
+
 /*********************************************************************************
  * HELPER FUNCTIONS
  **********************************************************************************/
@@ -193,6 +258,8 @@ void m1_init(){
             Streets_AllSegments.at(tempInfo.streetID).push_back(j);
         }
     }
+
+    // Trie for streets
 }
 
 /*********************************************************************************
