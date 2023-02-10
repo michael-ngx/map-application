@@ -205,16 +205,19 @@ bool loadMap(std::string map_streets_database_filename) {
     std::cout << "loadMap: " << map_streets_database_filename << std::endl;
 
     // Load your map related data structures here.
+    //String Manipulation for OSMDatabase
     char *temp = new char[map_streets_database_filename.length() + 1];
     strcpy(temp, map_streets_database_filename.c_str());
     std::string map_osm_database_filename;
     char *tempChar = strtok(temp, ".");
     map_osm_database_filename = tempChar;
     map_osm_database_filename.append(".osm.bin");
+    
+    //load both StreetsDatabase and OSMDatabase
     load_successful = loadStreetsDatabaseBIN(map_streets_database_filename)&&
                       loadOSMDatabaseBIN(map_osm_database_filename);
     
-    
+    //Initialize helper functions and process loaded data if loading was successful
     if(load_successful) m1_init();
 
     return load_successful;
@@ -439,7 +442,28 @@ double findStreetLength(StreetIdx street_id){
 // to the given position
 // Speed Requirement --> none 
 POIIdx findClosestPOI(LatLon my_position, std::string POItype){
-    return 0;
+    POIIdx closestPOI; //return value
+    double tempDistance; //store temporary distance
+    bool initialized = false; //flag for smallest distance initialization
+    double smallestDistance; //store the smallest distance
+    
+    for(POIIdx POI = 0; POI <= getNumPointsOfInterest() - 1; POI++){
+        //check for POI type
+        if(POItype == getPOIType(POI)){
+            //initialize smallest distance and the return value
+            if (!initialized){
+                smallestDistance = findDistanceBetweenTwoPoints(my_position, getPOIPosition(POI));
+                closestPOI = POI;
+                initialized = true;
+            }
+            tempDistance = findDistanceBetweenTwoPoints(my_position, getPOIPosition(POI));
+            if (tempDistance < smallestDistance){
+                smallestDistance = tempDistance;
+                closestPOI = POI;
+            }
+        }
+    }
+    return closestPOI;
 }
 
 // Returns the area of the given closed feature in square meters
