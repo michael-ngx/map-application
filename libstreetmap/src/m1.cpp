@@ -485,55 +485,56 @@ std::vector<StreetIdx> findStreetIdsFromPartialStreetName(std::string street_pre
 // Returns the length of a given street in meters
 // Speed Requirement --> high 
 double findStreetLength(StreetIdx street_id){
-    std::vector<StreetSegmentIdx> allSegments = Streets_AllSegments.at(street_id);
-    LatLon tempLatLonA, tempLatLonB;
-    double streetLength = 0;
-    int x1, x2, y1, y2;
-    for (auto it = allSegments.begin(); it != allSegments.end(); ++it){
-        auto strInfo = getStreetSegmentInfo(*it);
-        if (strInfo.numCurvePoints == 0){
-            tempLatLonA = getIntersectionPosition(strInfo.from);
-            tempLatLonB = getIntersectionPosition(strInfo.to);
-            x1 = kEarthRadiusInMeters*tempLatLonA.longitude() * 
-                     cos((tempLatLonA.latitude() + tempLatLonB.latitude()) / 2);
-            y1 = kEarthRadiusInMeters*tempLatLonA.latitude();
-            x2 = kEarthRadiusInMeters*tempLatLonB.longitude() * 
-                     cos((tempLatLonA.latitude() + tempLatLonB.latitude()) / 2);
-            y2 = kEarthRadiusInMeters*tempLatLonB.latitude();
-            streetLength += sqrt(pow(y2 - y1, 2) + pow(x2 - x1, 2));
-        } else {
-            tempLatLonA = getIntersectionPosition(strInfo.from);
-            tempLatLonB = getStreetSegmentCurvePoint(*it, 0);
-            x1 = kEarthRadiusInMeters*tempLatLonA.longitude() * 
-                     cos((tempLatLonA.latitude() + tempLatLonB.latitude()) / 2);
-            y1 = kEarthRadiusInMeters*tempLatLonA.latitude();
-            x2 = kEarthRadiusInMeters*tempLatLonB.longitude() * 
-                     cos((tempLatLonA.latitude() + tempLatLonB.latitude()) / 2);
-            y2 = kEarthRadiusInMeters*tempLatLonB.latitude();
-            streetLength += sqrt(pow(y2 - y1, 2) + pow(x2 - x1, 2));
-            for (int i = 0; i < strInfo.numCurvePoints - 1; ++i){
-                tempLatLonA = getStreetSegmentCurvePoint(*it, i);
-                tempLatLonB = getStreetSegmentCurvePoint(*it, i+1);
-                x1 = kEarthRadiusInMeters*tempLatLonA.longitude() * 
-                         cos((tempLatLonA.latitude() + tempLatLonB.latitude()) / 2);
-                y1 = kEarthRadiusInMeters*tempLatLonA.latitude();
-                x2 = kEarthRadiusInMeters*tempLatLonB.longitude() * 
-                         cos((tempLatLonA.latitude() + tempLatLonB.latitude()) / 2);
-                y2 = kEarthRadiusInMeters*tempLatLonB.latitude();
-                streetLength += sqrt(pow(y2 - y1, 2) + pow(x2 - x1, 2));
-            }
-            tempLatLonA = getStreetSegmentCurvePoint(*it, strInfo.numCurvePoints - 1);
-            tempLatLonB = getIntersectionPosition(strInfo.to);
-            x1 = kEarthRadiusInMeters*tempLatLonA.longitude() * 
-                     cos((tempLatLonA.latitude() + tempLatLonB.latitude()) / 2);
-            y1 = kEarthRadiusInMeters*tempLatLonA.latitude();
-            x2 = kEarthRadiusInMeters*tempLatLonB.longitude() * 
-                     cos((tempLatLonA.latitude() + tempLatLonB.latitude()) / 2);
-            y2 = kEarthRadiusInMeters*tempLatLonB.latitude();
-            streetLength += sqrt(pow(y2 - y1, 2) + pow(x2 - x1, 2));
-        }
-    }
-    return streetLength;
+//    std::vector<StreetSegmentIdx> allSegments = Streets_AllSegments.at(street_id);
+//    LatLon tempLatLonA, tempLatLonB;
+//    double streetLength = 0;
+//    int x1, x2, y1, y2;
+//    for (auto it = allSegments.begin(); it != allSegments.end(); ++it){
+//        auto strInfo = getStreetSegmentInfo(*it);
+//        if (strInfo.numCurvePoints == 0){
+//            tempLatLonA = getIntersectionPosition(strInfo.from);
+//            tempLatLonB = getIntersectionPosition(strInfo.to);
+//            x1 = kEarthRadiusInMeters*tempLatLonA.longitude() * 
+//                     cos((tempLatLonA.latitude() + tempLatLonB.latitude()) / 2);
+//            y1 = kEarthRadiusInMeters*tempLatLonA.latitude();
+//            x2 = kEarthRadiusInMeters*tempLatLonB.longitude() * 
+//                     cos((tempLatLonA.latitude() + tempLatLonB.latitude()) / 2);
+//            y2 = kEarthRadiusInMeters*tempLatLonB.latitude();
+//            streetLength += sqrt(pow(y2 - y1, 2) + pow(x2 - x1, 2));
+//        } else {
+//            tempLatLonA = getIntersectionPosition(strInfo.from);
+//            tempLatLonB = getStreetSegmentCurvePoint(*it, 0);
+//            x1 = kEarthRadiusInMeters*tempLatLonA.longitude() * 
+//                     cos((tempLatLonA.latitude() + tempLatLonB.latitude()) / 2);
+//            y1 = kEarthRadiusInMeters*tempLatLonA.latitude();
+//            x2 = kEarthRadiusInMeters*tempLatLonB.longitude() * 
+//                     cos((tempLatLonA.latitude() + tempLatLonB.latitude()) / 2);
+//            y2 = kEarthRadiusInMeters*tempLatLonB.latitude();
+//            streetLength += sqrt(pow(y2 - y1, 2) + pow(x2 - x1, 2));
+//            for (int i = 0; i < strInfo.numCurvePoints - 1; ++i){
+//                tempLatLonA = getStreetSegmentCurvePoint(*it, i);
+//                tempLatLonB = getStreetSegmentCurvePoint(*it, i+1);
+//                x1 = kEarthRadiusInMeters*tempLatLonA.longitude() * 
+//                         cos((tempLatLonA.latitude() + tempLatLonB.latitude()) / 2);
+//                y1 = kEarthRadiusInMeters*tempLatLonA.latitude();
+//                x2 = kEarthRadiusInMeters*tempLatLonB.longitude() * 
+//                         cos((tempLatLonA.latitude() + tempLatLonB.latitude()) / 2);
+//                y2 = kEarthRadiusInMeters*tempLatLonB.latitude();
+//                streetLength += sqrt(pow(y2 - y1, 2) + pow(x2 - x1, 2));
+//            }
+//            tempLatLonA = getStreetSegmentCurvePoint(*it, strInfo.numCurvePoints - 1);
+//            tempLatLonB = getIntersectionPosition(strInfo.to);
+//            x1 = kEarthRadiusInMeters*tempLatLonA.longitude() * 
+//                     cos((tempLatLonA.latitude() + tempLatLonB.latitude()) / 2);
+//            y1 = kEarthRadiusInMeters*tempLatLonA.latitude();
+//            x2 = kEarthRadiusInMeters*tempLatLonB.longitude() * 
+//                     cos((tempLatLonA.latitude() + tempLatLonB.latitude()) / 2);
+//            y2 = kEarthRadiusInMeters*tempLatLonB.latitude();
+//            streetLength += sqrt(pow(y2 - y1, 2) + pow(x2 - x1, 2));
+//        }
+//    }
+//    return streetLength;
+    return 0.0;
 }
 
 // Returns the nearest point of interest of the given type (e.g. "restaurant") 
@@ -569,7 +570,49 @@ POIIdx findClosestPOI(LatLon my_position, std::string POItype){
 // Return 0 if this feature is not a closed polygon.
 // Speed Requirement --> moderate
 double findFeatureArea(FeatureIdx feature_id){
-    return 0.0;
+    int numberOfPoints = getNumFeaturePoints(feature_id); //total number of points
+    //variables used for area calculation
+    double lat1, lon1, lat2, lon2, latavg;
+    double x1, y1, x2, y2;
+    double featureArea = 0; //return value
+    //check for non-closed polygon
+    LatLon firstPoint = getFeaturePoint(feature_id, 0);
+    LatLon secondPoint = getFeaturePoint(feature_id, numberOfPoints - 1);
+    if ((firstPoint.latitude() == secondPoint.latitude()) && (firstPoint.longitude() == secondPoint.longitude())){
+//        //calculate the average latitude
+//        int latmin = getFeaturePoint(feature_id, 0).latitude()* kDegreeToRadian;
+//        int latmax = getFeaturePoint(feature_id, 0).latitude()* kDegreeToRadian;
+//        for (int index = 0; index < numberOfPoints - 1; index++){
+//            templat = getFeaturePoint(feature_id, index).latitude()* kDegreeToRadian;
+//            if (templat < latmin){
+//                latmin = templat;
+//            } else if (templat > latmax) {
+//                latmax = templat;
+//            }
+//        }
+//        latavg = (latmin + latmax) / 2;
+        
+        //Calculate the area of the polygon
+        for (int index = 0; index < numberOfPoints-1; index++){
+            firstPoint = getFeaturePoint(feature_id, index);
+            secondPoint = getFeaturePoint(feature_id, index + 1);
+            lat1 = firstPoint.latitude() * kDegreeToRadian;
+            lon1 = firstPoint.longitude() * kDegreeToRadian;
+            lat2 = secondPoint.latitude() * kDegreeToRadian;
+            lon2 = secondPoint.longitude() * kDegreeToRadian;
+            latavg = (lat1 + lat2)/2;
+            x1 = kEarthRadiusInMeters * lon1 * cos(latavg);
+            y1 = kEarthRadiusInMeters * lat1;
+            x2 = kEarthRadiusInMeters * lon2 * cos(latavg);
+            y2 = kEarthRadiusInMeters * lat2;
+            
+
+            featureArea = featureArea + (y2 - y1) * std::abs((x1+x2)/2);
+        }
+        return std::abs(featureArea);
+    } else {
+        return 0.0;
+    }
 }
 
 // Return the value associated with this key on the specified OSMNode.
