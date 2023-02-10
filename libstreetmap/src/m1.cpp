@@ -485,5 +485,5 @@ std::string getOSMNodeTagValue (OSMID OSMid, std::string key){
 void closeMap() {
     //Clean-up your map related data structures here
     closeStreetDatabase();
-    //closeOSMDatabase();
+    closeOSMDatabase();
 }
