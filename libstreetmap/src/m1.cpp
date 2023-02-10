@@ -280,35 +280,28 @@ std::vector<IntersectionIdx> findIntersectionsOfTwoStreets(StreetIdx street_id1,
 }
 
 // Returns all street ids corresponding to street names that start with the 
-// given prefix 
-// The function should be case-insensitive to the street prefix. 
-// The function should ignore spaces.
-//  For example, both "bloor " and "BloOrst" are prefixes to 
-// "Bloor Street East".
-// If no street names match the given prefix, this routine returns an empty 
-// (length 0) vector.
-// You can choose what to return if the street prefix passed in is an empty 
-// (length 0) string, but your program must not crash if street_prefix is a 
-// length 0 string.
-// Speed Requirement --> high 
+// given prefix
+// Speed Requirement --> high
 std::vector<StreetIdx> findStreetIdsFromPartialStreetName(std::string street_prefix){
     std::vector<StreetIdx> result;
+
+    if (street_prefix.empty()) return result;
+
     // Manipulate street_prefix
     std::string prefix = "";
     for (auto& c : street_prefix){
         if (c == ' ') continue;
         prefix.push_back(char(tolower(c)));
     }
+
     // Find street by street prefix
     std::multimap<std::string,StreetIdx>::iterator node = StreetName_StreetIdx.lower_bound(prefix); // Iterator to first candidate
-    // std::cout << root->first << " " << root->second << std::endl;
-    
+
     // Street with prefix will always be larger
     while (node->first.compare(0, prefix.size(), prefix) == 0){
         result.push_back(node->second);
         node++;
     }
-    
     return result;
 }
 
@@ -507,23 +500,8 @@ void m1_init(){
             if (c == ' ') continue;
             streetName.push_back(char(tolower(c)));
         }
-        StreetName_StreetIdx.insert(std::make_pair(streetName, pair.first));        // Create a pair of (name, streetidx) and add to ordered multimap
+        // Create a pair of (name, streetidx) and add to ordered multimap
+        StreetName_StreetIdx.insert(std::make_pair(streetName, pair.first));
     }
-
-    // Test print content of ordered multimap
-    // for (auto& i : StreetName_StreetIdx){
-    //     std::string prefix = "ba";
-    //     // if (i.first.find("colle") != std::string::npos){
-    //     //     std::cout << i.first << " " << i.second << std::endl;
-    //     // }
-        
-    //     // if (i.first.find(prefix) == 0){
-    //     //     std::cout << i.first << " " << i.second << std::endl;
-    //     // }
-    //     if (i.first.compare(0, prefix.size(), prefix) == 0){
-    //         std::cout << i.first << " " << i.second << std::endl;
-    //     }
-    // }
-    // findStreetIdsFromPartialStreetName("ba");
 }
 
