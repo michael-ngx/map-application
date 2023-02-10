@@ -406,6 +406,12 @@ std::string getOSMNodeTagValue (OSMID OSMid, std::string key){
 
 void closeMap() {
     //Clean-up your map related data structures here
+    Segment_SegmentDetailedInfo.clear();
+    Intersection_AllStreetSegments.clear();
+    Streets_AllSegments.clear();
+    streetAllLength.clear();
+    StreetName_StreetIdx.clear();
+
     closeStreetDatabase();
     closeOSMDatabase();
 }
