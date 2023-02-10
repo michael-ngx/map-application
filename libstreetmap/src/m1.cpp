@@ -26,6 +26,7 @@
 #include <unordered_map>
 #include <list>
 #include <cmath>
+#include <bits/stdc++.h>
 // loadMap will be called with the name of the file that stores the "layer-2"
 // map data accessed through StreetsDatabaseAPI: the street and intersection 
 // data that is higher-level than the raw OSM data). 
@@ -203,12 +204,15 @@ bool loadMap(std::string map_streets_database_filename) {
     
     std::cout << "loadMap: " << map_streets_database_filename << std::endl;
 
-    //
     // Load your map related data structures here.
-    //
-    load_successful = loadStreetsDatabaseBIN(map_streets_database_filename);
-    // &&
-    //                   loadOSMDatabaseBIN(map_streets_database_filename);
+    char *temp = new char[map_streets_database_filename.length() + 1];
+    strcpy(temp, map_streets_database_filename.c_str());
+    std::string map_osm_database_filename;
+    char *tempChar = strtok(temp, ".");
+    map_osm_database_filename = tempChar;
+    map_osm_database_filename.append(".osm.bin");
+    load_successful = loadStreetsDatabaseBIN(map_streets_database_filename)&&
+                      loadOSMDatabaseBIN(map_osm_database_filename);
     
     
     if(load_successful) m1_init();
