@@ -101,6 +101,12 @@ std::unordered_map<StreetIdx, double> streetAllLength;
 // Keys: Street names, Value: street index
 std::multimap<std::string, StreetIdx> StreetName_StreetIdx;
 
+// *******************************************************************
+// OSMNode
+// *******************************************************************
+// Keys: OSMID, Value: vector of (tag, value) pairs
+std::unordered_map<OSMID, std::vector<std::pair<std::string, std::string>>> OSM_AllTagPairs;
+
 /*******************************************************************************************************************************
  * STREET MAP LIBRARY
  ********************************************************************************************************************************/
@@ -127,6 +133,7 @@ bool loadMap(std::string map_streets_database_filename) {
         m1_init();
     }
     
+    delete[] temp;
     return load_successful;
 }
 
@@ -300,7 +307,7 @@ std::vector<StreetIdx> findStreetIdsFromPartialStreetName(std::string street_pre
 // Speed Requirement --> high 
 double findStreetLength(StreetIdx street_id){
     //use unorderedmap to get the street length from street id
-    return streetAllLength.at(street_id) / 3;
+    return streetAllLength.at(street_id);
 }
 
 // Returns the nearest point of interest of the given type (e.g. "restaurant") 
@@ -345,18 +352,6 @@ double findFeatureArea(FeatureIdx feature_id){
     LatLon firstPoint = getFeaturePoint(feature_id, 0);
     LatLon secondPoint = getFeaturePoint(feature_id, numberOfPoints - 1);
     if ((firstPoint.latitude() == secondPoint.latitude()) && (firstPoint.longitude() == secondPoint.longitude())){
-//        //calculate the average latitude
-//        int latmin = getFeaturePoint(feature_id, 0).latitude()* kDegreeToRadian;
-//        int latmax = getFeaturePoint(feature_id, 0).latitude()* kDegreeToRadian;
-//        for (int index = 0; index < numberOfPoints - 1; index++){
-//            templat = getFeaturePoint(feature_id, index).latitude()* kDegreeToRadian;
-//            if (templat < latmin){
-//                latmin = templat;
-//            } else if (templat > latmax) {
-//                latmax = templat;
-//            }
-//        }
-//        latavg = (latmin + latmax) / 2;
         
         //Calculate the area of the polygon
         for (int index = 0; index < numberOfPoints-1; index++){
@@ -504,6 +499,21 @@ void m1_init(){
 
         // 2D Vector for Streets (StreetIdx - Vector of All Intersections)
         Streets_AllIntersections[pair.first] = findIntersectionsOfStreet(pair.first);
+    }
+
+    // Unordered Map for OSMDatabase (OSMID - vector of pair(tag, value)
+    for (int index = 0; index < getNumberOfNodes(); ++index){
+        const OSMNode* tempOSMNode = getNodeByIndex(index);
+        OSMID tempOSMID = tempOSMNode->id();
+        for (int tagIdx = 0; tagIdx < getTagCount(tempOSMNode); ++tagIdx){
+            if (OSM_AllTagPairs.find(tempOSMID) == OSM_AllTagPairs.end()){
+                std::vector<std::pair<std::string, std::string>> tempVector;
+                tempVector.push_back(getTagPair(tempOSMNode, 0));
+                OSM_AllTagPairs.insert(std::make_pair(tempOSMID, tempVector));
+            } else {
+                OSM_AllTagPairs.at(tempOSMID).push_back(getTagPair(tempOSMNode, tagIdx));
+            }
+        }
     }
 }
 
