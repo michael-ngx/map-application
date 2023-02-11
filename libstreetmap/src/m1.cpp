@@ -181,17 +181,20 @@ double findStreetSegmentTravelTime(StreetSegmentIdx street_segment_id){
 // include the intersection in the returned vector (no special handling needed).
 // Speed Requirement --> high 
 
-// TODO: have not done the corner case
 std::vector<IntersectionIdx> findAdjacentIntersections(IntersectionIdx intersection_id){
     std::vector<IntersectionIdx> adjacentIntersections;
     std::vector<StreetSegmentIdx> stSegments = findStreetSegmentsOfIntersection(intersection_id);
 
     for(auto& i : stSegments){
-        if(Segment_SegmentDetailedInfo[i].to != intersection_id)
+        if(Segment_SegmentDetailedInfo[i].from == Segment_SegmentDetailedInfo[i].to){
+            adjacentIntersections.push_back(Segment_SegmentDetailedInfo[i].from);       // Corner case
+            continue;
+        }
+        if(Segment_SegmentDetailedInfo[i].to != intersection_id)                        // Can travel "to" -> always add
             adjacentIntersections.push_back(Segment_SegmentDetailedInfo[i].to);
-        if(!Segment_SegmentDetailedInfo[i].oneWay)
-            if(Segment_SegmentDetailedInfo[i].from != intersection_id)
-                adjacentIntersections.push_back(Segment_SegmentDetailedInfo[i].from);                        
+        if(!Segment_SegmentDetailedInfo[i].oneWay && 
+            Segment_SegmentDetailedInfo[i].from != intersection_id)                     // If not one way and labelled as 
+                adjacentIntersections.push_back(Segment_SegmentDetailedInfo[i].from);   // from: intersection_id -> to: id_to_add
     }
     
     sort(adjacentIntersections.begin(), adjacentIntersections.end());
