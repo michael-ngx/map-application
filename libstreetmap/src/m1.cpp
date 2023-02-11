@@ -380,7 +380,21 @@ double findFeatureArea(FeatureIdx feature_id){
 // not set on the specified OSMNode, return an empty string.
 // Speed Requirement --> high
 std::string getOSMNodeTagValue (OSMID OSMid, std::string key){
-    return "stub";
+    //use try and catch block to check for out of range OSMid
+    try{
+        //use the OSM_AllTagPairs container to find given OSMid
+        auto tempVector = OSM_AllTagPairs.at(OSMid);
+        for (auto tempPair = tempVector.begin(); tempPair != tempVector.end(); ++tempPair){
+            //return value corresponding to a key
+            if ((*tempPair).first == key){
+                return (*tempPair).second;
+            }
+        }
+        return "";
+    }
+    catch (const std::out_of_range& oor){
+        return "";
+    }
 }
 
 void closeMap() {
