@@ -18,13 +18,12 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-#include <iostream>
 #include "m1.h"
 #include "StreetsDatabaseAPI.h"
 #include "OSMDatabaseAPI.h"
+#include <iostream>
 #include <set>
 #include <unordered_map>
-#include <list>
 #include <cmath>
 #include <bits/stdc++.h>
 #include <cctype>
@@ -51,7 +50,7 @@
 void m1_init();
 
 // *******************************************************************
-// Numbers
+// Numbers (counts)
 // *******************************************************************
 int intersectionNum;
 int segmentNum;
@@ -61,7 +60,7 @@ int streetNum;
 // Street Segments
 // *******************************************************************
 
-// Processed information of each street segment
+// Pre-processed information of each street segment
 class StreetSegmentDetailedInfo{
     public:
         OSMID wayOSMID;             // OSM ID of the source way
@@ -79,12 +78,6 @@ std::vector<StreetSegmentDetailedInfo> Segment_SegmentDetailedInfo;
 // Intersections
 // *******************************************************************
 
-// class of distance from intersection to a location
-class IntersectionDistance{
-public:
-    int intersectionId;
-    double distance;
-}; // TODO: consider changing to vector for performance
 // Index: Intersection id, Value: vector of all segments that cross through the intersection
 std::vector<std::vector<StreetSegmentIdx>> Intersection_AllStreetSegments;
 
@@ -207,28 +200,25 @@ std::vector<IntersectionIdx> findAdjacentIntersections(IntersectionIdx intersect
 // the given position
 // Speed Requirement --> none
 IntersectionIdx findClosestIntersection(LatLon my_position){
-    std::list<IntersectionDistance> distanceContainer;
+    std::vector<IntersectionIdx> distanceContainer;
     
-    //get distance from every intersection to IntersectionPosition
-    for(int i = 0; i < intersectionNum; i++){       
-        IntersectionDistance intersectionDistance;
+    // Get distance from every intersection to IntersectionPosition
+    for(int i = 0; i < intersectionNum; i++){
         double distance = findDistanceBetweenTwoPoints(getIntersectionPosition(i), my_position);
-        intersectionDistance.distance = distance;
-        intersectionDistance.intersectionId = i;
-        distanceContainer.push_back(intersectionDistance);
+        distanceContainer.push_back(distance);
     }
     
-    IntersectionDistance shortestDistance; 
-    shortestDistance = *distanceContainer.begin();
-    // choose the nearest position
-    for(auto& i : distanceContainer){
-        if(i.distance < shortestDistance.distance){
-            shortestDistance.distance = i.distance;
-            shortestDistance.intersectionId = i.intersectionId;
-          } 
+    IntersectionIdx closestIntersection = 0;
+    double closestDistance = distanceContainer[0];
+    // Choose the nearest position
+    for(int i = 0; i < distanceContainer.size(); i++){
+        if (distanceContainer[i] < closestDistance){
+            closestDistance = distanceContainer[i];
+            closestIntersection = i;
         }
-              
-    return shortestDistance.intersectionId;
+    }
+
+    return closestIntersection;
 }
 
 // Returns the street segments that connect to the given intersection 
@@ -269,10 +259,10 @@ std::vector<IntersectionIdx> findIntersectionsOfStreet(StreetIdx street_id){
 // Speed Requirement --> high
 std::vector<IntersectionIdx> findIntersectionsOfTwoStreets(StreetIdx street_id1, StreetIdx street_id2){
     std::vector<IntersectionIdx> intersectionTwoSt;
-    
+    // Get all intersections of 2 streets
     std::vector<IntersectionIdx> street1Intersection = Streets_AllIntersections[street_id1];
     std::vector<IntersectionIdx> street2Intersection = Streets_AllIntersections[street_id2];
-
+    // Find union of 2 vectors
     std::set_intersection(street1Intersection.begin(), street1Intersection.end(),
                         street2Intersection.begin(), street2Intersection.end(),
                         std::back_inserter(intersectionTwoSt));
@@ -288,7 +278,7 @@ std::vector<StreetIdx> findStreetIdsFromPartialStreetName(std::string street_pre
 
     if (street_prefix.empty()) return result;
 
-    // Manipulate street_prefix
+    // Manipulate street_prefix to lowercase, ignore space
     std::string prefix = "";
     for (auto& c : street_prefix){
         if (c == ' ') continue;
@@ -298,7 +288,7 @@ std::vector<StreetIdx> findStreetIdsFromPartialStreetName(std::string street_pre
     // Find street by street prefix
     std::multimap<std::string,StreetIdx>::iterator node = StreetName_StreetIdx.lower_bound(prefix); // Iterator to first candidate
 
-    // Street with prefix will always be larger
+    // Increase iterator through ordered map will always reach larger strings by string comparision
     while (node->first.compare(0, prefix.size(), prefix) == 0){
         result.push_back(node->second);
         node++;
@@ -309,7 +299,7 @@ std::vector<StreetIdx> findStreetIdsFromPartialStreetName(std::string street_pre
 // Returns the length of a given street in meters
 // Speed Requirement --> high 
 double findStreetLength(StreetIdx street_id){
-    //use unorderedmap to get the street length from street id
+    // Get street length from street id
     return streetAllLength.at(street_id);
 }
 
@@ -417,9 +407,6 @@ void closeMap() {
  * HELPER FUNCTIONS
  ********************************************************************************************************************************/
 void m1_init(){
-    // *******************************************************************
-    // Numbers
-    // *******************************************************************
     // Retrive total numbers from API
     segmentNum = getNumStreetSegments();
     streetNum = getNumStreets();
@@ -460,7 +447,7 @@ void m1_init(){
         }
 
         // Pre-calculate travel time of each street segments
-        processedInfo.travel_time = processedInfo.length/rawInfo.speedLimit;        // TODO: Optimize division
+        processedInfo.travel_time = processedInfo.length/rawInfo.speedLimit;
 
         // Push processed info into vector
         Segment_SegmentDetailedInfo.push_back(processedInfo);
