@@ -65,12 +65,12 @@ int streetNum;
 class StreetSegmentDetailedInfo{
     public:
         OSMID wayOSMID;             // OSM ID of the source way
-                                        // NOTE: Multiple segments may match a single OSM way ID
-        IntersectionIdx from, to;  // intersection ID this segment runs from/to
+                                    // NOTE: Multiple segments may match a single OSM way ID
+        IntersectionIdx from, to;   // intersection ID this segment runs from/to
         bool oneWay;
         double length;
         double travel_time;
-        StreetIdx streetID;     // index of street this segment belongs to
+        StreetIdx streetID;         // index of street this segment belongs to
 };
 // Index: Segment id, Value: Processed information of the segment
 std::vector<StreetSegmentDetailedInfo> Segment_SegmentDetailedInfo;
@@ -78,6 +78,7 @@ std::vector<StreetSegmentDetailedInfo> Segment_SegmentDetailedInfo;
 // *******************************************************************
 // Intersections
 // *******************************************************************
+
 // class of distance from intersection to a location
 class IntersectionDistance{
 public:
@@ -93,6 +94,8 @@ std::vector<std::vector<StreetSegmentIdx>> Intersection_AllStreetSegments;
 
 // Keys: Street id, Value: vector of all segments corresponding to that Street
 std::unordered_map<StreetIdx, std::vector<StreetSegmentIdx>> Streets_AllSegments;
+// Keys: Street id, Value: vector of all intersections within that Street
+std::unordered_map<StreetIdx, std::vector<IntersectionIdx>> Streets_AllIntersections;
 // Keys: Street id, Value: length of the street
 std::unordered_map<StreetIdx, double> streetAllLength;
 // Keys: Street names, Value: street index
@@ -116,7 +119,7 @@ bool loadMap(std::string map_streets_database_filename) {
     map_osm_database_filename = tempChar;
     map_osm_database_filename.append(".osm.bin");
 
-    //load both StreetsDatabase and OSMDatabase if never loaded
+    //load both StreetsDatabase and OSMDatabase
     load_successful = loadStreetsDatabaseBIN(map_streets_database_filename) &&
                     loadOSMDatabaseBIN(map_osm_database_filename);
 
@@ -171,7 +174,7 @@ double findStreetSegmentTravelTime(StreetSegmentIdx street_segment_id){
 // include the intersection in the returned vector (no special handling needed).
 // Speed Requirement --> high 
 
-// have not done the corner case
+// TODO: have not done the corner case
 std::vector<IntersectionIdx> findAdjacentIntersections(IntersectionIdx intersection_id){
     std::vector<IntersectionIdx> adjacentIntersections;
     std::vector<StreetSegmentIdx> stSegments = findStreetSegmentsOfIntersection(intersection_id);
@@ -242,11 +245,7 @@ std::vector<IntersectionIdx> findIntersectionsOfStreet(StreetIdx street_id){
     //sort + unique to remove all the duplicates
     sort(IntersectionsOfStreet.begin(), IntersectionsOfStreet.end());
     IntersectionsOfStreet.erase(unique(IntersectionsOfStreet.begin(), IntersectionsOfStreet.end()), IntersectionsOfStreet.end());
-    
-    //using set to remove duplicates (somehow slower than the first method)
-//    std::set<IntersectionIdx> IntersectionsOfStreetSet (IntersectionsOfStreet.begin(), IntersectionsOfStreet.end());
-//    IntersectionsOfStreet.assign(IntersectionsOfStreetSet.begin(), IntersectionsOfStreetSet.end());
-    
+
     return IntersectionsOfStreet;
     
 }
@@ -261,20 +260,12 @@ std::vector<IntersectionIdx> findIntersectionsOfStreet(StreetIdx street_id){
 std::vector<IntersectionIdx> findIntersectionsOfTwoStreets(StreetIdx street_id1, StreetIdx street_id2){
     std::vector<IntersectionIdx> intersectionTwoSt;
     
-    std::vector<IntersectionIdx> street1Intersection = findIntersectionsOfStreet(street_id1);
-    std::vector<IntersectionIdx> street2Intersection = findIntersectionsOfStreet(street_id2);
-    
-    //  for(auto& i : street1Intersection){
-    //      for(auto& j : street2Intersection)
-    //          if(i == j)
-    //              intersectionTwoSt.push_back(j);
-    //  }
+    std::vector<IntersectionIdx> street1Intersection = Streets_AllIntersections[street_id1];
+    std::vector<IntersectionIdx> street2Intersection = Streets_AllIntersections[street_id2];
 
-    for(auto& i : street1Intersection){
-         auto it = std::find(street2Intersection.begin(), street2Intersection.end(), i);
-            if(it != street2Intersection.end())
-                intersectionTwoSt.push_back(i);
-     }
+    std::set_intersection(street1Intersection.begin(), street1Intersection.end(),
+                        street2Intersection.begin(), street2Intersection.end(),
+                        std::back_inserter(intersectionTwoSt));
     
     return intersectionTwoSt;
 }
@@ -402,6 +393,7 @@ void closeMap() {
     Segment_SegmentDetailedInfo.clear();
     Intersection_AllStreetSegments.clear();
     Streets_AllSegments.clear();
+    Streets_AllIntersections.clear();
     streetAllLength.clear();
     StreetName_StreetIdx.clear();
 
@@ -413,15 +405,21 @@ void closeMap() {
  * HELPER FUNCTIONS
  ********************************************************************************************************************************/
 void m1_init(){
+    // *******************************************************************
+    // Numbers
+    // *******************************************************************
     // Retrive total numbers from API
     segmentNum = getNumStreetSegments();
     streetNum = getNumStreets();
     intersectionNum = getNumIntersections();
 
+    // *******************************************************************
+    // Street Segments
+    // *******************************************************************
     // Vector of StreetSegmentDetailedInfo (StreetSegmentIdx - StreetSegmentDetailedInfo)
-    for (int segment = 0; segment < segmentNum; segment++){         // Corresponds to id of all street segments
-        StreetSegmentInfo rawInfo = getStreetSegmentInfo(segment);  // Raw info object   
-        StreetSegmentDetailedInfo processedInfo;                    // Processed info object
+    for (int segment = 0; segment < segmentNum; segment++){                 // Corresponds to id of all street segments
+        StreetSegmentInfo rawInfo = getStreetSegmentInfo(segment);          // Raw info object   
+        StreetSegmentDetailedInfo processedInfo;                            // Processed info object
         
         processedInfo.wayOSMID = rawInfo.wayOSMID;
         processedInfo.from = rawInfo.from;
@@ -456,6 +454,9 @@ void m1_init(){
         Segment_SegmentDetailedInfo.push_back(processedInfo);
     }
 
+    // *******************************************************************
+    // Intersections
+    // *******************************************************************
     // Vector for Intersection (IntersectionIdx - Vector of Segments)
     for (IntersectionIdx intersection = 0; intersection < intersectionNum; intersection++){
         std::vector<StreetSegmentIdx> allSegments;
@@ -466,8 +467,11 @@ void m1_init(){
         Intersection_AllStreetSegments.push_back(allSegments);
     }
 
-    // Unordered Map for Streets (StreetIdx - Vector of All Segments)
+    // *******************************************************************
+    // Streets
+    // *******************************************************************
     for(int j = 0; j < segmentNum; ++j){
+        // Unordered Map for Streets (StreetIdx - Vector of All Segments)
         StreetSegmentDetailedInfo segmentInfo = Segment_SegmentDetailedInfo[j];
         if (Streets_AllSegments.find(segmentInfo.streetID) == Streets_AllSegments.end()){
             std::vector<StreetSegmentIdx> segmentsVector;
@@ -477,31 +481,29 @@ void m1_init(){
         else {
             Streets_AllSegments.at(segmentInfo.streetID).push_back(j);
         }
-    }
-
-    //Unordered Map for Streets (StreetIdx - length of street)
-    for(int j = 0; j < segmentNum; ++j){
-        StreetSegmentDetailedInfo tempInfo = Segment_SegmentDetailedInfo[j];
+        
+        //Unordered Map for Streets (StreetIdx - length of street)
         double tempLength = Segment_SegmentDetailedInfo[j].length;
-        if (streetAllLength.find(tempInfo.streetID) == streetAllLength.end()){
-            streetAllLength.insert(std::make_pair(tempInfo.streetID, tempLength));
+        if (streetAllLength.find(segmentInfo.streetID) == streetAllLength.end()){
+            streetAllLength.insert(std::make_pair(segmentInfo.streetID, tempLength));
         }
         else {
-            streetAllLength.at(tempInfo.streetID) += tempLength;
+            streetAllLength.at(segmentInfo.streetID) += tempLength;
         }
     }
 
-    // Populate ordered multimap for Streets (StreetName - Street index)
     for (auto& pair : Streets_AllSegments){
+        // Populate ordered multimap for Streets (StreetName - Street index)
         std::string str = getStreetName(pair.first);
-        // Save street names in Multimap as lowercase, no space
         std::string streetName = "";
         for (auto& c : str){
             if (c == ' ') continue;
-            streetName.push_back(char(tolower(c)));
+            streetName.push_back(char(tolower(c))); // Save names as lowercase, no space
         }
-        // Create a pair of (name, streetidx) and add to ordered multimap
-        StreetName_StreetIdx.insert(std::make_pair(streetName, pair.first));
+        StreetName_StreetIdx.insert(std::make_pair(streetName, pair.first)); // Add (name, streetidx) pair
+
+        // 2D Vector for Streets (StreetIdx - Vector of All Intersections)
+        Streets_AllIntersections[pair.first] = findIntersectionsOfStreet(pair.first);
     }
 }
 
