@@ -8,3 +8,10 @@ libstreetmap.a
 test_libstreetmap
 **/.nfs*
 null.d
+nbproject
+.nbproject_*
+build
+mapper
+libstreetmap.a
+test_libstreetmap
+null.d
