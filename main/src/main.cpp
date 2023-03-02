@@ -22,7 +22,7 @@
 #include <string>
 
 #include "m1.h"
-
+#include "m2.h"
 //Program exit codes
 constexpr int SUCCESS_EXIT_CODE = 0;        //Everyting went OK
 constexpr int ERROR_EXIT_CODE = 1;          //An error occured
@@ -64,8 +64,7 @@ int main(int argc, char** argv) {
     std::cout << "Successfully loaded map '" << map_path << "'\n";
 
     //You can now do something with the map data
-    std::vector<IntersectionIdx> a = findIntersectionsOfStreet(100);
-    std::cout << a[5] << std::endl;
+    drawMap();
     
     //Clean-up the map data and related data structures
     std::cout << "Closing map\n";

@@ -18,6 +18,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+
 #include "m1.h"
 #include "m2.h"
 #include "ezgl/application.hpp"
@@ -30,20 +31,20 @@ struct IntersectionInfo{
 };
 
 std::vector<IntersectionInfo> IntersectionInfoVec;
-
+int intersectionNumber = getNumIntersections();
 // helper function declaration
 void draw_main_canvas (ezgl::renderer *g);
 void draw_map_blank_canvas();
-void intersection_init();
+//void intersection_init();
 
-void intersection_init(){
-    IntersectionInfoVec.resize(getNumIntersections());
-    for (IntersectionIdx intersection = 0; intersection < getNumIntersections(); intersection++){
+/*void intersection_init(){
+    IntersectionInfoVec.resize(intersectionNumber);
+    for (IntersectionIdx intersection = 0; intersection < intersectionNumber; intersection++){
         
         IntersectionInfoVec[intersection].position = getIntersectionPosition(intersection);
         IntersectionInfoVec[intersection].name = getIntersectionName(intersection);
     }
-}
+}*/
 
 void draw_map_blank_canvas(){
     ezgl::application::settings settings;
@@ -63,9 +64,17 @@ void draw_map_blank_canvas(){
 }
 
 void draw_main_canvas(ezgl::renderer *g){
-    g->set_color(0,0,0);
-    g->set_line_width(2);
     g->draw_rectangle({0,0}, {1000,1000});
+    
+    /*for(size_t intersection = 0; intersection < IntersectionInfoVec.size(); intersection++){
+        float x = IntersectionInfoVec[intersection].position.longitude();
+        float y = IntersectionInfoVec[intersection].position.latitude();
+        
+        float width  = 2;
+        float hight = width;
+        
+        g->fill_rectangle({x,y}, {x + width, y + hight});
+    }*/
 }
 
 
