@@ -19,6 +19,7 @@
  * SOFTWARE.
  */
 #include "m1.h"
+#include "globals.h"
 #include "StreetsDatabaseAPI.h"
 #include "OSMDatabaseAPI.h"
 #include <iostream>
@@ -51,31 +52,18 @@ int streetNum;
 // *******************************************************************
 // Street Segments
 // *******************************************************************
-
-// Pre-processed information of each street segment
-struct StreetSegmentDetailedInfo{
-    OSMID wayOSMID;             // OSM ID of the source way
-                                // NOTE: Multiple segments may match a single OSM way ID
-    IntersectionIdx from, to;   // intersection ID this segment runs from/to
-    bool oneWay;
-    double length;
-    double travel_time;
-    StreetIdx streetID;         // index of street this segment belongs to
-};
 // Index: Segment id, Value: Processed information of the segment
 std::vector<StreetSegmentDetailedInfo> Segment_SegmentDetailedInfo;
 
 // *******************************************************************
 // Intersections
 // *******************************************************************
-
 // Index: Intersection id, Value: vector of all segments that cross through the intersection
 std::vector<std::vector<StreetSegmentIdx>> Intersection_AllStreetSegments;
 
 // *******************************************************************
 // Streets
 // *******************************************************************
-
 // Keys: Street id, Value: vector of all segments corresponding to that Street
 std::unordered_map<StreetIdx, std::vector<StreetSegmentIdx>> Streets_AllSegments;
 // Keys: Street id, Value: vector of all intersections within that Street
@@ -337,21 +325,21 @@ double findFeatureArea(FeatureIdx feature_id){
     // If polygon is closed
     if ((firstPoint.latitude() == secondPoint.latitude()) && (firstPoint.longitude() == secondPoint.longitude())){
         // Calculate the area of the polygon
-        for (int index = 0; index < numberOfPoints-1; index++){
+        for (int index = 0; index < numberOfPoints - 1; index++){
             firstPoint = getFeaturePoint(feature_id, index);
             secondPoint = getFeaturePoint(feature_id, index + 1);
             lat1 = firstPoint.latitude() * kDegreeToRadian;
             lon1 = firstPoint.longitude() * kDegreeToRadian;
             lat2 = secondPoint.latitude() * kDegreeToRadian;
             lon2 = secondPoint.longitude() * kDegreeToRadian;
-            latavg = (lat1 + lat2)/2;
+            latavg = (lat1 + lat2) / 2;
 
             x1 = kEarthRadiusInMeters * lon1 * cos(latavg);
             y1 = kEarthRadiusInMeters * lat1;
             x2 = kEarthRadiusInMeters * lon2 * cos(latavg);
             y2 = kEarthRadiusInMeters * lat2;
             
-            featureArea = featureArea + (y2 - y1) * std::abs((x1+x2)/2);
+            featureArea = featureArea + (y2 - y1) * std::abs((x1 + x2) / 2);
         }
         return std::abs(featureArea);
     } 
@@ -409,7 +397,6 @@ void m1_init(){
     init_intersections();
     init_streets();
     init_osm();
-
 }
 
 // *******************************************************************

@@ -20,10 +20,13 @@
  */
 #include "m1.h"
 #include "m2.h"
+#include "globals.h"
 #include "ezgl/application.hpp"
 #include "ezgl/graphics.hpp"
 
-// global structures and variables
+/*******************************************************************************************************************************
+ * GLOBAL VARIABLES AND HELPER FUNCTION DECLARATION
+ ********************************************************************************************************************************/
 struct IntersectionInfo{
     LatLon position;
     std::string name;
@@ -31,15 +34,38 @@ struct IntersectionInfo{
 
 std::vector<IntersectionInfo> IntersectionInfoVec;
 
-// helper function declaration
+// *************************************************
+// Function Declarations
+// *************************************************
 void draw_main_canvas (ezgl::renderer *g);
 void draw_map_blank_canvas();
 void intersection_init();
 
+/*******************************************************************************************************************************
+ * DRAW MAP
+ ********************************************************************************************************************************/
+void drawMap() {
+   // Set up the ezgl graphics window and hand control to it, as shown in the 
+   // ezgl example program. 
+   // This function will be called by both the unit tests (ece297exercise) 
+   // and your main() function in main/src/main.cpp.
+   // The unit tests always call loadMap() before calling this function
+   // and call closeMap() after this function returns.
+    
+    
+   // Demo 1 
+    draw_map_blank_canvas();
+   // Demo 2
+}
+
+
+/*******************************************************************************************************************************
+ * HELPER FUNCTIONS
+ ********************************************************************************************************************************/
+
 void intersection_init(){
-    IntersectionInfoVec.resize(getNumIntersections());
+    IntersectionInfoVec.resize(intersectionNum);
     for (IntersectionIdx intersection = 0; intersection < getNumIntersections(); intersection++){
-        
         IntersectionInfoVec[intersection].position = getIntersectionPosition(intersection);
         IntersectionInfoVec[intersection].name = getIntersectionName(intersection);
     }
@@ -59,22 +85,11 @@ void draw_map_blank_canvas(){
     
     application.run(nullptr, nullptr, 
                     nullptr, nullptr);
-    
 }
 
 void draw_main_canvas(ezgl::renderer *g){
     g->set_color(0,0,0);
-    g->set_line_width(2);
+    g->set_line_width(10);
     g->draw_rectangle({0,0}, {1000,1000});
 }
 
-
-void drawMap() {
-   // Set up the ezgl graphics window and hand control to it, as shown in the 
-   // ezgl example program. 
-   // This function will be called by both the unit tests (ece297exercise) 
-   // and your main() function in main/src/main.cpp.
-   // The unit tests always call loadMap() before calling this function
-   // and call closeMap() after this function returns.
-   draw_map_blank_canvas();
-}
