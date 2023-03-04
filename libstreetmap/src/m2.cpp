@@ -80,17 +80,14 @@ void draw_main_canvas(ezgl::renderer *g){
         // TODO: fix the centre of intersection
         float width = 10;
         float height = width;
-        // Draw intersections corresponding to each segment. Not drawing curve points. 
-        g->fill_rectangle(Intersection_IntersectionInfo[from_id].position_xy, width, height);
-        g->fill_rectangle(Intersection_IntersectionInfo[to_id].position_xy, width, height);
 
         // Draw street segments
         ezgl::point2d from_xy = Intersection_IntersectionInfo[from_id].position_xy;
         ezgl::point2d to_xy = Intersection_IntersectionInfo[to_id].position_xy;
-        
+        ezgl::point2d mid_xy = {(from_xy.x + to_xy.x) / 2, (from_xy.y + to_xy.y) / 2};
         ezgl::point2d curve_pt_xy;          // Temp xy for current curve point. 
                                             // Starts drawing at from_xy to first curve point.
-
+        
         // Connecting curvepoints. Increment from_xy.
         for (int i = 0; i < Segment_SegmentDetailedInfo[seg_id].numCurvePoints; i++)
         {
@@ -100,8 +97,24 @@ void draw_main_canvas(ezgl::renderer *g){
         }
         // Connect last curve point to (x_to, y_to)
         g->draw_line(from_xy, to_xy);
+        
+//        Intersection_IntersectionInfo[from_id].position_xy.x -= 5;
+//        Intersection_IntersectionInfo[from_id].position_xy.y -= 5;
+        // Draw intersections corresponding to each segment. Not drawing curve points. 
+        g->fill_rectangle({Intersection_IntersectionInfo[from_id].position_xy.x - 5, 
+                           Intersection_IntersectionInfo[from_id].position_xy.y - 5}, 
+                           width, height);
+        g->fill_rectangle({Intersection_IntersectionInfo[to_id].position_xy.x - 5, 
+                           Intersection_IntersectionInfo[to_id].position_xy.y - 5}, 
+                           width, height);
+                           
+        // draws text on street segments
+//        std::string stName = getStreetName(Segment_SegmentDetailedInfo[seg_id].streetID);
+//        //g->set_color(0, 0, 0, 100);
+//        g->set_font_size(7);
+//        g->draw_text(mid_xy, stName);                 
     }
-      
+             
    auto currTime = std::chrono::high_resolution_clock::now();
    auto wallClock = std::chrono::duration_cast<std::chrono::duration<double>>(currTime - startTime);
    std::cout << "draw main cavas took " << wallClock.count() << " seconds" << std::endl;

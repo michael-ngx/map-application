@@ -44,7 +44,7 @@ struct StreetSegmentDetailedInfo{
     double length;
     double travel_time;
     StreetIdx streetID;         // Index of street this segment belongs to
-
+    std::string streetName;
     int numCurvePoints;      // number of curve points between the ends
     std::vector<ezgl::point2d> curvePoints_xy; // Vector of xy for all curvepoints
 };

@@ -425,7 +425,8 @@ void init_segments(){
         processedInfo.oneWay = rawInfo.oneWay;
         processedInfo.streetID = rawInfo.streetID;
         processedInfo.numCurvePoints = rawInfo.numCurvePoints;
-
+        processedInfo.streetName = getStreetName(processedInfo.streetID);
+        
         // Pre-calculate length of each street segments (including curve points)
         if (rawInfo.numCurvePoints == 0){
             LatLon point_1 = getIntersectionPosition(rawInfo.from);
