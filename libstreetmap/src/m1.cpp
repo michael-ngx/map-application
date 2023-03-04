@@ -413,6 +413,7 @@ void init_segments(){
         processedInfo.to = rawInfo.to;
         processedInfo.oneWay = rawInfo.oneWay;
         processedInfo.streetID = rawInfo.streetID;
+        processedInfo.numCurvePoints = rawInfo.numCurvePoints;
 
         // Pre-calculate length of each street segments (including curve points)
         if (rawInfo.numCurvePoints == 0){
@@ -426,6 +427,7 @@ void init_segments(){
             // Iterate through all curve points
             for (int i = 0; i < rawInfo.numCurvePoints; i++){
                 LatLon point_2 = getStreetSegmentCurvePoint(segment, i);
+                processedInfo.curvePoints.push_back(point_2);
                 double templength = findDistanceBetweenTwoPoints(point_1, point_2);
                 processedInfo.length += templength;
                 point_1 = point_2;

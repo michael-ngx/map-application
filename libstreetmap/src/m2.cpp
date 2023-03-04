@@ -73,6 +73,7 @@ void drawMap() {
  * HELPER FUNCTIONS
  ********************************************************************************************************************************/
 
+// Initialize IntersectionInfoVec
 void intersection_init(){
     IntersectionInfoVec.resize(intersectionNum);
     max_lat = getIntersectionPosition(0).latitude();
@@ -110,14 +111,38 @@ void draw_map_blank_canvas(){
 
 void draw_main_canvas(ezgl::renderer *g){
     g->set_color(0,0,0);
-    
-    for(size_t i = 0; i < IntersectionInfoVec.size(); i++){
-          float x = x_from_lon(IntersectionInfoVec[i].position.longitude());
-          float y = y_from_lat(IntersectionInfoVec[i].position.latitude());
-          float width = 100;
-          float height = width;
-        
-          g->fill_rectangle({x,y}, {x + width, y + height});
+
+    for (int seg_id = 0; seg_id < segmentNum; seg_id++){
+        // Get LatLon information of from and to intersections from each segments
+        IntersectionIdx from_id = Segment_SegmentDetailedInfo[seg_id].from;
+        IntersectionIdx to_id = Segment_SegmentDetailedInfo[seg_id].to;
+        float x_from = x_from_lon(IntersectionInfoVec[from_id].position.longitude());
+        float y_from = y_from_lat(IntersectionInfoVec[from_id].position.latitude());
+        float x_to = x_from_lon(IntersectionInfoVec[to_id].position.longitude());
+        float y_to = y_from_lat(IntersectionInfoVec[to_id].position.latitude());
+
+        // Temp x and y for current curve point. Starts drawing at (x_from, y_from) to first curve point.
+        float curve_from_x = x_from;
+        float curve_from_y = y_from;
+        float curve_to_x, curve_to_y;
+
+        // Draw street segments by drawing between curvepoints
+        for (int i = 0; i < Segment_SegmentDetailedInfo[seg_id].numCurvePoints; i++){
+            curve_to_x = x_from_lon(Segment_SegmentDetailedInfo[seg_id].curvePoints[i].longitude());
+            curve_to_y = y_from_lat(Segment_SegmentDetailedInfo[seg_id].curvePoints[i].latitude());
+            g->draw_line({curve_from_x, curve_from_y}, {curve_to_x, curve_to_y});
+            curve_from_x = curve_to_x;
+            curve_from_y = curve_to_y;
+        }
+        // Connect last curve point to (x_to, y_to)
+        g->draw_line({curve_from_x, curve_from_y}, {x_to, y_to});
+
+        // Draw intersections corresponding to segment. Not drawing curve points. 
+        float width = 10;
+        float height = width;
+        g->fill_rectangle({x_from, y_from}, {x_from + width, y_from + height});
+        // Only draw once if from == to
+        if (x_from != x_to && y_from != y_to) g->fill_rectangle({x_to, y_to}, {x_to + width, y_to + height});
     }
 }
 

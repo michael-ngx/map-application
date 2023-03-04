@@ -27,11 +27,14 @@ extern int streetNum;
 struct StreetSegmentDetailedInfo{
     OSMID wayOSMID;             // OSM ID of the source way
                                 // NOTE: Multiple segments may match a single OSM way ID
-    IntersectionIdx from, to;   // intersection ID this segment runs from/to
+    IntersectionIdx from, to;   // Intersection ID this segment runs from/to
     bool oneWay;
     double length;
     double travel_time;
-    StreetIdx streetID;         // index of street this segment belongs to
+    StreetIdx streetID;         // Index of street this segment belongs to
+
+    int numCurvePoints;      // number of curve points between the ends
+    std::vector<LatLon> curvePoints;    // Vector of LatLon for all curvepoints
 };
 // Index: Segment id, Value: Processed information of the segment
 extern std::vector<StreetSegmentDetailedInfo> Segment_SegmentDetailedInfo;
