@@ -78,9 +78,9 @@ void draw_main_canvas(ezgl::renderer *g){
         IntersectionIdx to_id = Segment_SegmentDetailedInfo[seg_id].to;
 
         // TODO: fix the centre of intersection
-        float width = 10;
+        float width = 1;
         float height = width;
-
+        float midpoint = width / 2;
         // Draw street segments
         ezgl::point2d from_xy = Intersection_IntersectionInfo[from_id].position_xy;
         ezgl::point2d to_xy = Intersection_IntersectionInfo[to_id].position_xy;
@@ -101,11 +101,11 @@ void draw_main_canvas(ezgl::renderer *g){
 //        Intersection_IntersectionInfo[from_id].position_xy.x -= 5;
 //        Intersection_IntersectionInfo[from_id].position_xy.y -= 5;
         // Draw intersections corresponding to each segment. Not drawing curve points. 
-        g->fill_rectangle({Intersection_IntersectionInfo[from_id].position_xy.x - 5, 
-                           Intersection_IntersectionInfo[from_id].position_xy.y - 5}, 
+        g->fill_rectangle({Intersection_IntersectionInfo[from_id].position_xy.x - midpoint, 
+                           Intersection_IntersectionInfo[from_id].position_xy.y - midpoint}, 
                            width, height);
-        g->fill_rectangle({Intersection_IntersectionInfo[to_id].position_xy.x - 5, 
-                           Intersection_IntersectionInfo[to_id].position_xy.y - 5}, 
+        g->fill_rectangle({Intersection_IntersectionInfo[to_id].position_xy.x - midpoint, 
+                           Intersection_IntersectionInfo[to_id].position_xy.y - midpoint}, 
                            width, height);
                            
         // draws text on street segments
