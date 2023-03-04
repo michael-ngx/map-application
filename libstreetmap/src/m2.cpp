@@ -25,6 +25,7 @@
 #include "ezgl/graphics.hpp"
 #include "LatLon.h"
 #include <cmath>
+#include <chrono>
 /*******************************************************************************************************************************
  * GLOBAL VARIABLES AND HELPER FUNCTION DECLARATION
  ********************************************************************************************************************************/
@@ -110,8 +111,9 @@ void draw_map_blank_canvas(){
 }
 
 void draw_main_canvas(ezgl::renderer *g){
+    auto startTime = std::chrono::high_resolution_clock::now();
     g->set_color(0,0,0);
-
+    
     for (int seg_id = 0; seg_id < segmentNum; seg_id++){
         // Get LatLon information of from and to intersections from each segments
         IntersectionIdx from_id = Segment_SegmentDetailedInfo[seg_id].from;
@@ -120,7 +122,7 @@ void draw_main_canvas(ezgl::renderer *g){
         float y_from = y_from_lat(IntersectionInfoVec[from_id].position.latitude());
         float x_to = x_from_lon(IntersectionInfoVec[to_id].position.longitude());
         float y_to = y_from_lat(IntersectionInfoVec[to_id].position.latitude());
-
+            
         // Temp x and y for current curve point. Starts drawing at (x_from, y_from) to first curve point.
         float curve_from_x = x_from;
         float curve_from_y = y_from;
@@ -136,14 +138,24 @@ void draw_main_canvas(ezgl::renderer *g){
         }
         // Connect last curve point to (x_to, y_to)
         g->draw_line({curve_from_x, curve_from_y}, {x_to, y_to});
-
-        // Draw intersections corresponding to segment. Not drawing curve points. 
+        
+        // fixing the centre of intersection
+        x_from -= 5;
+        y_from -= 5;
+        x_to -= 5;
+        y_to -= 5;
+        
+                // Draw intersections corresponding to segment. Not drawing curve points. 
         float width = 10;
         float height = width;
         g->fill_rectangle({x_from, y_from}, {x_from + width, y_from + height});
         // Only draw once if from == to
         if (x_from != x_to && y_from != y_to) g->fill_rectangle({x_to, y_to}, {x_to + width, y_to + height});
     }
+      
+    auto currTime = std::chrono::high_resolution_clock::now();
+    auto wallClock = std::chrono::duration_cast<std::chrono::duration<double>>(currTime - startTime);
+    std::cout << "draw main cavas took " << wallClock.count() << " seconds" << std::endl;
 }
 
 // converts longitude to float value
