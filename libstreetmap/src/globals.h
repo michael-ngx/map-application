@@ -8,9 +8,21 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
+#include "ezgl/application.hpp"
+#include "ezgl/graphics.hpp"
 #include <unordered_map>
 #include <map>
 #include <vector>
+
+// *******************************************************************
+// Latlon bounds
+// *******************************************************************
+extern LatLonBounds latlon_bound;
+extern double max_lat, max_lon;
+extern double min_lat, min_lon;
+extern double lat_avg;
+
+ezgl::point2d xy_from_latlon(LatLon latlon);
 
 // *******************************************************************
 // Numbers (counts)
@@ -34,7 +46,7 @@ struct StreetSegmentDetailedInfo{
     StreetIdx streetID;         // Index of street this segment belongs to
 
     int numCurvePoints;      // number of curve points between the ends
-    std::vector<LatLon> curvePoints;    // Vector of LatLon for all curvepoints
+    std::vector<ezgl::point2d> curvePoints_xy; // Vector of xy for all curvepoints
 };
 // Index: Segment id, Value: Processed information of the segment
 extern std::vector<StreetSegmentDetailedInfo> Segment_SegmentDetailedInfo;
@@ -45,6 +57,15 @@ extern std::vector<StreetSegmentDetailedInfo> Segment_SegmentDetailedInfo;
 
 // Index: Intersection id, Value: vector of all segments that cross through the intersection
 extern std::vector<std::vector<StreetSegmentIdx>> Intersection_AllStreetSegments;
+
+// Struct for preprocessed information of Intersections
+struct IntersectionInfo{
+    ezgl::point2d position_xy;
+    std::string name;
+};
+
+// Index: Intersection id, Value: Pre-processed Intersection info
+extern std::vector<IntersectionInfo> Intersection_IntersectionInfo;
 
 // *******************************************************************
 // Streets

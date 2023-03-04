@@ -43,6 +43,14 @@ void init_streets();
 void init_osm();
 
 // *******************************************************************
+// Latlon bounds of current city
+// *******************************************************************
+LatLonBounds latlon_bound;
+double max_lat, max_lon;
+double min_lat, min_lon;
+double lat_avg;
+
+// *******************************************************************
 // Numbers (counts)
 // *******************************************************************
 int intersectionNum;
@@ -60,6 +68,8 @@ std::vector<StreetSegmentDetailedInfo> Segment_SegmentDetailedInfo;
 // *******************************************************************
 // Index: Intersection id, Value: vector of all segments that cross through the intersection
 std::vector<std::vector<StreetSegmentIdx>> Intersection_AllStreetSegments;
+// Index: Intersection id, Value: Pre-processed Intersection info
+std::vector<IntersectionInfo> Intersection_IntersectionInfo;
 
 // *******************************************************************
 // Streets
@@ -374,6 +384,7 @@ void closeMap() {
     //Clean-up your map related data structures here
     Segment_SegmentDetailedInfo.clear();
     Intersection_AllStreetSegments.clear();
+    Intersection_IntersectionInfo.clear();
     Streets_AllSegments.clear();
     Streets_AllIntersections.clear();
     streetAllLength.clear();
@@ -393,8 +404,8 @@ void m1_init(){
     streetNum = getNumStreets();
     intersectionNum = getNumIntersections();
     // Init database
-    init_segments();
     init_intersections();
+    init_segments();
     init_streets();
     init_osm();
 }
@@ -427,9 +438,9 @@ void init_segments(){
             // Iterate through all curve points
             for (int i = 0; i < rawInfo.numCurvePoints; i++){
                 LatLon point_2 = getStreetSegmentCurvePoint(segment, i);
-                processedInfo.curvePoints.push_back(point_2);
                 double templength = findDistanceBetweenTwoPoints(point_1, point_2);
                 processedInfo.length += templength;
+                processedInfo.curvePoints_xy.push_back(xy_from_latlon(point_2));    // Save the xy of curve point
                 point_1 = point_2;
             }
             LatLon point_2 = getIntersectionPosition(rawInfo.to);                   // Destination (to) point
@@ -445,18 +456,51 @@ void init_segments(){
 }
 
 // *******************************************************************
-// Intersections
+// Intersections and LatLon
 // *******************************************************************
 void init_intersections(){
-    // Vector for Intersection (IntersectionIdx - Vector of Segments)
-    for (IntersectionIdx intersection = 0; intersection < intersectionNum; intersection++){
+    Intersection_IntersectionInfo.resize(intersectionNum);
+
+    // Find max and min lat, lon of intersection in city
+    max_lat = getIntersectionPosition(0).latitude();
+    max_lon = getIntersectionPosition(0).longitude();
+    min_lat = max_lat;
+    min_lon = max_lon;
+
+    for (IntersectionIdx id = 0; id < intersectionNum; id++){
+        // Find max and min lat, lon of city
+        LatLon position_latlon = getIntersectionPosition(id);
+        max_lat = std::max(max_lat, position_latlon.latitude());
+        max_lon = std::max(max_lon, position_latlon.longitude());
+        min_lat = std::min(min_lat, position_latlon.latitude());
+        min_lon = std::min(min_lon, position_latlon.longitude());
+        
+        // Initialize vector for Intersection (IntersectionIdx - Vector of Segments)
         std::vector<StreetSegmentIdx> allSegments;
-        for(int segment = 0; segment < getNumIntersectionStreetSegment(intersection); segment++) {
-            StreetSegmentIdx ss_id = getIntersectionStreetSegment(intersection, segment);
+        for(int segment = 0; segment < getNumIntersectionStreetSegment(id); segment++) {
+            StreetSegmentIdx ss_id = getIntersectionStreetSegment(id, segment);
             allSegments.push_back(ss_id);
         }
         Intersection_AllStreetSegments.push_back(allSegments);
     }
+
+    // Pre-process xy position for all intersections (xy_from_latlon conversion function needs max_lat and min_lat)
+    lat_avg = (max_lat + min_lat) / 2;
+    latlon_bound.max = LatLon(max_lat, max_lon);
+    latlon_bound.min = LatLon(min_lat, min_lon);
+
+    for (IntersectionIdx id = 0; id < intersectionNum; id++){
+        Intersection_IntersectionInfo[id].name = getIntersectionName(id);
+        Intersection_IntersectionInfo[id].position_xy = xy_from_latlon(getIntersectionPosition(id));
+    }
+}
+
+// Converts LatLon to xy
+ezgl::point2d xy_from_latlon(LatLon latlon)
+{
+    double x = kEarthRadiusInMeters * latlon.longitude() * kDegreeToRadian * cos(lat_avg * kDegreeToRadian);
+    double y = kEarthRadiusInMeters * latlon.latitude() * kDegreeToRadian;
+    return ezgl::point2d(x, y);
 }
 
 // *******************************************************************
