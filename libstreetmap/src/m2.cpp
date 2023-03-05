@@ -109,10 +109,13 @@ void draw_main_canvas(ezgl::renderer *g){
                            width, height);
                            
         // draws text on street segments
-//        std::string stName = getStreetName(Segment_SegmentDetailedInfo[seg_id].streetID);
-//        //g->set_color(0, 0, 0, 100);
-//        g->set_font_size(7);
-//        g->draw_text(mid_xy, stName);                 
+        ezgl::rectangle rec;
+        rec = g->get_visible_screen();    
+        std::string stName = getStreetName(Segment_SegmentDetailedInfo[seg_id].streetID);
+        //g->set_color(0, 0, 0, 100);
+        g->set_font_size(7);
+        g->draw_text(mid_xy, stName, rec.m_second.x, rec.m_second.y);   
+          
     }
              
    auto currTime = std::chrono::high_resolution_clock::now();
