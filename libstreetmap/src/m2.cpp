@@ -28,18 +28,52 @@
 #include <string>
 
 double WORLD_AREA;
-float ZOOM_LIMIT_1 = 30;
+std::string CURRENT_CITY = " ";
+float ZOOM_LIMIT_1 = 30;            // TODO: Determine zoom limit based on both world and screen size
 float ZOOM_LIMIT_2 = 5;
 float ZOOM_LIMIT_3 = 1;
 double world_percent;
+
 /*******************************************************************************************************************************
- * HELPER FUNCTION DECLARATION
+ * FUNCTION DECLARATIONS
  ********************************************************************************************************************************/
+
+/*************************************************************
+ * Draw to the main canvas using the provided graphics object. 
+ * Runs every time graphics are refreshed/image zooms or pans
+ * The graphics object expects that x and y values will be in the main canvas' world coordinate system.
+ *************************************************************/
 void draw_main_canvas(ezgl::renderer *g);
+
+/*************************************************************
+ * Initial Setup is a mandatory function for any EZGL application, and is run whenever a window is opened. 
+ *************************************************************/
+void initial_setup(ezgl::application *application, bool new_window);
+
+/*************************************************************
+ * EVENT CALLBACK FUNCTIONS
+ * 
+ * These functions run whenever their corresponding event (key press, mouse move, or mouse click) occurs.
+ *************************************************************/
+void act_on_mouse_click(ezgl::application* app, GdkEventButton* event, double x, double y);
+void act_on_mouse_move(ezgl::application *application, GdkEventButton *event, double x, double y);
+void act_on_key_press(ezgl::application *application, GdkEventKey *event, char *key_name);
+
+/*************************************************************
+ * UI CALLBACK FUNCTIONS
+ * 
+ * These are example callback functions for the UI elements
+ *************************************************************/
+void city_change_cbk(GtkComboBoxText* self, ezgl::application* app);
+
+/************************************************************
+ * HELPER FUNCTIONS 
+ ************************************************************/
 void draw_street_segments(ezgl::renderer *g, StreetSegmentIdx seg_id, ezgl::point2d from_xy, ezgl::point2d to_xy);
 void draw_street_segment_names(ezgl::renderer *g, StreetSegmentIdx seg_id, ezgl::point2d mid_xy);
-void act_on_mouse_click(ezgl::application* app, GdkEventButton* event, double x, double y);
 void highlight_intersection(ezgl::renderer* g);
+std::string get_new_map_path(std::string text_string);
+
 /*******************************************************************************************************************************
  * DRAW MAP
  ********************************************************************************************************************************/
@@ -68,7 +102,8 @@ void drawMap()
 
     application.add_canvas("MainCanvas", draw_main_canvas, initial_world);
 
-    application.run(nullptr, act_on_mouse_click,
+
+    application.run(initial_setup, act_on_mouse_click,
                     nullptr, nullptr);
 }
 
@@ -137,11 +172,37 @@ void draw_main_canvas(ezgl::renderer *g)
 //    auto wallClock = std::chrono::duration_cast<std::chrono::duration<double>>(currTime - startTime);
 //    std::cout << "draw main cavas took " << wallClock.count() << " seconds" << std::endl;
 }
-
-/*******************************************************************************************************************************
- *  function that stores state of mouse clicks
+ 
+ /*******************************************************************************************************************************
+ * EVENT CALLBACKS
  ********************************************************************************************************************************/
-void act_on_mouse_click(ezgl::application* app, GdkEventButton* event, double x, double y){
+// Function called before the activation of the application
+void initial_setup(ezgl::application *application, bool /*new_window*/)
+{
+  // Update the status bar message
+  application->update_message("EZGL Application");
+
+  //Setting our starting row for insertion at 6 (Default zoom/pan buttons created by EZGL take up first five rows);
+  //We will increment row each time we insert a new element. 
+  int row = 6;
+
+  application->create_label(row++, "Select city:");
+
+  //Creating drop-down list for different cities, connected to city_change_cbk
+  application->create_combo_box_text(
+    "CitySelect", 
+    row++,
+    city_change_cbk,
+    {" ", "Toronto", "Beijing", "Cairo", "Cape Town", "Golden Horseshoe", 
+    "Hamilton", "Hong Kong", "Iceland", "Interlaken", "Kyiv",
+    "London", "New Delhi", "New York", "Rio de Janeiro", "Saint Helena",
+    "Singapore", "Sydney", "Tehran", "Tokyo"}
+  );
+}
+
+// Storing state of mouse clicks
+void act_on_mouse_click(ezgl::application* app, GdkEventButton* event, double x, double y)
+{
     LatLon pos = LatLon(latlon_from_xy(x, y));   
     int id = findClosestIntersection(pos);   
     Intersection_IntersectionInfo[id].highligh = true;
@@ -154,6 +215,37 @@ void act_on_mouse_click(ezgl::application* app, GdkEventButton* event, double x,
     ss << "Intersection selected: " << Intersection_IntersectionInfo[id].name;
     app->update_message(ss.str());
     app->refresh_drawing();
+}
+
+/*******************************************************************************************************************************
+ * UI CALLBACKS
+ ********************************************************************************************************************************/
+
+// Callback function for the city change drop down list.
+// Function trigerred when currently selected option changes. 
+void city_change_cbk(GtkComboBoxText* self, ezgl::application* app){
+    //Getting current text content
+    auto text = gtk_combo_box_text_get_active_text(self);
+    std::string text_string = text;
+    if(!text || text_string == " "){  //Returning if the combo box is currently empty (Always check to avoid errors)
+        return;
+    } else if (text_string != CURRENT_CITY) {                   // TODO: Current city might be reloaded if user select current city as their first choice
+        CURRENT_CITY = text_string;
+        std::string new_map_path = get_new_map_path(text_string);
+
+        // Closes current map and loads the new city
+        closeMap();
+        loadMap(new_map_path);
+        std::cout << "Loaded new map" << std::endl;
+        ezgl::rectangle new_world(xy_from_latlon(latlon_bound.min),
+                                    xy_from_latlon(latlon_bound.max));
+
+        WORLD_AREA = abs(xy_from_latlon(latlon_bound.max).x - xy_from_latlon(latlon_bound.min).x)
+                        * abs(xy_from_latlon(latlon_bound.max).y - xy_from_latlon(latlon_bound.min).y);
+        
+        app->change_canvas_world_coordinates("MainCanvas", new_world);
+        app->refresh_drawing();
+    }
 }
 
 /*******************************************************************************************************************************
@@ -191,20 +283,49 @@ void draw_street_segment_names(ezgl::renderer *g, StreetSegmentIdx seg_id, ezgl:
 
 // highlights selected intersection, and draws intersection like normal if nothing is selected
 void highlight_intersection(ezgl::renderer* g){
-    for(IntersectionIdx inter_id = 0; inter_id < intersectionNum; inter_id++){
+    for(IntersectionIdx inter_id = 0; inter_id < intersectionNum; inter_id++)
+    {
+              
         float width = 10;
         float height = width;
         ezgl::point2d inter_loc = Intersection_IntersectionInfo[inter_id].position_xy
                                   - ezgl::point2d{width / 2, height / 2};
-        if(Intersection_IntersectionInfo[inter_id].highligh){
+        if(Intersection_IntersectionInfo[inter_id].highligh)
+        {
             g->set_color(ezgl::RED);
-        }else{
-           g->set_color(0, 0, 0); 
+        } else
+        {
+            g->set_color(0, 0, 0); 
         }
                                                
-        if (world_percent <= ZOOM_LIMIT_3){   
+        if (world_percent <= ZOOM_LIMIT_3)
+        {   
                 g->fill_rectangle(inter_loc, width, height);              
         }
     }
 }
  
+std::string get_new_map_path(std::string text_string)
+{
+    std::string new_map_path;
+    if (text_string == "Toronto") new_map_path = "/cad2/ece297s/public/maps/toronto_canada.streets.bin";
+    else if (text_string == "Beijing") new_map_path = "/cad2/ece297s/public/maps/beijing_china.streets.bin";
+    else if (text_string == "Cairo") new_map_path = "/cad2/ece297s/public/maps/cairo_egypt.streets.bin";
+    else if (text_string == "Cape Town") new_map_path = "/cad2/ece297s/public/maps/cape-town_south-africa.streets.bin";
+    else if (text_string == "Golden Horseshoe") new_map_path = "/cad2/ece297s/public/maps/golden-horseshoe_canada.streets.bin";
+    else if (text_string == "Hamilton") new_map_path = "/cad2/ece297s/public/maps/hamilton_canada.streets.bin";
+    else if (text_string == "Hong Kong") new_map_path = "/cad2/ece297s/public/maps/hong-kong_china.streets.bin";
+    else if (text_string == "Iceland") new_map_path = "/cad2/ece297s/public/maps/iceland.streets.bin";
+    else if (text_string == "Interlaken") new_map_path = "/cad2/ece297s/public/maps/interlaken_switzerland.streets.bin";
+    else if (text_string == "Kyiv") new_map_path = "/cad2/ece297s/public/maps/kyiv_ukraine.streets.bin";
+    else if (text_string == "London") new_map_path = "/cad2/ece297s/public/maps/london_england.streets.bin";
+    else if (text_string == "New Delhi") new_map_path = "/cad2/ece297s/public/maps/new-delhi_india.streets.bin";
+    else if (text_string == "New York") new_map_path = "/cad2/ece297s/public/maps/new-york_usa.streets.bin";
+    else if (text_string == "Rio de Janeiro") new_map_path = "/cad2/ece297s/public/maps/rio-de-janeiro_brazil.streets.bin";
+    else if (text_string == "Saint Helena") new_map_path = "/cad2/ece297s/public/maps/saint-helena.streets.bin";
+    else if (text_string == "Singapore") new_map_path = "/cad2/ece297s/public/maps/singapore.streets.bin";
+    else if (text_string == "Sydney") new_map_path = "/cad2/ece297s/public/maps/sydney_australia.streets.bin";
+    else if (text_string == "Tehran") new_map_path = "/cad2/ece297s/public/maps/tehran_iran.streets.bin";
+    else if (text_string == "Tokyo") new_map_path = "/cad2/ece297s/public/maps/tokyo_japan.streets.bin";
+    return new_map_path;
+}
