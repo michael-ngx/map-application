@@ -145,6 +145,10 @@ void act_on_mouse_click(ezgl::application* app, GdkEventButton* event, double x,
     LatLon pos = LatLon(latlon_from_xy(x, y));   
     int id = findClosestIntersection(pos);   
     Intersection_IntersectionInfo[id].highligh = true;
+    std::cout << "Name of intersection: " << 
+        Intersection_IntersectionInfo[id].name << std::endl;
+    std::cout << "Position of intersection: " <<
+        x << " " << y << std::endl;
     //std::cout << Intersection_IntersectionInfo[id].highligh << std::endl;  
     std::stringstream ss;
     ss << "Intersection selected: " << Intersection_IntersectionInfo[id].name;
@@ -188,19 +192,18 @@ void draw_street_segment_names(ezgl::renderer *g, StreetSegmentIdx seg_id, ezgl:
 // highlights selected intersection, and draws intersection like normal if nothing is selected
 void highlight_intersection(ezgl::renderer* g){
     for(IntersectionIdx inter_id = 0; inter_id < intersectionNum; inter_id++){
+        float width = 10;
+        float height = width;
+        ezgl::point2d inter_loc = Intersection_IntersectionInfo[inter_id].position_xy
+                                  - ezgl::point2d{width / 2, height / 2};
         if(Intersection_IntersectionInfo[inter_id].highligh){
             g->set_color(ezgl::RED);
         }else{
            g->set_color(0, 0, 0); 
         }
-              
-        float width = 10;
-        float height = width;
-        ezgl::point2d inter_loc = Intersection_IntersectionInfo[inter_id].position_xy
-                                  - ezgl::point2d{width / 2, height / 2};
-                                  
+                                               
         if (world_percent <= ZOOM_LIMIT_3){   
-                g->fill_rectangle(inter_loc, width, height);
+                g->fill_rectangle(inter_loc, width, height);              
         }
     }
 }
