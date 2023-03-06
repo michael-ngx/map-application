@@ -21,10 +21,14 @@
 #include "m1.h"
 #include "m2.h"
 #include "globals.h"
+#include "OSMDatabaseAPI.h"
 #include <cmath>
 #include <chrono>
 
 double WORLD_AREA;
+float ZOOM_LIMIT_1 = 30;
+float ZOOM_LIMIT_2 = 5;
+float ZOOM_LIMIT_3 = 1;
 
 /*******************************************************************************************************************************
  * HELPER FUNCTION DECLARATION
@@ -33,6 +37,7 @@ void draw_main_canvas(ezgl::renderer *g);
 void draw_street_segments(ezgl::renderer *g, StreetSegmentIdx seg_id, ezgl::point2d from_xy, ezgl::point2d to_xy);
 void draw_intersections(ezgl::renderer *g, IntersectionIdx from_id, IntersectionIdx to_id);
 void draw_street_segment_names(ezgl::renderer *g, StreetSegmentIdx seg_id, ezgl::point2d mid_xy);
+
 /*******************************************************************************************************************************
  * DRAW MAP
  ********************************************************************************************************************************/
@@ -66,11 +71,11 @@ void drawMap()
 }
 
 /*******************************************************************************************************************************
- * HELPER FUNCTIONS
+ * DRAW MAIN CANVAS
  ********************************************************************************************************************************/
 void draw_main_canvas(ezgl::renderer *g)
 {
-    auto startTime = std::chrono::high_resolution_clock::now();
+//    auto startTime = std::chrono::high_resolution_clock::now();
     g->set_color(0, 0, 0);
 
     // Check for current zoom level through area of visible world
@@ -87,45 +92,53 @@ void draw_main_canvas(ezgl::renderer *g)
         ezgl::point2d to_xy = Intersection_IntersectionInfo[to_id].position_xy;
         ezgl::point2d mid_xy = {(from_xy.x + to_xy.x) / 2, (from_xy.y + to_xy.y) / 2};
         
-        // Check the type of street this segment belongs to
-        double street_length = findStreetLength(Segment_SegmentDetailedInfo[seg_id].streetID);
-        
-        // Draws different amount of data based on different zoom levels
-        if (world_percent > 15 && street_length > 5500){
-            // Draw segments
-            draw_street_segments(g, seg_id, from_xy, to_xy);
-            // Draw intersections
-            draw_intersections(g, from_id, to_id);
-            // draws text on street segments
-            draw_street_segment_names(g, seg_id, mid_xy);
-        } else if (7 < world_percent && world_percent < 15 && street_length > 3000){
-            // Draw segments
-            draw_street_segments(g, seg_id, from_xy, to_xy);
-            // Draw intersections
-            draw_intersections(g, from_id, to_id);
-            // draws text on street segments
-            draw_street_segment_names(g, seg_id, mid_xy);
-        } else if (0.933138 < world_percent && world_percent < 7 && street_length > 1000){
-            // Draw segments
-            draw_street_segments(g, seg_id, from_xy, to_xy);
-            // Draw intersections
-            draw_intersections(g, from_id, to_id);
-            // draws text on street segments
-            draw_street_segment_names(g, seg_id, mid_xy);
-        } else if (world_percent <= 0.933138) {
-            // Draw segments
-            draw_street_segments(g, seg_id, from_xy, to_xy);
-            // Draw intersections
-            draw_intersections(g, from_id, to_id);
-            // draws text on street segments
-            draw_street_segment_names(g, seg_id, mid_xy);
+        // Check the type of street this segment belongs to through wayOSMID
+        OSMID wayOSMID = Segment_SegmentDetailedInfo[seg_id].wayOSMID;
+        auto temp_vector = OSM_AllTagPairs.at(wayOSMID);
+        for (auto tag : temp_vector)
+        {
+            if (tag.first == "highway")
+            {   // Draws different amount of data based on different zoom levels
+                if (world_percent > ZOOM_LIMIT_1)
+                {
+                    if (tag.second == "trunk" || tag.second == "motorway" 
+                         || tag.second == "primary" || tag.second == "secondary")
+                    {
+                        draw_street_segments(g, seg_id, from_xy, to_xy);
+                    }
+                           
+                } else if (ZOOM_LIMIT_2 < world_percent && world_percent < ZOOM_LIMIT_1)
+                {
+                    if (tag.second == "trunk" || tag.second == "motorway" || tag.second == "primary" 
+                        || tag.second == "secondary" || tag.second == "tertiary")
+                    {
+                        draw_street_segments(g, seg_id, from_xy, to_xy);
+                    }
+                } else if (ZOOM_LIMIT_3 < world_percent && world_percent < ZOOM_LIMIT_2)
+                {
+                    if (tag.second == "trunk" || tag.second == "motorway" || tag.second == "primary" 
+                        || tag.second == "secondary" || tag.second == "tertiary" 
+                        || tag.second == "unclassified" || tag.second == "residential")
+                    {
+                        draw_street_segments(g, seg_id, from_xy, to_xy);
+                    }
+                } else if (world_percent <= ZOOM_LIMIT_3)
+                {
+                    draw_street_segments(g, seg_id, from_xy, to_xy);
+                    // draw_intersections(g, from_id, to_id);
+                    // draw_street_segment_names(g, seg_id, mid_xy);
+                }
+            }
         }
     }
-
-    auto currTime = std::chrono::high_resolution_clock::now();
-    auto wallClock = std::chrono::duration_cast<std::chrono::duration<double>>(currTime - startTime);
-    std::cout << "draw main cavas took " << wallClock.count() << " seconds" << std::endl;
+//    auto currTime = std::chrono::high_resolution_clock::now();
+//    auto wallClock = std::chrono::duration_cast<std::chrono::duration<double>>(currTime - startTime);
+//    std::cout << "draw main cavas took " << wallClock.count() << " seconds" << std::endl;
 }
+
+/*******************************************************************************************************************************
+ * HELPER FUNCTIONS
+ ********************************************************************************************************************************/
 
 // Draw street segments
 void draw_street_segments(ezgl::renderer *g, StreetSegmentIdx seg_id, ezgl::point2d from_xy, ezgl::point2d to_xy)

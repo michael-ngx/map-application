@@ -20,7 +20,6 @@
  */
 #include "m1.h"
 #include "globals.h"
-#include "StreetsDatabaseAPI.h"
 #include "OSMDatabaseAPI.h"
 #include <iostream>
 #include <set>
@@ -556,6 +555,7 @@ void init_streets(){
 // *******************************************************************
 void init_osm(){
     // Unordered Map for OSMDatabase (OSMID - vector of pair(tag, value)
+    // Pre-load data for OSMNodes
     for (int index = 0; index < getNumberOfNodes(); ++index){
         const OSMNode* tempOSMNode = getNodeByIndex(index);
         OSMID tempOSMID = tempOSMNode->id();
@@ -566,6 +566,20 @@ void init_osm(){
                 OSM_AllTagPairs.insert(std::make_pair(tempOSMID, tempVector));
             } else {
                 OSM_AllTagPairs.at(tempOSMID).push_back(getTagPair(tempOSMNode, tagIdx));
+            }
+        }
+    }
+    // Pre-load data for OSMWays
+    for (int way = 0; way < getNumberOfWays(); ++way){
+        const OSMWay* tempOSMWay = getWayByIndex(way);
+        OSMID tempOSMID = tempOSMWay->id();
+        for (int tagIdx = 0; tagIdx < getTagCount(tempOSMWay); ++tagIdx){
+            if (OSM_AllTagPairs.find(tempOSMID) == OSM_AllTagPairs.end()){
+                std::vector<std::pair<std::string, std::string>> tempVector;
+                tempVector.push_back(getTagPair(tempOSMWay, 0));
+                OSM_AllTagPairs.insert(std::make_pair(tempOSMID, tempVector));
+            } else {
+                OSM_AllTagPairs.at(tempOSMID).push_back(getTagPair(tempOSMWay, tagIdx));
             }
         }
     }
