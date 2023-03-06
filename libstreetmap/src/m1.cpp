@@ -425,7 +425,7 @@ void init_segments(){
         processedInfo.oneWay = rawInfo.oneWay;
         processedInfo.streetID = rawInfo.streetID;
         processedInfo.numCurvePoints = rawInfo.numCurvePoints;
-        processedInfo.streetName = getStreetName(processedInfo.streetID);
+        processedInfo.streetName = getStreetName(processedInfo.streetID);       // (get the name of the street that each segment belongs to - for m2)
         
         // Pre-calculate length of each street segments (including curve points)
         if (rawInfo.numCurvePoints == 0){
@@ -441,7 +441,7 @@ void init_segments(){
                 LatLon point_2 = getStreetSegmentCurvePoint(segment, i);
                 double templength = findDistanceBetweenTwoPoints(point_1, point_2);
                 processedInfo.length += templength;
-                processedInfo.curvePoints_xy.push_back(xy_from_latlon(point_2));    // Save the xy of curve point
+                processedInfo.curvePoints_xy.push_back(xy_from_latlon(point_2));    // Save the xy of curve points (for m2)
                 point_1 = point_2;
             }
             LatLon point_2 = getIntersectionPosition(rawInfo.to);                   // Destination (to) point
@@ -520,14 +520,20 @@ void init_streets(){
             Streets_AllSegments.at(segmentInfo.streetID).push_back(j);
         }
         
-        //Unordered Map for Streets (StreetIdx - length of street)
-        double tempLength = Segment_SegmentDetailedInfo[j].length;
-        if (streetAllLength.find(segmentInfo.streetID) == streetAllLength.end()){
-            streetAllLength.insert(std::make_pair(segmentInfo.streetID, tempLength));
-        }
-        else {
-            streetAllLength.at(segmentInfo.streetID) += tempLength;
-        }
+        // Unordered Map for Streets (StreetIdx - length of street)
+        // If streetName == <unknown> (StreetIdx == 0) length of street is 0
+        if (segmentInfo.streetID == 0){
+            if (streetAllLength.find(0) == streetAllLength.end()){
+                streetAllLength.insert(std::make_pair(segmentInfo.streetID, 0.0));
+            }
+        } else {
+            double tempLength = Segment_SegmentDetailedInfo[j].length;
+            if (streetAllLength.find(segmentInfo.streetID) == streetAllLength.end()){
+                streetAllLength.insert(std::make_pair(segmentInfo.streetID, tempLength));
+            } else {
+                streetAllLength.at(segmentInfo.streetID) += tempLength;
+            }
+        }        
     }
 
     for (auto& pair : Streets_AllSegments){

@@ -23,6 +23,9 @@
 #include "globals.h"
 #include <cmath>
 #include <chrono>
+
+double WORLD_AREA;
+
 /*******************************************************************************************************************************
  * HELPER FUNCTION DECLARATION
  ********************************************************************************************************************************/
@@ -53,6 +56,9 @@ void drawMap()
     ezgl::rectangle initial_world(xy_from_latlon(latlon_bound.min),
                                   xy_from_latlon(latlon_bound.max));
 
+    WORLD_AREA = abs(xy_from_latlon(latlon_bound.max).x - xy_from_latlon(latlon_bound.min).x)
+                      * abs(xy_from_latlon(latlon_bound.max).y - xy_from_latlon(latlon_bound.min).y);
+
     application.add_canvas("MainCanvas", draw_main_canvas, initial_world);
 
     application.run(nullptr, nullptr,
@@ -66,7 +72,12 @@ void draw_main_canvas(ezgl::renderer *g)
 {
     auto startTime = std::chrono::high_resolution_clock::now();
     g->set_color(0, 0, 0);
-    // g->set_color(0, 0, 0, 100);
+
+    // Check for current zoom level through area of visible world
+    ezgl::rectangle world = g->get_visible_world();
+    double world_percent = world.area()/WORLD_AREA*100;
+    std::cout << "world area percent: " << world_percent << "%" << std::endl;
+    
     for (StreetSegmentIdx seg_id = 0; seg_id < segmentNum; seg_id++)
     {
         // Get LatLon information of from and to intersections from each segments
@@ -75,13 +86,40 @@ void draw_main_canvas(ezgl::renderer *g)
         ezgl::point2d from_xy = Intersection_IntersectionInfo[from_id].position_xy;
         ezgl::point2d to_xy = Intersection_IntersectionInfo[to_id].position_xy;
         ezgl::point2d mid_xy = {(from_xy.x + to_xy.x) / 2, (from_xy.y + to_xy.y) / 2};
-
-        // Draw street segments
-        draw_street_segments(g, seg_id, from_xy, to_xy);
-        // Draw intersections
-        draw_intersections(g, from_id, to_id);
-        // draws text on street segments
-        draw_street_segment_names(g, seg_id, mid_xy);
+        
+        // Check the type of street this segment belongs to
+        double street_length = findStreetLength(Segment_SegmentDetailedInfo[seg_id].streetID);
+        
+        // Draws different amount of data based on different zoom levels
+        if (world_percent > 15 && street_length > 5500){
+            // Draw segments
+            draw_street_segments(g, seg_id, from_xy, to_xy);
+            // Draw intersections
+            draw_intersections(g, from_id, to_id);
+            // draws text on street segments
+            draw_street_segment_names(g, seg_id, mid_xy);
+        } else if (7 < world_percent && world_percent < 15 && street_length > 3000){
+            // Draw segments
+            draw_street_segments(g, seg_id, from_xy, to_xy);
+            // Draw intersections
+            draw_intersections(g, from_id, to_id);
+            // draws text on street segments
+            draw_street_segment_names(g, seg_id, mid_xy);
+        } else if (0.933138 < world_percent && world_percent < 7 && street_length > 1000){
+            // Draw segments
+            draw_street_segments(g, seg_id, from_xy, to_xy);
+            // Draw intersections
+            draw_intersections(g, from_id, to_id);
+            // draws text on street segments
+            draw_street_segment_names(g, seg_id, mid_xy);
+        } else if (world_percent <= 0.933138) {
+            // Draw segments
+            draw_street_segments(g, seg_id, from_xy, to_xy);
+            // Draw intersections
+            draw_intersections(g, from_id, to_id);
+            // draws text on street segments
+            draw_street_segment_names(g, seg_id, mid_xy);
+        }
     }
 
     auto currTime = std::chrono::high_resolution_clock::now();
@@ -89,12 +127,13 @@ void draw_main_canvas(ezgl::renderer *g)
     std::cout << "draw main cavas took " << wallClock.count() << " seconds" << std::endl;
 }
 
+// Draw street segments
 void draw_street_segments(ezgl::renderer *g, StreetSegmentIdx seg_id, ezgl::point2d from_xy, ezgl::point2d to_xy)
 {
     // Draw street segments
     ezgl::point2d curve_pt_xy; // Temp xy for current curve point.
                                // Starts drawing at from_xy to first curve point.
-
+   
     // Connecting curvepoints. Increment from_xy.
     for (int i = 0; i < Segment_SegmentDetailedInfo[seg_id].numCurvePoints; i++)
     {
@@ -106,9 +145,10 @@ void draw_street_segments(ezgl::renderer *g, StreetSegmentIdx seg_id, ezgl::poin
     g->draw_line(from_xy, to_xy);
 }
 
+// Draw intersections
 void draw_intersections(ezgl::renderer *g, IntersectionIdx from_id, IntersectionIdx to_id)
 {
-    float width = 1;
+    float width = 10;
     float height = width;
     float midpoint = width / 2;
     // Draw intersections corresponding to each segment. Not drawing curve points.
@@ -120,7 +160,7 @@ void draw_intersections(ezgl::renderer *g, IntersectionIdx from_id, Intersection
                       width, height);
 }
 
-// draws text on street segments
+// Draws text on street segments
 void draw_street_segment_names(ezgl::renderer *g, StreetSegmentIdx seg_id, ezgl::point2d mid_xy)
 {
     ezgl::rectangle rec;
