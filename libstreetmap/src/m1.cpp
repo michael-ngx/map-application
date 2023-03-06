@@ -503,6 +503,13 @@ ezgl::point2d xy_from_latlon(LatLon latlon)
     return ezgl::point2d(x, y);
 }
 
+// Converts xy to LatLon(
+LatLon latlon_from_xy(double x, double y){
+    double lon = x / (kEarthRadiusInMeters * kDegreeToRadian* cos(lat_avg * kDegreeToRadian));
+    double lat = y / (kEarthRadiusInMeters * kDegreeToRadian);
+    return LatLon(lat, lon);
+}
+
 // *******************************************************************
 // Streets
 // *******************************************************************

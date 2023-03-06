@@ -23,7 +23,7 @@ extern double min_lat, min_lon;
 extern double lat_avg;
 
 ezgl::point2d xy_from_latlon(LatLon latlon);
-
+LatLon latlon_from_xy(double x, double y);
 // *******************************************************************
 // Numbers (counts)
 // *******************************************************************
@@ -62,6 +62,7 @@ extern std::vector<std::vector<StreetSegmentIdx>> Intersection_AllStreetSegments
 struct IntersectionInfo{
     ezgl::point2d position_xy;
     std::string name;
+    bool highligh = false;
 };
 
 // Index: Intersection id, Value: Pre-processed Intersection info

@@ -24,20 +24,22 @@
 #include "OSMDatabaseAPI.h"
 #include <cmath>
 #include <chrono>
+#include <sstream>
+#include <string>
 
 double WORLD_AREA;
 float ZOOM_LIMIT_1 = 30;
 float ZOOM_LIMIT_2 = 5;
 float ZOOM_LIMIT_3 = 1;
-
+double world_percent;
 /*******************************************************************************************************************************
  * HELPER FUNCTION DECLARATION
  ********************************************************************************************************************************/
 void draw_main_canvas(ezgl::renderer *g);
 void draw_street_segments(ezgl::renderer *g, StreetSegmentIdx seg_id, ezgl::point2d from_xy, ezgl::point2d to_xy);
-void draw_intersections(ezgl::renderer *g, IntersectionIdx from_id, IntersectionIdx to_id);
 void draw_street_segment_names(ezgl::renderer *g, StreetSegmentIdx seg_id, ezgl::point2d mid_xy);
-
+void act_on_mouse_click(ezgl::application* app, GdkEventButton* event, double x, double y);
+void highlight_intersection(ezgl::renderer* g);
 /*******************************************************************************************************************************
  * DRAW MAP
  ********************************************************************************************************************************/
@@ -66,7 +68,7 @@ void drawMap()
 
     application.add_canvas("MainCanvas", draw_main_canvas, initial_world);
 
-    application.run(nullptr, nullptr,
+    application.run(nullptr, act_on_mouse_click,
                     nullptr, nullptr);
 }
 
@@ -75,13 +77,14 @@ void drawMap()
  ********************************************************************************************************************************/
 void draw_main_canvas(ezgl::renderer *g)
 {
-//    auto startTime = std::chrono::high_resolution_clock::now();
-    g->set_color(0, 0, 0);
-
+    //auto startTime = std::chrono::high_resolution_clock::now();
+    
     // Check for current zoom level through area of visible world
     ezgl::rectangle world = g->get_visible_world();
-    double world_percent = world.area()/WORLD_AREA*100;
+    world_percent = world.area()/WORLD_AREA*100;
     std::cout << "world area percent: " << world_percent << "%" << std::endl;
+    
+    highlight_intersection(g);
     
     for (StreetSegmentIdx seg_id = 0; seg_id < segmentNum; seg_id++)
     {
@@ -124,9 +127,8 @@ void draw_main_canvas(ezgl::renderer *g)
                     }
                 } else if (world_percent <= ZOOM_LIMIT_3)
                 {
-                    draw_street_segments(g, seg_id, from_xy, to_xy);
-                    // draw_intersections(g, from_id, to_id);
-                    // draw_street_segment_names(g, seg_id, mid_xy);
+                    draw_street_segments(g, seg_id, from_xy, to_xy);                   
+                    draw_street_segment_names(g, seg_id, mid_xy);
                 }
             }
         }
@@ -134,6 +136,20 @@ void draw_main_canvas(ezgl::renderer *g)
 //    auto currTime = std::chrono::high_resolution_clock::now();
 //    auto wallClock = std::chrono::duration_cast<std::chrono::duration<double>>(currTime - startTime);
 //    std::cout << "draw main cavas took " << wallClock.count() << " seconds" << std::endl;
+}
+
+/*******************************************************************************************************************************
+ *  function that stores state of mouse clicks
+ ********************************************************************************************************************************/
+void act_on_mouse_click(ezgl::application* app, GdkEventButton* event, double x, double y){
+    LatLon pos = LatLon(latlon_from_xy(x, y));   
+    int id = findClosestIntersection(pos);   
+    Intersection_IntersectionInfo[id].highligh = true;
+    //std::cout << Intersection_IntersectionInfo[id].highligh << std::endl;  
+    std::stringstream ss;
+    ss << "Intersection selected: " << Intersection_IntersectionInfo[id].name;
+    app->update_message(ss.str());
+    app->refresh_drawing();
 }
 
 /*******************************************************************************************************************************
@@ -158,21 +174,6 @@ void draw_street_segments(ezgl::renderer *g, StreetSegmentIdx seg_id, ezgl::poin
     g->draw_line(from_xy, to_xy);
 }
 
-// Draw intersections
-void draw_intersections(ezgl::renderer *g, IntersectionIdx from_id, IntersectionIdx to_id)
-{
-    float width = 10;
-    float height = width;
-    float midpoint = width / 2;
-    // Draw intersections corresponding to each segment. Not drawing curve points.
-    g->fill_rectangle({Intersection_IntersectionInfo[from_id].position_xy.x - midpoint,
-                       Intersection_IntersectionInfo[from_id].position_xy.y - midpoint},
-                      width, height);
-    g->fill_rectangle({Intersection_IntersectionInfo[to_id].position_xy.x - midpoint,
-                       Intersection_IntersectionInfo[to_id].position_xy.y - midpoint},
-                      width, height);
-}
-
 // Draws text on street segments
 void draw_street_segment_names(ezgl::renderer *g, StreetSegmentIdx seg_id, ezgl::point2d mid_xy)
 {
@@ -183,3 +184,24 @@ void draw_street_segment_names(ezgl::renderer *g, StreetSegmentIdx seg_id, ezgl:
     g->set_font_size(7);
     g->draw_text(mid_xy, stName, rec.m_second.x, rec.m_second.y);
 }
+
+// highlights selected intersection, and draws intersection like normal if nothing is selected
+void highlight_intersection(ezgl::renderer* g){
+    for(IntersectionIdx inter_id = 0; inter_id < intersectionNum; inter_id++){
+        if(Intersection_IntersectionInfo[inter_id].highligh){
+            g->set_color(ezgl::RED);
+        }else{
+           g->set_color(0, 0, 0); 
+        }
+              
+        float width = 10;
+        float height = width;
+        ezgl::point2d inter_loc = Intersection_IntersectionInfo[inter_id].position_xy
+                                  - ezgl::point2d{width / 2, height / 2};
+                                  
+        if (world_percent <= ZOOM_LIMIT_3){   
+                g->fill_rectangle(inter_loc, width, height);
+        }
+    }
+}
+ 
