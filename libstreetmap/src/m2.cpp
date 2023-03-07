@@ -33,7 +33,8 @@ const float ZOOM_LIMIT_1 = 30;            // TODO: Determine zoom limit based on
 const float ZOOM_LIMIT_2 = 1;
 const float ZOOM_LIMIT_3 = 0.1;
 double world_percent;
-
+std::string stName1;
+std::string stName2;
 /*******************************************************************************************************************************
  * FUNCTION DECLARATIONS
  ********************************************************************************************************************************/
@@ -65,7 +66,8 @@ void act_on_key_press(ezgl::application *application, GdkEventKey *event, char *
  * These are callback functions for the UI elements
  *************************************************************/
 void city_change_cbk(GtkComboBoxText* self, ezgl::application* app);
-
+void input_streets_cbk(GtkWidget */*widget*/, ezgl::application* app);
+void dialog_cbk(GtkDialog* self, gint response_id, ezgl::application* app);
 /************************************************************
  * HELPER FUNCTIONS 
  ************************************************************/
@@ -167,7 +169,7 @@ void draw_main_canvas(ezgl::renderer *g)
                     // Draw highlighted intersection(s)
                     draw_highlighted_intersections(g, from_id, from_xy);
                     draw_highlighted_intersections(g, to_id, to_xy);                
-                    // draw_street_segment_names(g, seg_id, mid_xy);            // TODO: avoid displaying too many text boxes
+                    draw_street_segment_names(g, seg_id, mid_xy);            // TODO: avoid displaying too many text boxes
                 }
             }
         }
@@ -185,13 +187,14 @@ void initial_setup(ezgl::application *application, bool /*new_window*/)
 {
   // Update the status bar message
   application->update_message("EZGL Application");
-
+  
   //Setting our starting row for insertion at 6 (Default zoom/pan buttons created by EZGL take up first five rows);
   //We will increment row each time we insert a new element. 
   int row = 6;
-
-  application->create_label(row++, "Select city:");
-
+  //ask user to input names of two streets
+  application->create_button("Search intersections", row++, input_streets_cbk);
+  
+  application->create_label(row++, "Select city:"); 
   //Creating drop-down list for different cities, connected to city_change_cbk
   application->create_combo_box_text(
     "CitySelect", 
@@ -257,6 +260,52 @@ void city_change_cbk(GtkComboBoxText* self, ezgl::application* app){
     }
 }
 
+// asks user to input street names
+void input_streets_cbk(GtkWidget */*widget*/, ezgl::application* app){
+    //app->create_dialog_window(dialog_cbk, "Notice", "Please input street names!");
+    std::cout << "Please enter 2 street names (separated by 'enter'): " << std::endl;
+    while(1){
+        getline(std::cin, stName1);
+        getline(std::cin, stName2);
+        std::vector<StreetIdx> FoundInterIdx1 = findStreetIdsFromPartialStreetName(stName1);
+        std::vector<StreetIdx> FoundInterIdx2 = findStreetIdsFromPartialStreetName(stName2);
+    
+        std::vector<IntersectionIdx> FoundInters 
+                                     = findIntersectionsOfTwoStreets(FoundInterIdx1[0], FoundInterIdx2[0]);
+        for(auto interIdx : FoundInters){
+            std::cout << std::endl;
+            std::cout << "Info of this intersection --------" << std::endl;
+            std::cout << "Name of Intersection: " << Intersection_IntersectionInfo[interIdx].name << std::endl;
+            std::cout << "X position: " << Intersection_IntersectionInfo[interIdx].position_xy.x << std::endl
+                     << "Y position: " << Intersection_IntersectionInfo[interIdx].position_xy.y << std::endl;
+        }
+        break;
+    }   
+}
+
+/**
+ * Callback function for dialog window created by "Create Dialog Window" button. 
+ * Updates application message to reflect user answer to dialog window. 
+ */
+void dialog_cbk(GtkDialog* self, gint response_id, ezgl::application* app){
+  //Response_id is an integer/enumeration, so we can use a switch to read its value and act accordingly
+  switch(response_id){
+    case GTK_RESPONSE_ACCEPT:
+      app->update_message("USER ACCEPTED");
+      break;
+    case GTK_RESPONSE_REJECT:
+      app->update_message("USER REJECTED");
+      break;
+    case GTK_RESPONSE_DELETE_EVENT:
+      app->update_message("USER CLOSED WINDOW");
+      break;
+    default:
+      app->update_message("YOU SHOULD NOT SEE THIS");
+  }
+
+  //We always have to destroy the dialog window in the callback function or it will never close
+  gtk_widget_destroy(GTK_WIDGET(self));
+}
 /*******************************************************************************************************************************
  * HELPER FUNCTIONS
  ********************************************************************************************************************************/
@@ -298,7 +347,7 @@ void draw_street_segments(ezgl::renderer *g, StreetSegmentIdx seg_id, ezgl::poin
 // Display intersection if highlighted
 void draw_highlighted_intersections(ezgl::renderer* g, IntersectionIdx inter_id, ezgl::point2d inter_xy)
 {
-    float width = 10;
+    float width = 6;
     float height = width;
 
     if(Intersection_IntersectionInfo[inter_id].highlight)
@@ -315,6 +364,7 @@ void draw_street_segment_names(ezgl::renderer *g, StreetSegmentIdx seg_id, ezgl:
     rec = g->get_visible_screen();
     std::string stName = getStreetName(Segment_SegmentDetailedInfo[seg_id].streetID);
     // g->set_color(0, 0, 0, 100);
+    g->set_color(0, 0, 0);
     g->set_font_size(7);
     g->draw_text(mid_xy, stName, rec.m_second.x, rec.m_second.y);
 }
