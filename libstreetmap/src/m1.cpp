@@ -396,6 +396,7 @@ void closeMap() {
     Streets_AllIntersections.clear();
     streetAllLength.clear();
     StreetName_StreetIdx.clear();
+    Features_AllInfo.clear();
     OSM_AllTagPairs.clear();
 
     closeStreetDatabase();
