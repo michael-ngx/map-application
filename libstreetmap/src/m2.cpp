@@ -322,6 +322,7 @@ void dialog_cbk(GtkDialog* self, gint response_id, ezgl::application* app){
 void draw_street_segments(ezgl::renderer *g, StreetSegmentIdx seg_id, ezgl::point2d from_xy, ezgl::point2d to_xy, std::string street_type)
 {
     // Set colors and line width according to street type           // TODO: Bug highway hidden by other streets when zoomed out
+                                                                    // TODO: Fix line_width according to zoom level
     if (street_type == "motorway" || street_type == "motorway_link")
     {
         g->set_color(ezgl::ORANGE);
@@ -330,7 +331,7 @@ void draw_street_segments(ezgl::renderer *g, StreetSegmentIdx seg_id, ezgl::poin
                || street_type == "secondary" || street_type == "tertiary")
     {
         g->set_color(ezgl::WHITE);
-        g->set_line_width(5);
+        g->set_line_width(3);
     } else 
     {
         g->set_color(ezgl::WHITE);
