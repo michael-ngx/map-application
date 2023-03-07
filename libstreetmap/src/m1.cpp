@@ -39,6 +39,7 @@ void m1_init();
 void init_segments();
 void init_intersections();
 void init_streets();
+void init_features();
 void init_osm();
 
 // *******************************************************************
@@ -55,6 +56,7 @@ double lat_avg;
 int intersectionNum;
 int segmentNum;
 int streetNum;
+int featureNum;
 
 // *******************************************************************
 // Street Segments
@@ -81,6 +83,12 @@ std::unordered_map<StreetIdx, std::vector<IntersectionIdx>> Streets_AllIntersect
 std::unordered_map<StreetIdx, double> streetAllLength;
 // Keys: Street names, Value: street index
 std::multimap<std::string, StreetIdx> StreetName_StreetIdx;
+
+// *******************************************************************
+// Features
+// *******************************************************************
+//Index: FeatureIdx, Value: structure that stores all feature information
+std::vector<FeatureDetailedInfo> Features_AllInfo;
 
 // *******************************************************************
 // OSMNode
@@ -402,10 +410,12 @@ void m1_init(){
     segmentNum = getNumStreetSegments();
     streetNum = getNumStreets();
     intersectionNum = getNumIntersections();
+    featureNum = getNumFeatures();
     // Init database
     init_intersections();
     init_segments();
     init_streets();
+    init_features();
     init_osm();
 }
 
@@ -554,6 +564,22 @@ void init_streets(){
 
         // 2D Vector for Streets (StreetIdx - Vector of All Intersections)
         Streets_AllIntersections[pair.first] = findIntersectionsOfStreet(pair.first);
+    }
+}
+
+// *******************************************************************
+// Features
+// *******************************************************************
+void init_features(){
+    //Load pre-processed data into Features_AllPoints
+    for (int featureIdx = 0; featureIdx < featureNum; featureIdx++){
+        FeatureDetailedInfo tempFeatureInfo;
+        tempFeatureInfo.featureType = getFeatureType(featureIdx);
+        tempFeatureInfo.featureOSMID = getFeatureOSMID(featureIdx);
+        for (int pointIdx = 0; pointIdx < getNumFeaturePoints(featureIdx); pointIdx++){
+            tempFeatureInfo.featurePoints.push_back(xy_from_latlon(getFeaturePoint(featureIdx, pointIdx)));
+        }
+        Features_AllInfo.push_back(tempFeatureInfo);
     }
 }
 

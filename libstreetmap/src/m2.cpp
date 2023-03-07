@@ -74,6 +74,7 @@ void dialog_cbk(GtkDialog* self, gint response_id, ezgl::application* app);
 void draw_street_segments(ezgl::renderer *g, StreetSegmentIdx seg_id, ezgl::point2d from_xy, ezgl::point2d to_xy, std::string street_type);
 void draw_highlighted_intersections(ezgl::renderer* g, IntersectionIdx inter_id, ezgl::point2d inter_xy);
 void draw_street_segment_names(ezgl::renderer *g, StreetSegmentIdx seg_id, ezgl::point2d mid_xy);
+void draw_feature_area(ezgl::renderer *g, FeatureDetailedInfo tempFeatureInfo);
 std::string get_new_map_path(std::string text_string);
 
 /*******************************************************************************************************************************
@@ -173,6 +174,13 @@ void draw_main_canvas(ezgl::renderer *g)
                 }
             }
         }
+    }
+    
+    
+    for (int j = 0; j < featureNum; j++)
+    {
+        FeatureDetailedInfo tempFeatureInfo = Features_AllInfo[j];
+        draw_feature_area(g, tempFeatureInfo);
     }
 //    auto currTime = std::chrono::high_resolution_clock::now();
 //    auto wallClock = std::chrono::duration_cast<std::chrono::duration<double>>(currTime - startTime);
@@ -393,4 +401,59 @@ std::string get_new_map_path(std::string text_string)
     else if (text_string == "Tehran") new_map_path = "/cad2/ece297s/public/maps/tehran_iran.streets.bin";
     else if (text_string == "Tokyo") new_map_path = "/cad2/ece297s/public/maps/tokyo_japan.streets.bin";
     return new_map_path;
+}
+
+void draw_feature_area(ezgl::renderer *g, FeatureDetailedInfo tempFeatureInfo){
+    FeatureType tempType = tempFeatureInfo.featureType;
+    std::vector<ezgl::point2d> tempPoints = tempFeatureInfo.featurePoints;
+    if (tempType == PARK)
+    {
+        if (tempPoints.size() > 1){
+            g->set_color(141,154, 134);
+            g->fill_poly(tempPoints);
+        }
+    } else if (tempType == BEACH)
+    {
+        if (tempPoints.size() > 1){
+            g->set_color(255, 235, 205);
+            g->fill_poly(tempPoints);
+        }
+    } else if (tempType == LAKE)
+    {
+        if (tempPoints.size() > 1){
+            g->set_color(75, 182, 239);
+            g->fill_poly(tempPoints);
+        }
+    } else if (tempType == ISLAND)
+    {
+        if (tempPoints.size() > 1){
+            g->set_color(43, 174, 102);
+            g->fill_poly(tempPoints);
+        }
+    } else if (tempType == BUILDING)
+    {
+        if (tempPoints.size() > 1){
+            g->set_color(178, 190, 181);
+            g->fill_poly(tempPoints);
+        }
+    } else if (tempType == GREENSPACE)
+    {
+        if (tempPoints.size() > 1){
+            g->set_color(ezgl::GREEN);
+            g->fill_poly(tempPoints);
+        }
+    } else if (tempType == GOLFCOURSE)
+    {
+        if (tempPoints.size() > 1){
+            g->set_color(0, 145, 112);
+            g->fill_poly(tempPoints);
+        }
+    } else if (tempType == GLACIER)
+    {
+        if (tempPoints.size() > 1){
+            g->set_color(114, 157, 200);
+            g->fill_poly(tempPoints);
+        }
+    } 
+    return;
 }

@@ -30,6 +30,7 @@ LatLon latlon_from_xy(double x, double y);
 extern int intersectionNum;
 extern int segmentNum;
 extern int streetNum;
+extern int featureNum;
 
 // *******************************************************************
 // Street Segments
@@ -80,6 +81,18 @@ extern std::unordered_map<StreetIdx, std::vector<IntersectionIdx>> Streets_AllIn
 extern std::unordered_map<StreetIdx, double> streetAllLength;
 // Keys: Street names, Value: street index
 extern std::multimap<std::string, StreetIdx> StreetName_StreetIdx;
+
+// *******************************************************************
+// Features
+// *******************************************************************
+//Stores pre-processed information of features
+struct FeatureDetailedInfo{
+    FeatureType featureType;                    //Type of the feature
+    TypedOSMID  featureOSMID;                   //OSMID of the feature
+    std::vector<ezgl::point2d> featurePoints;   //Coordinates of the feature in point2d
+};
+//Index: FeatureIdx, Value: structure that stores all feature information
+extern std::vector<FeatureDetailedInfo> Features_AllInfo;
 
 // *******************************************************************
 // OSMNode
