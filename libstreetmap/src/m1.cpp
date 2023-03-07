@@ -569,7 +569,7 @@ void init_osm(){
         for (int tagIdx = 0; tagIdx < getTagCount(tempOSMNode); ++tagIdx){
             if (OSM_AllTagPairs.find(tempOSMID) == OSM_AllTagPairs.end()){
                 std::vector<std::pair<std::string, std::string>> tempVector;
-                tempVector.push_back(getTagPair(tempOSMNode, 0));
+                tempVector.push_back(getTagPair(tempOSMNode, tagIdx));
                 OSM_AllTagPairs.insert(std::make_pair(tempOSMID, tempVector));
             } else {
                 OSM_AllTagPairs.at(tempOSMID).push_back(getTagPair(tempOSMNode, tagIdx));
@@ -583,7 +583,7 @@ void init_osm(){
         for (int tagIdx = 0; tagIdx < getTagCount(tempOSMWay); ++tagIdx){
             if (OSM_AllTagPairs.find(tempOSMID) == OSM_AllTagPairs.end()){
                 std::vector<std::pair<std::string, std::string>> tempVector;
-                tempVector.push_back(getTagPair(tempOSMWay, 0));
+                tempVector.push_back(getTagPair(tempOSMWay, tagIdx));
                 OSM_AllTagPairs.insert(std::make_pair(tempOSMID, tempVector));
             } else {
                 OSM_AllTagPairs.at(tempOSMID).push_back(getTagPair(tempOSMWay, tagIdx));

@@ -29,9 +29,9 @@
 
 double WORLD_AREA;
 std::string CURRENT_CITY = " ";
-float ZOOM_LIMIT_1 = 30;            // TODO: Determine zoom limit based on both world and screen size
-float ZOOM_LIMIT_2 = 5;
-float ZOOM_LIMIT_3 = 1;
+const float ZOOM_LIMIT_1 = 30;            // TODO: Determine zoom limit based on both world and screen size
+const float ZOOM_LIMIT_2 = 1;
+const float ZOOM_LIMIT_3 = 0.1;
 double world_percent;
 
 /*******************************************************************************************************************************
@@ -62,16 +62,16 @@ void act_on_key_press(ezgl::application *application, GdkEventKey *event, char *
 /*************************************************************
  * UI CALLBACK FUNCTIONS
  * 
- * These are example callback functions for the UI elements
+ * These are callback functions for the UI elements
  *************************************************************/
 void city_change_cbk(GtkComboBoxText* self, ezgl::application* app);
 
 /************************************************************
  * HELPER FUNCTIONS 
  ************************************************************/
-void draw_street_segments(ezgl::renderer *g, StreetSegmentIdx seg_id, ezgl::point2d from_xy, ezgl::point2d to_xy);
+void draw_street_segments(ezgl::renderer *g, StreetSegmentIdx seg_id, ezgl::point2d from_xy, ezgl::point2d to_xy, std::string street_type);
+void draw_highlighted_intersections(ezgl::renderer* g, IntersectionIdx inter_id, ezgl::point2d inter_xy);
 void draw_street_segment_names(ezgl::renderer *g, StreetSegmentIdx seg_id, ezgl::point2d mid_xy);
-void highlight_intersection(ezgl::renderer* g);
 std::string get_new_map_path(std::string text_string);
 
 /*******************************************************************************************************************************
@@ -97,10 +97,10 @@ void drawMap()
     ezgl::rectangle initial_world(xy_from_latlon(latlon_bound.min),
                                   xy_from_latlon(latlon_bound.max));
 
-    WORLD_AREA = abs(xy_from_latlon(latlon_bound.max).x - xy_from_latlon(latlon_bound.min).x)
-                      * abs(xy_from_latlon(latlon_bound.max).y - xy_from_latlon(latlon_bound.min).y);
+    WORLD_AREA = (abs(xy_from_latlon(latlon_bound.max).x - xy_from_latlon(latlon_bound.min).x)
+                        * abs(xy_from_latlon(latlon_bound.max).y - xy_from_latlon(latlon_bound.min).y));
 
-    application.add_canvas("MainCanvas", draw_main_canvas, initial_world);
+    application.add_canvas("MainCanvas", draw_main_canvas, initial_world, ezgl::color(210, 210, 210));
 
 
     application.run(initial_setup, act_on_mouse_click,
@@ -115,11 +115,9 @@ void draw_main_canvas(ezgl::renderer *g)
     //auto startTime = std::chrono::high_resolution_clock::now();
     
     // Check for current zoom level through area of visible world
-    ezgl::rectangle world = g->get_visible_world();
-    world_percent = world.area()/WORLD_AREA*100;
-    std::cout << "world area percent: " << world_percent << "%" << std::endl;
-    
-    highlight_intersection(g);
+    ezgl::rectangle visible_world = g->get_visible_world();
+    world_percent = visible_world.area()/WORLD_AREA*100;
+    std::cout << "world area percent: " << world_percent << std::endl;
     
     for (StreetSegmentIdx seg_id = 0; seg_id < segmentNum; seg_id++)
     {
@@ -129,12 +127,12 @@ void draw_main_canvas(ezgl::renderer *g)
         ezgl::point2d from_xy = Intersection_IntersectionInfo[from_id].position_xy;
         ezgl::point2d to_xy = Intersection_IntersectionInfo[to_id].position_xy;
         ezgl::point2d mid_xy = {(from_xy.x + to_xy.x) / 2, (from_xy.y + to_xy.y) / 2};
-        
+
         // Check the type of street this segment belongs to through wayOSMID
         OSMID wayOSMID = Segment_SegmentDetailedInfo[seg_id].wayOSMID;
         auto temp_vector = OSM_AllTagPairs.at(wayOSMID);
         for (auto tag : temp_vector)
-        {
+        {   // Displaying highway tags
             if (tag.first == "highway")
             {   // Draws different amount of data based on different zoom levels
                 if (world_percent > ZOOM_LIMIT_1)
@@ -142,28 +140,34 @@ void draw_main_canvas(ezgl::renderer *g)
                     if (tag.second == "trunk" || tag.second == "motorway" 
                          || tag.second == "primary" || tag.second == "secondary")
                     {
-                        draw_street_segments(g, seg_id, from_xy, to_xy);
+                        draw_street_segments(g, seg_id, from_xy, to_xy, tag.second);
                     }
                            
                 } else if (ZOOM_LIMIT_2 < world_percent && world_percent < ZOOM_LIMIT_1)
                 {
-                    if (tag.second == "trunk" || tag.second == "motorway" || tag.second == "primary" 
-                        || tag.second == "secondary" || tag.second == "tertiary")
+                    if (tag.second == "trunk" || tag.second == "motorway" || tag.second == "motorway_link" 
+                        || tag.second == "primary" || tag.second == "secondary" || tag.second == "tertiary")
                     {
-                        draw_street_segments(g, seg_id, from_xy, to_xy);
+                        draw_street_segments(g, seg_id, from_xy, to_xy, tag.second);
                     }
                 } else if (ZOOM_LIMIT_3 < world_percent && world_percent < ZOOM_LIMIT_2)
                 {
-                    if (tag.second == "trunk" || tag.second == "motorway" || tag.second == "primary" 
-                        || tag.second == "secondary" || tag.second == "tertiary" 
-                        || tag.second == "unclassified" || tag.second == "residential")
+                    if (tag.second == "trunk" || tag.second == "motorway" || tag.second == "motorway_link" 
+                        || tag.second == "primary" || tag.second == "secondary" || tag.second == "tertiary" 
+                        || tag.second == "unclassified" || tag.second == "residential" )
                     {
-                        draw_street_segments(g, seg_id, from_xy, to_xy);
+                        draw_street_segments(g, seg_id, from_xy, to_xy, tag.second);
                     }
+                    // Draw highlighted intersection(s)
+                    draw_highlighted_intersections(g, from_id, from_xy);
+                    draw_highlighted_intersections(g, to_id, to_xy);  
                 } else if (world_percent <= ZOOM_LIMIT_3)
                 {
-                    draw_street_segments(g, seg_id, from_xy, to_xy);                   
-                    draw_street_segment_names(g, seg_id, mid_xy);
+                    draw_street_segments(g, seg_id, from_xy, to_xy, tag.second);   
+                    // Draw highlighted intersection(s)
+                    draw_highlighted_intersections(g, from_id, from_xy);
+                    draw_highlighted_intersections(g, to_id, to_xy);                
+                    // draw_street_segment_names(g, seg_id, mid_xy);            // TODO: avoid displaying too many text boxes
                 }
             }
         }
@@ -203,17 +207,20 @@ void initial_setup(ezgl::application *application, bool /*new_window*/)
 // Storing state of mouse clicks
 void act_on_mouse_click(ezgl::application* app, GdkEventButton* event, double x, double y)
 {
-    LatLon pos = LatLon(latlon_from_xy(x, y));   
-    int id = findClosestIntersection(pos);   
-    Intersection_IntersectionInfo[id].highligh = true;
-    std::cout << "Name of intersection: " << 
+    LatLon pos = LatLon(latlon_from_xy(x, y));
+    // Highlight / Unhighlight closest intersections to mouseclick
+    int id = findClosestIntersection(pos);
+    Intersection_IntersectionInfo[id].highlight = !Intersection_IntersectionInfo[id].highlight;
+    if (Intersection_IntersectionInfo[id].highlight)
+    {   // Update mesasge if newly highlight an intersection
+        std::cout << "Name of intersection: " << 
         Intersection_IntersectionInfo[id].name << std::endl;
-    std::cout << "Position of intersection: " <<
-        x << " " << y << std::endl;
-    //std::cout << Intersection_IntersectionInfo[id].highligh << std::endl;  
-    std::stringstream ss;
-    ss << "Intersection selected: " << Intersection_IntersectionInfo[id].name;
-    app->update_message(ss.str());
+        std::cout << "Position of intersection: " <<
+            x << " " << y << std::endl; 
+        std::stringstream ss;
+        ss << "Intersection selected: " << Intersection_IntersectionInfo[id].name;
+        app->update_message(ss.str());
+    }
     app->refresh_drawing();
 }
 
@@ -227,9 +234,11 @@ void city_change_cbk(GtkComboBoxText* self, ezgl::application* app){
     //Getting current text content
     auto text = gtk_combo_box_text_get_active_text(self);
     std::string text_string = text;
-    if(!text || text_string == " "){  //Returning if the combo box is currently empty (Always check to avoid errors)
+    if(!text || text_string == " ")
+    {  //Returning if the combo box is currently empty (Always check to avoid errors)
         return;
-    } else if (text_string != CURRENT_CITY) {                   // TODO: Current city might be reloaded if user select current city as their first choice
+    } else if (text_string != CURRENT_CITY)
+    {                   // TODO: Bug current city is reloaded if user select current city as first choice
         CURRENT_CITY = text_string;
         std::string new_map_path = get_new_map_path(text_string);
 
@@ -242,7 +251,7 @@ void city_change_cbk(GtkComboBoxText* self, ezgl::application* app){
 
         WORLD_AREA = abs(xy_from_latlon(latlon_bound.max).x - xy_from_latlon(latlon_bound.min).x)
                         * abs(xy_from_latlon(latlon_bound.max).y - xy_from_latlon(latlon_bound.min).y);
-        
+       
         app->change_canvas_world_coordinates("MainCanvas", new_world);
         app->refresh_drawing();
     }
@@ -253,12 +262,28 @@ void city_change_cbk(GtkComboBoxText* self, ezgl::application* app){
  ********************************************************************************************************************************/
 
 // Draw street segments
-void draw_street_segments(ezgl::renderer *g, StreetSegmentIdx seg_id, ezgl::point2d from_xy, ezgl::point2d to_xy)
+void draw_street_segments(ezgl::renderer *g, StreetSegmentIdx seg_id, ezgl::point2d from_xy, ezgl::point2d to_xy, std::string street_type)
 {
-    // Draw street segments
+    // Set colors and line width according to street type           // TODO: Bug highway hidden by other streets when zoomed out
+    if (street_type == "motorway" || street_type == "motorway_link")
+    {
+        g->set_color(ezgl::ORANGE);
+        g->set_line_width(5);
+    } else if (street_type == "trunk" || street_type == "primary" 
+               || street_type == "secondary" || street_type == "tertiary")
+    {
+        g->set_color(ezgl::WHITE);
+        g->set_line_width(5);
+    } else 
+    {
+        g->set_color(ezgl::WHITE);
+        g->set_line_width(0);
+    }
+    g->set_line_cap(ezgl::line_cap(1));
+    // Draw street segments including curvepoints
     ezgl::point2d curve_pt_xy; // Temp xy for current curve point.
                                // Starts drawing at from_xy to first curve point.
-   
+    
     // Connecting curvepoints. Increment from_xy.
     for (int i = 0; i < Segment_SegmentDetailedInfo[seg_id].numCurvePoints; i++)
     {
@@ -268,6 +293,19 @@ void draw_street_segments(ezgl::renderer *g, StreetSegmentIdx seg_id, ezgl::poin
     }
     // Connect last curve point to (x_to, y_to)
     g->draw_line(from_xy, to_xy);
+}
+
+// Display intersection if highlighted
+void draw_highlighted_intersections(ezgl::renderer* g, IntersectionIdx inter_id, ezgl::point2d inter_xy)
+{
+    float width = 10;
+    float height = width;
+
+    if(Intersection_IntersectionInfo[inter_id].highlight)
+    {
+        g->set_color(ezgl::RED);
+        g->fill_rectangle(ezgl::point2d(inter_xy.x - width/2, inter_xy.y - width/2), width, height);   
+    }
 }
 
 // Draws text on street segments
@@ -281,30 +319,7 @@ void draw_street_segment_names(ezgl::renderer *g, StreetSegmentIdx seg_id, ezgl:
     g->draw_text(mid_xy, stName, rec.m_second.x, rec.m_second.y);
 }
 
-// highlights selected intersection, and draws intersection like normal if nothing is selected
-void highlight_intersection(ezgl::renderer* g){
-    for(IntersectionIdx inter_id = 0; inter_id < intersectionNum; inter_id++)
-    {
-              
-        float width = 10;
-        float height = width;
-        ezgl::point2d inter_loc = Intersection_IntersectionInfo[inter_id].position_xy
-                                  - ezgl::point2d{width / 2, height / 2};
-        if(Intersection_IntersectionInfo[inter_id].highligh)
-        {
-            g->set_color(ezgl::RED);
-        } else
-        {
-            g->set_color(0, 0, 0); 
-        }
-                                               
-        if (world_percent <= ZOOM_LIMIT_3)
-        {   
-                g->fill_rectangle(inter_loc, width, height);              
-        }
-    }
-}
- 
+// Get map path for reloading from string of city name
 std::string get_new_map_path(std::string text_string)
 {
     std::string new_map_path;

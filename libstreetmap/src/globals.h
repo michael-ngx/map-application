@@ -62,7 +62,7 @@ extern std::vector<std::vector<StreetSegmentIdx>> Intersection_AllStreetSegments
 struct IntersectionInfo{
     ezgl::point2d position_xy;
     std::string name;
-    bool highligh = false;
+    bool highlight = false;
 };
 
 // Index: Intersection id, Value: Pre-processed Intersection info
