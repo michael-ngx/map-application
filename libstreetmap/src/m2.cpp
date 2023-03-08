@@ -27,14 +27,19 @@
 #include <sstream>
 #include <string>
 
-double WORLD_AREA;
 std::string CURRENT_CITY = " ";
-const float ZOOM_LIMIT_1 = 30;            // TODO: Determine zoom limit based on both world and screen size
-const float ZOOM_LIMIT_2 = 1;
-const float ZOOM_LIMIT_3 = 0.1;
-double world_percent;
+
+// Zoom limits for curr_world_width, in meters
+const float ZOOM_LIMIT_0 = 50000;
+const float ZOOM_LIMIT_1 = 15000;
+const float ZOOM_LIMIT_2 = 5000;
+const float ZOOM_LIMIT_3 = 2000;
+// Current world width in meters
+double curr_world_width;
+
 std::string stName1;
 std::string stName2;
+
 /*******************************************************************************************************************************
  * FUNCTION DECLARATIONS
  ********************************************************************************************************************************/
@@ -68,10 +73,13 @@ void act_on_key_press(ezgl::application *application, GdkEventKey *event, char *
 void city_change_cbk(GtkComboBoxText* self, ezgl::application* app);
 void input_streets_cbk(GtkWidget */*widget*/, ezgl::application* app);
 void dialog_cbk(GtkDialog* self, gint response_id, ezgl::application* app);
+
 /************************************************************
  * HELPER FUNCTIONS 
  ************************************************************/
-void draw_street_segments(ezgl::renderer *g, StreetSegmentIdx seg_id, ezgl::point2d from_xy, ezgl::point2d to_xy, std::string street_type);
+void draw_street_segments(ezgl::renderer *g, StreetSegmentIdx seg_id, 
+                          ezgl::point2d from_xy, ezgl::point2d to_xy, 
+                          std::string street_type);
 void draw_highlighted_intersections(ezgl::renderer* g, IntersectionIdx inter_id, ezgl::point2d inter_xy);
 void draw_street_segment_names(ezgl::renderer *g, StreetSegmentIdx seg_id, ezgl::point2d mid_xy);
 void draw_feature_area(ezgl::renderer *g, FeatureDetailedInfo tempFeatureInfo);
@@ -100,10 +108,7 @@ void drawMap()
     ezgl::rectangle initial_world(xy_from_latlon(latlon_bound.min),
                                   xy_from_latlon(latlon_bound.max));
 
-    WORLD_AREA = (abs(xy_from_latlon(latlon_bound.max).x - xy_from_latlon(latlon_bound.min).x)
-                        * abs(xy_from_latlon(latlon_bound.max).y - xy_from_latlon(latlon_bound.min).y));
-
-    application.add_canvas("MainCanvas", draw_main_canvas, initial_world, ezgl::color(210, 210, 210));
+    application.add_canvas("MainCanvas", draw_main_canvas, initial_world, ezgl::color(240, 240, 240));
 
 
     application.run(initial_setup, act_on_mouse_click,
@@ -116,11 +121,18 @@ void drawMap()
 void draw_main_canvas(ezgl::renderer *g)
 {
     //auto startTime = std::chrono::high_resolution_clock::now();
-    
     // Check for current zoom level through area of visible world
+    // ezgl::rectangle world_to_screen_location = g->world_to_screen(ezgl::rectangle(ezgl::point2d(xy_from_latlon(latlon_bound.min).x, xy_from_latlon(latlon_bound.min).y),
+    //                                                                                 ezgl::point2d(xy_from_latlon(latlon_bound.max).x, xy_from_latlon(latlon_bound.max).y)));
+    // std::cout << "world to screen location: " << std::endl;
+    // std::cout << "top left: " << world_to_screen_location.left() << ", " << world_to_screen_location.bottom() << std::endl;
+    // std::cout << "bottom right" << world_to_screen_location.right() << ", " << world_to_screen_location.top() << std::endl;
+    // std::cout << "-------------------------------------" << std::endl;    
+    
+    // Check for current zoom level through visible width of world
     ezgl::rectangle visible_world = g->get_visible_world();
-    world_percent = visible_world.area()/WORLD_AREA*100;
-    std::cout << "world area percent: " << world_percent << std::endl;
+    curr_world_width = visible_world.width();
+    std::cout << "horizontal length (in km): " << visible_world.width()/1000 << std::endl;
     
     for (StreetSegmentIdx seg_id = 0; seg_id < segmentNum; seg_id++)
     {
@@ -138,24 +150,31 @@ void draw_main_canvas(ezgl::renderer *g)
         {   // Displaying highway tags
             if (tag.first == "highway")
             {   // Draws different amount of data based on different zoom levels
-                if (world_percent > ZOOM_LIMIT_1)
+                if (curr_world_width > ZOOM_LIMIT_0)
                 {
-                    if (tag.second == "trunk" || tag.second == "motorway" 
+                    if (tag.second == "motorway" || tag.second == "trunk"
+                         || tag.second == "primary")
+                    {   
+                        draw_street_segments(g, seg_id, from_xy, to_xy, tag.second);
+                    }
+                } else if (ZOOM_LIMIT_1 < curr_world_width && curr_world_width < ZOOM_LIMIT_0)
+                {
+                    if (tag.second == "motorway" || tag.second == "trunk"
                          || tag.second == "primary" || tag.second == "secondary")
-                    {
+                    {   
                         draw_street_segments(g, seg_id, from_xy, to_xy, tag.second);
                     }
                            
-                } else if (ZOOM_LIMIT_2 < world_percent && world_percent < ZOOM_LIMIT_1)
+                } else if (ZOOM_LIMIT_2 < curr_world_width && curr_world_width < ZOOM_LIMIT_1)
                 {
-                    if (tag.second == "trunk" || tag.second == "motorway" || tag.second == "motorway_link" 
+                    if (tag.second == "motorway" || tag.second == "motorway_link" || tag.second == "trunk"
                         || tag.second == "primary" || tag.second == "secondary" || tag.second == "tertiary")
                     {
                         draw_street_segments(g, seg_id, from_xy, to_xy, tag.second);
                     }
-                } else if (ZOOM_LIMIT_3 < world_percent && world_percent < ZOOM_LIMIT_2)
+                } else if (ZOOM_LIMIT_3 < curr_world_width && curr_world_width < ZOOM_LIMIT_2)
                 {
-                    if (tag.second == "trunk" || tag.second == "motorway" || tag.second == "motorway_link" 
+                    if (tag.second == "motorway" || tag.second == "motorway_link" || tag.second == "trunk"
                         || tag.second == "primary" || tag.second == "secondary" || tag.second == "tertiary" 
                         || tag.second == "unclassified" || tag.second == "residential" )
                     {
@@ -164,18 +183,17 @@ void draw_main_canvas(ezgl::renderer *g)
                     // Draw highlighted intersection(s)
                     draw_highlighted_intersections(g, from_id, from_xy);
                     draw_highlighted_intersections(g, to_id, to_xy);  
-                } else if (world_percent <= ZOOM_LIMIT_3)
+                } else if (curr_world_width <= ZOOM_LIMIT_3)
                 {
                     draw_street_segments(g, seg_id, from_xy, to_xy, tag.second);   
                     // Draw highlighted intersection(s)
                     draw_highlighted_intersections(g, from_id, from_xy);
                     draw_highlighted_intersections(g, to_id, to_xy);                
-                    draw_street_segment_names(g, seg_id, mid_xy);            // TODO: avoid displaying too many text boxes
+                    // draw_street_segment_names(g, seg_id, mid_xy);            // TODO: avoid displaying too many text boxes
                 }
             }
         }
     }
-    
     
     for (int j = 0; j < featureNum; j++)
     {
@@ -199,7 +217,7 @@ void initial_setup(ezgl::application *application, bool /*new_window*/)
   //Setting our starting row for insertion at 6 (Default zoom/pan buttons created by EZGL take up first five rows);
   //We will increment row each time we insert a new element. 
   int row = 6;
-  //ask user to input names of two streets
+  //ask user to input names of two streets              // TODO: segmentation fault if street name not found
   application->create_button("Search intersections", row++, input_streets_cbk);
   
   application->create_label(row++, "Select city:"); 
@@ -259,9 +277,6 @@ void city_change_cbk(GtkComboBoxText* self, ezgl::application* app){
         std::cout << "Loaded new map" << std::endl;
         ezgl::rectangle new_world(xy_from_latlon(latlon_bound.min),
                                     xy_from_latlon(latlon_bound.max));
-
-        WORLD_AREA = abs(xy_from_latlon(latlon_bound.max).x - xy_from_latlon(latlon_bound.min).x)
-                        * abs(xy_from_latlon(latlon_bound.max).y - xy_from_latlon(latlon_bound.min).y);
        
         app->change_canvas_world_coordinates("MainCanvas", new_world);
         app->refresh_drawing();
@@ -319,13 +334,15 @@ void dialog_cbk(GtkDialog* self, gint response_id, ezgl::application* app){
  ********************************************************************************************************************************/
 
 // Draw street segments
-void draw_street_segments(ezgl::renderer *g, StreetSegmentIdx seg_id, ezgl::point2d from_xy, ezgl::point2d to_xy, std::string street_type)
+void draw_street_segments(ezgl::renderer *g, StreetSegmentIdx seg_id, 
+                          ezgl::point2d from_xy, ezgl::point2d to_xy, 
+                          std::string street_type)
 {
     // Set colors and line width according to street type           // TODO: Bug highway hidden by other streets when zoomed out
                                                                     // TODO: Fix line_width according to zoom level
     if (street_type == "motorway" || street_type == "motorway_link")
     {
-        g->set_color(ezgl::ORANGE);
+        g->set_color(255, 212, 124);
         g->set_line_width(5);
     } else if (street_type == "trunk" || street_type == "primary" 
                || street_type == "secondary" || street_type == "tertiary")
@@ -410,7 +427,7 @@ void draw_feature_area(ezgl::renderer *g, FeatureDetailedInfo tempFeatureInfo){
     if (tempType == PARK)
     {
         if (tempPoints.size() > 1){
-            g->set_color(141,154, 134);
+            g->set_color(206, 234, 214);
             g->fill_poly(tempPoints);
         }
     } else if (tempType == BEACH)
@@ -422,31 +439,31 @@ void draw_feature_area(ezgl::renderer *g, FeatureDetailedInfo tempFeatureInfo){
     } else if (tempType == LAKE)
     {
         if (tempPoints.size() > 1){
-            g->set_color(75, 182, 239);
+            g->set_color(153, 204, 255);
             g->fill_poly(tempPoints);
         }
     } else if (tempType == ISLAND)
     {
         if (tempPoints.size() > 1){
-            g->set_color(43, 174, 102);
+            g->set_color(168, 218, 181);
             g->fill_poly(tempPoints);
         }
     } else if (tempType == BUILDING)
     {
         if (tempPoints.size() > 1){
-            g->set_color(178, 190, 181);
+            g->set_color(230, 230, 230);
             g->fill_poly(tempPoints);
         }
     } else if (tempType == GREENSPACE)
     {
         if (tempPoints.size() > 1){
-            g->set_color(ezgl::GREEN);
+            g->set_color(206, 234, 214);
             g->fill_poly(tempPoints);
         }
     } else if (tempType == GOLFCOURSE)
     {
         if (tempPoints.size() > 1){
-            g->set_color(0, 145, 112);
+            g->set_color(168, 218, 181);
             g->fill_poly(tempPoints);
         }
     } else if (tempType == GLACIER)
