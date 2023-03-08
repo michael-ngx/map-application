@@ -26,6 +26,8 @@
 #include <chrono>
 #include <sstream>
 #include <string>
+#include <algorithm>
+#include <vector>
 
 std::string CURRENT_CITY = " ";
 
@@ -39,7 +41,7 @@ double curr_world_width;
 
 std::string stName1;
 std::string stName2;
-
+double street_name_percent = 0.00003;
 /*******************************************************************************************************************************
  * FUNCTION DECLARATIONS
  ********************************************************************************************************************************/
@@ -141,7 +143,7 @@ void draw_main_canvas(ezgl::renderer *g)
         FeatureDetailedInfo tempFeatureInfo = Features_AllInfo[j];
         draw_feature_area(g, tempFeatureInfo);
     }
-
+    int added_seg_id_count = 0;
     // Draw all streets and intersections
     for (StreetSegmentIdx seg_id = 0; seg_id < segmentNum; seg_id++)
     {
@@ -151,7 +153,13 @@ void draw_main_canvas(ezgl::renderer *g)
         ezgl::point2d from_xy = Intersection_IntersectionInfo[from_id].position_xy;
         ezgl::point2d to_xy = Intersection_IntersectionInfo[to_id].position_xy;
         ezgl::point2d mid_xy = {(from_xy.x + to_xy.x) / 2, (from_xy.y + to_xy.y) / 2};
-
+        
+        // Get the name of the street from steet segment, and from that get number of intersections
+        StreetIdx streetIdx = Segment_SegmentDetailedInfo[seg_id].streetID;
+        int streetSegNumber = Streets_AllSegments[streetIdx].size();
+        int seg_id_to_add = streetSegNumber * street_name_percent;
+        
+        //std::cout << seg_id_to_add << std::endl;
         // Check the type of street this segment belongs to through wayOSMID
         OSMID wayOSMID = Segment_SegmentDetailedInfo[seg_id].wayOSMID;
         std::string highway_type = OSMID_Highway_Type.at(wayOSMID);
@@ -196,7 +204,16 @@ void draw_main_canvas(ezgl::renderer *g)
             draw_highlighted_intersections(g, from_id, from_xy);
             draw_highlighted_intersections(g, to_id, to_xy);                
             // draw_street_segment_names(g, seg_id, mid_xy);            // TODO: avoid displaying too many text boxes
+            if(seg_id_to_add != 0){
+                if(seg_id % seg_id_to_add != 0){
+                    draw_street_segment_names(g, added_seg_id_count, mid_xy);
+                    if(added_seg_id_count <= seg_id)
+                        added_seg_id_count += seg_id_to_add;
+                    //std::cout << added_seg_id_count << std::endl;
+                }
+            }
         }
+        
     }
 //    auto currTime = std::chrono::high_resolution_clock::now();
 //    auto wallClock = std::chrono::duration_cast<std::chrono::duration<double>>(currTime - startTime);
@@ -290,9 +307,20 @@ void input_streets_cbk(GtkWidget */*widget*/, ezgl::application* app){
         getline(std::cin, stName2);
         std::vector<StreetIdx> FoundInterIdx1 = findStreetIdsFromPartialStreetName(stName1);
         std::vector<StreetIdx> FoundInterIdx2 = findStreetIdsFromPartialStreetName(stName2);
-    
+        
+        if(!FoundInterIdx1.size() || !FoundInterIdx2.size()){
+            std::cout << "No match!" << std::endl;
+            break;
+        }
+        
         std::vector<IntersectionIdx> FoundInters 
                                      = findIntersectionsOfTwoStreets(FoundInterIdx1[0], FoundInterIdx2[0]);
+        
+        if(!FoundInters.size()){
+            std::cout << "No match!" << std::endl;
+            break;
+        }
+        
         for(auto interIdx : FoundInters){
             std::cout << std::endl;
             std::cout << "Info of this intersection --------" << std::endl;
