@@ -41,6 +41,7 @@ void init_intersections();
 void init_streets();
 void init_features();
 void init_osm();
+void init_osm_highways();
 
 // *******************************************************************
 // Latlon bounds of current city
@@ -94,7 +95,9 @@ std::vector<FeatureDetailedInfo> Features_AllInfo;
 // OSMNode
 // *******************************************************************
 // Keys: OSMID, Value: vector of (tag, value) pairs
-std::unordered_map<OSMID, std::vector<std::pair<std::string, std::string>>> OSM_AllTagPairs;
+std::unordered_map<OSMID, std::vector<std::pair<std::string, std::string>>> OSMID_Nodes_AllTagPairs;
+// Keys: OSMID, Value: Type of highway of corresponding wayOSMID (only for segments)
+std::unordered_map<OSMID, std::string> OSMID_Highway_Type;
 
 /*******************************************************************************************************************************
  * STREET MAP LIBRARY
@@ -372,8 +375,8 @@ double findFeatureArea(FeatureIdx feature_id){
 std::string getOSMNodeTagValue (OSMID OSMid, std::string key){
     //use try and catch block to check for out of range OSMid
     try{
-        //use the OSM_AllTagPairs container to find given OSMid
-        auto tempVector = OSM_AllTagPairs.at(OSMid);
+        //use the OSMID_Nodes_AllTagPairs container to find given OSMid
+        auto tempVector = OSMID_Nodes_AllTagPairs.at(OSMid);
         for (auto tempPair = tempVector.begin(); tempPair != tempVector.end(); ++tempPair){
             //return value corresponding to a key
             if ((*tempPair).first == key){
@@ -397,7 +400,7 @@ void closeMap() {
     streetAllLength.clear();
     StreetName_StreetIdx.clear();
     Features_AllInfo.clear();
-    OSM_AllTagPairs.clear();
+    OSMID_Nodes_AllTagPairs.clear();
 
     closeStreetDatabase();
     closeOSMDatabase();
@@ -418,6 +421,7 @@ void m1_init(){
     init_streets();
     init_features();
     init_osm();
+    init_osm_highways();
 }
 
 // *******************************************************************
@@ -594,27 +598,32 @@ void init_osm(){
         const OSMNode* tempOSMNode = getNodeByIndex(index);
         OSMID tempOSMID = tempOSMNode->id();
         for (int tagIdx = 0; tagIdx < getTagCount(tempOSMNode); ++tagIdx){
-            if (OSM_AllTagPairs.find(tempOSMID) == OSM_AllTagPairs.end()){
+            if (OSMID_Nodes_AllTagPairs.find(tempOSMID) == OSMID_Nodes_AllTagPairs.end()){
                 std::vector<std::pair<std::string, std::string>> tempVector;
                 tempVector.push_back(getTagPair(tempOSMNode, tagIdx));
-                OSM_AllTagPairs.insert(std::make_pair(tempOSMID, tempVector));
+                OSMID_Nodes_AllTagPairs.insert(std::make_pair(tempOSMID, tempVector));
             } else {
-                OSM_AllTagPairs.at(tempOSMID).push_back(getTagPair(tempOSMNode, tagIdx));
-            }
-        }
-    }
-    // Pre-load data for OSMWays
-    for (int way = 0; way < getNumberOfWays(); ++way){
-        const OSMWay* tempOSMWay = getWayByIndex(way);
-        OSMID tempOSMID = tempOSMWay->id();
-        for (int tagIdx = 0; tagIdx < getTagCount(tempOSMWay); ++tagIdx){
-            if (OSM_AllTagPairs.find(tempOSMID) == OSM_AllTagPairs.end()){
-                std::vector<std::pair<std::string, std::string>> tempVector;
-                tempVector.push_back(getTagPair(tempOSMWay, tagIdx));
-                OSM_AllTagPairs.insert(std::make_pair(tempOSMID, tempVector));
-            } else {
-                OSM_AllTagPairs.at(tempOSMID).push_back(getTagPair(tempOSMWay, tagIdx));
+                OSMID_Nodes_AllTagPairs.at(tempOSMID).push_back(getTagPair(tempOSMNode, tagIdx));
             }
         }
     }
 }
+
+// Pre-load data for OSMWays - Only consider OSMIDs having a tag of highway, record highway type
+void init_osm_highways()
+{
+    for (int way = 0; way < getNumberOfWays(); ++way)
+    {
+        const OSMWay* tempOSMWay = getWayByIndex(way);
+        OSMID tempOSMID = tempOSMWay->id();
+        for (int tagIdx = 0; tagIdx < getTagCount(tempOSMWay); ++tagIdx)
+        {
+            auto tag_pair = getTagPair(tempOSMWay, tagIdx);
+            if (tag_pair.first == "highway")
+            {
+                OSMID_Highway_Type.insert(std::make_pair(tempOSMID, tag_pair.second));
+            }
+        }
+    }
+}
+

@@ -99,6 +99,8 @@ extern std::vector<FeatureDetailedInfo> Features_AllInfo;
 // *******************************************************************
 // Keys: OSMID, Value: vector of (tag, value) pairs
 extern std::unordered_map<OSMID, std::vector<std::pair<std::string, std::string>>> OSM_AllTagPairs;
+// Keys: OSMID, Value: Type of highway of corresponding wayOSMID (only for segments)
+extern std::unordered_map<OSMID, std::string> OSMID_Highway_Type;
 
 #endif /* GLOBALS_H */
 

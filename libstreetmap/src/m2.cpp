@@ -122,8 +122,9 @@ void draw_main_canvas(ezgl::renderer *g)
 {
     //auto startTime = std::chrono::high_resolution_clock::now();
     // Check for current zoom level through area of visible world
-    // ezgl::rectangle world_to_screen_location = g->world_to_screen(ezgl::rectangle(ezgl::point2d(xy_from_latlon(latlon_bound.min).x, xy_from_latlon(latlon_bound.min).y),
-    //                                                                                 ezgl::point2d(xy_from_latlon(latlon_bound.max).x, xy_from_latlon(latlon_bound.max).y)));
+    // ezgl::rectangle world_to_screen_location = g->world_to_screen(ezgl::rectangle(
+    //                                              ezgl::point2d(xy_from_latlon(latlon_bound.min).x, xy_from_latlon(latlon_bound.min).y),
+    //                                              ezgl::point2d(xy_from_latlon(latlon_bound.max).x, xy_from_latlon(latlon_bound.max).y)));
     // std::cout << "world to screen location: " << std::endl;
     // std::cout << "top left: " << world_to_screen_location.left() << ", " << world_to_screen_location.bottom() << std::endl;
     // std::cout << "bottom right" << world_to_screen_location.right() << ", " << world_to_screen_location.top() << std::endl;
@@ -134,6 +135,14 @@ void draw_main_canvas(ezgl::renderer *g)
     curr_world_width = visible_world.width();
     std::cout << "horizontal length (in km): " << visible_world.width()/1000 << std::endl;
     
+    // Draw features
+    for (int j = 0; j < featureNum; j++)
+    {
+        FeatureDetailedInfo tempFeatureInfo = Features_AllInfo[j];
+        draw_feature_area(g, tempFeatureInfo);
+    }
+
+    // Draw all streets and intersections
     for (StreetSegmentIdx seg_id = 0; seg_id < segmentNum; seg_id++)
     {
         // Get LatLon information of from and to intersections from each segments
@@ -145,60 +154,49 @@ void draw_main_canvas(ezgl::renderer *g)
 
         // Check the type of street this segment belongs to through wayOSMID
         OSMID wayOSMID = Segment_SegmentDetailedInfo[seg_id].wayOSMID;
-        auto temp_vector = OSM_AllTagPairs.at(wayOSMID);
-        for (auto tag : temp_vector)
-        {   // Displaying highway tags
-            if (tag.first == "highway")
-            {   // Draws different amount of data based on different zoom levels
-                if (curr_world_width > ZOOM_LIMIT_0)
-                {
-                    if (tag.second == "motorway" || tag.second == "trunk"
-                         || tag.second == "primary")
-                    {   
-                        draw_street_segments(g, seg_id, from_xy, to_xy, tag.second);
-                    }
-                } else if (ZOOM_LIMIT_1 < curr_world_width && curr_world_width < ZOOM_LIMIT_0)
-                {
-                    if (tag.second == "motorway" || tag.second == "trunk"
-                         || tag.second == "primary" || tag.second == "secondary")
-                    {   
-                        draw_street_segments(g, seg_id, from_xy, to_xy, tag.second);
-                    }
-                           
-                } else if (ZOOM_LIMIT_2 < curr_world_width && curr_world_width < ZOOM_LIMIT_1)
-                {
-                    if (tag.second == "motorway" || tag.second == "motorway_link" || tag.second == "trunk"
-                        || tag.second == "primary" || tag.second == "secondary" || tag.second == "tertiary")
-                    {
-                        draw_street_segments(g, seg_id, from_xy, to_xy, tag.second);
-                    }
-                } else if (ZOOM_LIMIT_3 < curr_world_width && curr_world_width < ZOOM_LIMIT_2)
-                {
-                    if (tag.second == "motorway" || tag.second == "motorway_link" || tag.second == "trunk"
-                        || tag.second == "primary" || tag.second == "secondary" || tag.second == "tertiary" 
-                        || tag.second == "unclassified" || tag.second == "residential" )
-                    {
-                        draw_street_segments(g, seg_id, from_xy, to_xy, tag.second);
-                    }
-                    // Draw highlighted intersection(s)
-                    draw_highlighted_intersections(g, from_id, from_xy);
-                    draw_highlighted_intersections(g, to_id, to_xy);  
-                } else if (curr_world_width <= ZOOM_LIMIT_3)
-                {
-                    draw_street_segments(g, seg_id, from_xy, to_xy, tag.second);   
-                    // Draw highlighted intersection(s)
-                    draw_highlighted_intersections(g, from_id, from_xy);
-                    draw_highlighted_intersections(g, to_id, to_xy);                
-                    // draw_street_segment_names(g, seg_id, mid_xy);            // TODO: avoid displaying too many text boxes
-                }
+        std::string highway_type = OSMID_Highway_Type.at(wayOSMID);
+        // Draws different amount of data based on different zoom levels
+        if (curr_world_width > ZOOM_LIMIT_0)
+        {
+            if (highway_type == "motorway" || highway_type == "trunk"
+                    || highway_type == "primary")
+            {   
+                draw_street_segments(g, seg_id, from_xy, to_xy, highway_type);
             }
+        } else if (ZOOM_LIMIT_1 < curr_world_width && curr_world_width < ZOOM_LIMIT_0)
+        {
+            if (highway_type == "motorway" || highway_type == "trunk"
+                    || highway_type == "primary" || highway_type == "secondary")
+            {   
+                draw_street_segments(g, seg_id, from_xy, to_xy, highway_type);
+            }
+                    
+        } else if (ZOOM_LIMIT_2 < curr_world_width && curr_world_width < ZOOM_LIMIT_1)
+        {
+            if (highway_type == "motorway" || highway_type == "motorway_link" || highway_type == "trunk"
+                || highway_type == "primary" || highway_type == "secondary" || highway_type == "tertiary")
+            {
+                draw_street_segments(g, seg_id, from_xy, to_xy, highway_type);
+            }
+        } else if (ZOOM_LIMIT_3 < curr_world_width && curr_world_width < ZOOM_LIMIT_2)
+        {
+            if (highway_type == "motorway" || highway_type == "motorway_link" || highway_type == "trunk"
+                || highway_type == "primary" || highway_type == "secondary" || highway_type == "tertiary" 
+                || highway_type == "unclassified" || highway_type == "residential" )
+            {
+                draw_street_segments(g, seg_id, from_xy, to_xy, highway_type);
+            }
+            // Draw highlighted intersection(s)
+            draw_highlighted_intersections(g, from_id, from_xy);
+            draw_highlighted_intersections(g, to_id, to_xy);  
+        } else if (curr_world_width <= ZOOM_LIMIT_3)
+        {
+            draw_street_segments(g, seg_id, from_xy, to_xy, highway_type);   
+            // Draw highlighted intersection(s)
+            draw_highlighted_intersections(g, from_id, from_xy);
+            draw_highlighted_intersections(g, to_id, to_xy);                
+            // draw_street_segment_names(g, seg_id, mid_xy);            // TODO: avoid displaying too many text boxes
         }
-    }
-    
-    for (int j = 0; j < featureNum; j++)
-    {
-        FeatureDetailedInfo tempFeatureInfo = Features_AllInfo[j];
-        draw_feature_area(g, tempFeatureInfo);
     }
 //    auto currTime = std::chrono::high_resolution_clock::now();
 //    auto wallClock = std::chrono::duration_cast<std::chrono::duration<double>>(currTime - startTime);
