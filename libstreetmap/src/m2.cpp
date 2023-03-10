@@ -36,17 +36,9 @@ const float ZOOM_LIMIT_0 = 50000;
 const float ZOOM_LIMIT_1 = 15000;
 const float ZOOM_LIMIT_2 = 5000;
 const float ZOOM_LIMIT_3 = 2000;
-const float ZOOM_LIMIT_4 = 800;
-const float ZOOM_LIMIT_5 = 300;
 // Current world width in meters
 double curr_world_width;
 
-std::string stName1;
-std::string stName2;
-double street_name_percent2 = 0.00001;
-double street_name_percent3 = 0.00003;
-double street_name_percent4 = 0.00009;
-double street_name_percent5 = 0.00018;
 /*******************************************************************************************************************************
  * FUNCTION DECLARATIONS
  ********************************************************************************************************************************/
@@ -87,12 +79,10 @@ void dialog_cbk(GtkDialog* self, gint response_id, ezgl::application* app);
 void draw_street_segments(ezgl::renderer *g, StreetSegmentIdx seg_id, 
                           ezgl::point2d from_xy, ezgl::point2d to_xy, 
                           std::string street_type);
-int get_line_width(std::string street_type);
-void draw_highlighted_intersections(ezgl::renderer* g, ezgl::point2d inter_xy);
-void draw_street_segment_names(ezgl::renderer *g, StreetSegmentIdx seg_id, ezgl::point2d mid_xy);
-void draw_street_names(ezgl::renderer *g, StreetSegmentIdx seg_id, int seg_id_to_add, 
-                       int added_seg_id_count, ezgl::point2d mid_xy);
 void draw_feature_area(ezgl::renderer *g, FeatureDetailedInfo tempFeatureInfo);
+int get_line_width(std::string street_type);
+void draw_street_segment_names(ezgl::renderer *g, std::string street_name, ezgl::point2d mid_xy);
+void draw_highlighted_intersections(ezgl::renderer* g, ezgl::point2d inter_xy);
 std::string get_new_map_path(std::string text_string);
 
 /*******************************************************************************************************************************
@@ -143,9 +133,7 @@ void draw_main_canvas(ezgl::renderer *g)
         draw_feature_area(g, tempFeatureInfo);
     }
     
-    int added_seg_id_count = 0;
-    
-    // Draw all streets
+    // Draw all streets segments
     for (StreetSegmentIdx seg_id = 0; seg_id < segmentNum; seg_id++)
     {
         // Get LatLon information of from and to intersections from each segments
@@ -153,12 +141,6 @@ void draw_main_canvas(ezgl::renderer *g)
         IntersectionIdx to_id = Segment_SegmentDetailedInfo[seg_id].to;
         ezgl::point2d from_xy = Intersection_IntersectionInfo[from_id].position_xy;
         ezgl::point2d to_xy = Intersection_IntersectionInfo[to_id].position_xy;
-        ezgl::point2d mid_xy = {(from_xy.x + to_xy.x) / 2, (from_xy.y + to_xy.y) / 2};
-
-        // Get the name of the street from steet segment, and from that get number of intersections
-        StreetIdx streetIdx = Segment_SegmentDetailedInfo[seg_id].streetID;
-        int streetSegNumber = Streets_AllSegments[streetIdx].size();
-        int seg_id_to_add = 0;
         
         // Check the type of street this segment belongs to through wayOSMID
         OSMID wayOSMID = Segment_SegmentDetailedInfo[seg_id].wayOSMID;
@@ -193,31 +175,42 @@ void draw_main_canvas(ezgl::renderer *g)
             {
                 draw_street_segments(g, seg_id, from_xy, to_xy, highway_type);
             }
-            
-            seg_id_to_add = streetSegNumber * street_name_percent2;
-            //std::cout << seg_id_to_add << std::endl;
-            if(seg_id_to_add != 0){
-                if(seg_id % seg_id_to_add != 0){
-                    draw_street_segment_names(g, added_seg_id_count, mid_xy);
-                    if(added_seg_id_count <= seg_id)
-                        added_seg_id_count += seg_id_to_add;
-                    //std::cout << added_seg_id_count << std::endl;
-                }
-            }
         } else if (curr_world_width <= ZOOM_LIMIT_3)
         {
-            draw_street_segments(g, seg_id, from_xy, to_xy, highway_type);                 
-            // draw_street_segment_names(g, seg_id, mid_xy);            // TODO: avoid displaying too many text boxes
-            seg_id_to_add = streetSegNumber * street_name_percent3;
-            //std::cout << seg_id_to_add << std::endl;
-            if(seg_id_to_add != 0){
-                if(seg_id % seg_id_to_add != 0){
-                    draw_street_segment_names(g, added_seg_id_count, mid_xy);
-                    if(added_seg_id_count <= seg_id)
-                        added_seg_id_count += seg_id_to_add;
-                    //std::cout << added_seg_id_count << std::endl;
+            draw_street_segments(g, seg_id, from_xy, to_xy, highway_type);
+        }
+    }
+
+    // Draw street names based on number of segments of each street and zoom levels
+    // Draw street names starting at lowest 2 zoom levels
+    if ((ZOOM_LIMIT_3 < curr_world_width && curr_world_width < ZOOM_LIMIT_2) || (curr_world_width < ZOOM_LIMIT_3))
+    {
+        for (StreetIdx street_id = 0; street_id < streetNum; street_id++)
+        {
+            // Get the name of the street from steet segment, and from that get number of intersections
+            std::vector<StreetSegmentIdx> all_segments = Streets_AllSegments.find(street_id)->second;         // Vector of all segments
+            int total_segment_amount = all_segments.size();
+
+            // // Number of segments to display for each street (= fraction of total segment amounts)
+            // int num_seg_to_add = total_segment_amount * 0.00005;
+            // Avoid dividing by zero
+            // if (!num_seg_to_add)
+            // {
+                // int step = total_segment_amount / num_seg_to_add;
+                int step = 20;
+                std::string street_name = Segment_SegmentDetailedInfo[all_segments[0]].streetName;
+                for (int i = 0; i < total_segment_amount; i += step)
+                {
+                    StreetSegmentIdx seg_id = all_segments[i];
+                    // Get LatLon information of from and to intersections from each segments
+                    IntersectionIdx from_id = Segment_SegmentDetailedInfo[seg_id].from;
+                    IntersectionIdx to_id = Segment_SegmentDetailedInfo[seg_id].to;
+                    ezgl::point2d from_xy = Intersection_IntersectionInfo[from_id].position_xy;
+                    ezgl::point2d to_xy = Intersection_IntersectionInfo[to_id].position_xy;
+                    ezgl::point2d mid_xy = {(from_xy.x + to_xy.x) / 2, (from_xy.y + to_xy.y) / 2};
+                    draw_street_segment_names(g, street_name, mid_xy);
                 }
-            }
+            // }
         }
     }
 
@@ -242,10 +235,10 @@ void initial_setup(ezgl::application *application, bool /*new_window*/)
   // Update the status bar message
   application->update_message("EZGL Application");
   
-  //Setting our starting row for insertion at 6 (Default zoom/pan buttons created by EZGL take up first five rows);
-  //We will increment row each time we insert a new element. 
+  // Setting our starting row for insertion at 6 (Default zoom/pan buttons created by EZGL take up first five rows);
+  // We will increment row each time we insert a new element. 
   int row = 6;
-  //ask user to input names of two streets              // TODO: segmentation fault if street name not found
+  // Ask user to input names of two streets              // TODO: segmentation fault if street name not found
   application->create_button("Search intersections", row++, input_streets_cbk);
   
   application->create_label(row++, "Select city:"); 
@@ -453,27 +446,12 @@ void draw_highlighted_intersections(ezgl::renderer* g, ezgl::point2d inter_xy)
 }
 
 // Draws text on street segments
-void draw_street_segment_names(ezgl::renderer *g, StreetSegmentIdx seg_id, ezgl::point2d mid_xy)
+void draw_street_segment_names(ezgl::renderer *g, std::string street_name, ezgl::point2d mid_xy)
 {
-    ezgl::rectangle rec;
-    rec = g->get_visible_screen();
-    std::string stName = getStreetName(Segment_SegmentDetailedInfo[seg_id].streetID);
-    // g->set_color(0, 0, 0, 100);
     g->set_color(0, 0, 0);
     g->set_font_size(7);
-    if(stName != "<unknown>")
-        g->draw_text(mid_xy, stName, rec.m_second.x, rec.m_second.y);
-}
-
-void draw_street_names(ezgl::renderer *g, StreetSegmentIdx seg_id, int seg_id_to_add, 
-                       int added_seg_id_count, ezgl::point2d mid_xy){
-    if(seg_id_to_add != 0){
-                if(seg_id % seg_id_to_add != 0){
-                    draw_street_segment_names(g, added_seg_id_count, mid_xy);
-                    if(added_seg_id_count <= seg_id)
-                        added_seg_id_count += seg_id_to_add;
-                }
-            }
+    if (street_name != "<unknown>")
+        g->draw_text(mid_xy, street_name);
 }
 
 // Get map path for reloading from string of city name
