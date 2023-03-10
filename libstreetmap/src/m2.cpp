@@ -87,6 +87,7 @@ void dialog_cbk(GtkDialog* self, gint response_id, ezgl::application* app);
 void draw_street_segments(ezgl::renderer *g, StreetSegmentIdx seg_id, 
                           ezgl::point2d from_xy, ezgl::point2d to_xy, 
                           std::string street_type);
+int get_line_width(std::string street_type);
 void draw_highlighted_intersections(ezgl::renderer* g, IntersectionIdx inter_id, ezgl::point2d inter_xy);
 void draw_street_segment_names(ezgl::renderer *g, StreetSegmentIdx seg_id, ezgl::point2d mid_xy);
 void draw_street_names(ezgl::renderer *g, StreetSegmentIdx seg_id, int seg_id_to_add, 
@@ -130,19 +131,10 @@ void drawMap()
 void draw_main_canvas(ezgl::renderer *g)
 {
     //auto startTime = std::chrono::high_resolution_clock::now();
-    // Check for current zoom level through area of visible world
-    // ezgl::rectangle world_to_screen_location = g->world_to_screen(ezgl::rectangle(
-    //                                              ezgl::point2d(xy_from_latlon(latlon_bound.min).x, xy_from_latlon(latlon_bound.min).y),
-    //                                              ezgl::point2d(xy_from_latlon(latlon_bound.max).x, xy_from_latlon(latlon_bound.max).y)));
-    // std::cout << "world to screen location: " << std::endl;
-    // std::cout << "top left: " << world_to_screen_location.left() << ", " << world_to_screen_location.bottom() << std::endl;
-    // std::cout << "bottom right" << world_to_screen_location.right() << ", " << world_to_screen_location.top() << std::endl;
-    // std::cout << "-------------------------------------" << std::endl;    
     
     // Check for current zoom level through visible width of world
     ezgl::rectangle visible_world = g->get_visible_world();
     curr_world_width = visible_world.width();
-    std::cout << "horizontal length (in km): " << visible_world.width()/1000 << std::endl;
     
     // Draw features
     for (int j = 0; j < featureNum; j++)
@@ -167,15 +159,13 @@ void draw_main_canvas(ezgl::renderer *g)
         int streetSegNumber = Streets_AllSegments[streetIdx].size();
         int seg_id_to_add = 0;
         
-        //std::cout << seg_id_to_add << std::endl;
         // Check the type of street this segment belongs to through wayOSMID
         OSMID wayOSMID = Segment_SegmentDetailedInfo[seg_id].wayOSMID;
         std::string highway_type = OSMID_Highway_Type.at(wayOSMID);
         // Draws different amount of data based on different zoom levels
         if (curr_world_width > ZOOM_LIMIT_0)
         {
-            if (highway_type == "motorway" || highway_type == "trunk"
-                    || highway_type == "primary")
+            if (highway_type == "motorway" || highway_type == "primary")
             {   
                 draw_street_segments(g, seg_id, from_xy, to_xy, highway_type);
             }
@@ -376,31 +366,26 @@ void dialog_cbk(GtkDialog* self, gint response_id, ezgl::application* app){
   //We always have to destroy the dialog window in the callback function or it will never close
   gtk_widget_destroy(GTK_WIDGET(self));
 }
+
 /*******************************************************************************************************************************
  * HELPER FUNCTIONS
  ********************************************************************************************************************************/
-
 // Draw street segments
 void draw_street_segments(ezgl::renderer *g, StreetSegmentIdx seg_id, 
                           ezgl::point2d from_xy, ezgl::point2d to_xy, 
                           std::string street_type)
 {
     // Set colors and line width according to street type           // TODO: Bug highway hidden by other streets when zoomed out
-                                                                    // TODO: Fix line_width according to zoom level
     if (street_type == "motorway" || street_type == "motorway_link")
-    {
         g->set_color(255, 212, 124);
-        g->set_line_width(5);
-    } else if (street_type == "trunk" || street_type == "primary" 
-               || street_type == "secondary" || street_type == "tertiary")
-    {
+    else 
         g->set_color(ezgl::WHITE);
-        g->set_line_width(3);
-    } else 
-    {
-        g->set_color(ezgl::WHITE);
-        g->set_line_width(0);
-    }
+
+    // Set line width based on current zoom level and street type    
+    int line_width = get_line_width(street_type); 
+    g->set_line_width(line_width);
+
+    // Round street ends
     g->set_line_cap(ezgl::line_cap(1));
     // Draw street segments including curvepoints
     ezgl::point2d curve_pt_xy; // Temp xy for current curve point.
@@ -415,6 +400,52 @@ void draw_street_segments(ezgl::renderer *g, StreetSegmentIdx seg_id,
     }
     // Connect last curve point to (x_to, y_to)
     g->draw_line(from_xy, to_xy);
+}
+
+// Manually fix street width with pixels according to zoom levels
+int get_line_width(std::string street_type)
+{
+    if (curr_world_width > ZOOM_LIMIT_0)
+    {
+        if (street_type == "motorway") return 4;
+        else return 2;
+    } else if (ZOOM_LIMIT_1 < curr_world_width && curr_world_width < ZOOM_LIMIT_0)
+    {
+        if (street_type == "motorway") return 5;
+        else if (street_type == "primary") return 3;
+        else if (street_type == "trunk") return 1;
+        else if (street_type == "secondary") return 1;
+    } else if (ZOOM_LIMIT_2 < curr_world_width && curr_world_width < ZOOM_LIMIT_1)
+    {
+        if (street_type == "motorway") return 6;
+        if (street_type == "motorway_link") return 6;
+        else if (street_type == "primary") return 4;
+        else if (street_type == "trunk") return 2;
+        else if (street_type == "secondary") return 2;
+        else if (street_type == "tertiary") return 0;
+    } else if (ZOOM_LIMIT_3 < curr_world_width && curr_world_width < ZOOM_LIMIT_2)
+    {
+        if (street_type == "motorway") return 7;
+        if (street_type == "motorway_link") return 7;
+        else if (street_type == "primary") return 5;
+        else if (street_type == "trunk") return 3;
+        else if (street_type == "secondary") return 3;
+        else if (street_type == "tertiary") return 2;
+        else if (street_type == "unclassified") return 1;
+        else if (street_type == "residential") return 1;
+    } else
+    {
+        if (street_type == "motorway") return 8;
+        if (street_type == "motorway_link") return 8;
+        else if (street_type == "primary") return 5;
+        else if (street_type == "trunk") return 3;
+        else if (street_type == "secondary") return 4;
+        else if (street_type == "tertiary") return 3;
+        else if (street_type == "unclassified") return 2;
+        else if (street_type == "residential") return 2;
+        else return 0;
+    }
+    return 0;
 }
 
 // Display intersection if highlighted
