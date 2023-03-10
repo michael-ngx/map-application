@@ -10,6 +10,7 @@
 
 #include "ezgl/application.hpp"
 #include "ezgl/graphics.hpp"
+#include <deque>
 #include <unordered_map>
 #include <map>
 #include <vector>
@@ -92,7 +93,7 @@ struct FeatureDetailedInfo{
     std::vector<ezgl::point2d> featurePoints;   //Coordinates of the feature in point2d
 };
 //Index: FeatureIdx, Value: structure that stores all feature information
-extern std::vector<FeatureDetailedInfo> Features_AllInfo;
+extern std::deque<FeatureDetailedInfo> Features_AllInfo;
 
 // *******************************************************************
 // OSMNode

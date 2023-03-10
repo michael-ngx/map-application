@@ -23,6 +23,7 @@
 #include "OSMDatabaseAPI.h"
 #include <iostream>
 #include <set>
+#include <deque>
 #include <unordered_map>
 #include <cmath>
 #include <bits/stdc++.h>
@@ -89,7 +90,7 @@ std::multimap<std::string, StreetIdx> StreetName_StreetIdx;
 // Features
 // *******************************************************************
 //Index: FeatureIdx, Value: structure that stores all feature information
-std::vector<FeatureDetailedInfo> Features_AllInfo;
+std::deque<FeatureDetailedInfo> Features_AllInfo;
 
 // *******************************************************************
 // OSMNode
@@ -579,12 +580,17 @@ void init_features(){
     //Load pre-processed data into Features_AllPoints
     for (int featureIdx = 0; featureIdx < featureNum; featureIdx++){
         FeatureDetailedInfo tempFeatureInfo;
+        FeatureType tempType = getFeatureType(featureIdx);
         tempFeatureInfo.featureType = getFeatureType(featureIdx);
         tempFeatureInfo.featureOSMID = getFeatureOSMID(featureIdx);
         for (int pointIdx = 0; pointIdx < getNumFeaturePoints(featureIdx); pointIdx++){
             tempFeatureInfo.featurePoints.push_back(xy_from_latlon(getFeaturePoint(featureIdx, pointIdx)));
         }
-        Features_AllInfo.push_back(tempFeatureInfo);
+        if (tempType == LAKE || tempType == ISLAND || tempType == BEACH){
+            Features_AllInfo.push_back(tempFeatureInfo);
+        } else {
+            Features_AllInfo.push_front(tempFeatureInfo);
+        }
     }
 }
 
