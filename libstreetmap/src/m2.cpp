@@ -467,7 +467,7 @@ int get_line_width(std::string street_type)
 void draw_highlighted_intersections(ezgl::renderer* g, ezgl::point2d inter_xy)
 {
     ezgl::surface *png_surface = g->load_png("libstreetmap/resources/red_pin.png");
-    g->draw_surface(png_surface, inter_xy, 0.05);
+    g->draw_surface(png_surface, inter_xy);
     g->free_surface(png_surface);
 }
 
