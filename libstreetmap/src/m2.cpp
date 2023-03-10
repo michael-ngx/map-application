@@ -88,7 +88,7 @@ void draw_street_segments(ezgl::renderer *g, StreetSegmentIdx seg_id,
                           ezgl::point2d from_xy, ezgl::point2d to_xy, 
                           std::string street_type);
 int get_line_width(std::string street_type);
-void draw_highlighted_intersections(ezgl::renderer* g, IntersectionIdx inter_id, ezgl::point2d inter_xy);
+void draw_highlighted_intersections(ezgl::renderer* g, ezgl::point2d inter_xy);
 void draw_street_segment_names(ezgl::renderer *g, StreetSegmentIdx seg_id, ezgl::point2d mid_xy);
 void draw_street_names(ezgl::renderer *g, StreetSegmentIdx seg_id, int seg_id_to_add, 
                        int added_seg_id_count, ezgl::point2d mid_xy);
@@ -144,7 +144,8 @@ void draw_main_canvas(ezgl::renderer *g)
     }
     
     int added_seg_id_count = 0;
-    // Draw all streets and intersections
+    
+    // Draw all streets
     for (StreetSegmentIdx seg_id = 0; seg_id < segmentNum; seg_id++)
     {
         // Get LatLon information of from and to intersections from each segments
@@ -153,7 +154,7 @@ void draw_main_canvas(ezgl::renderer *g)
         ezgl::point2d from_xy = Intersection_IntersectionInfo[from_id].position_xy;
         ezgl::point2d to_xy = Intersection_IntersectionInfo[to_id].position_xy;
         ezgl::point2d mid_xy = {(from_xy.x + to_xy.x) / 2, (from_xy.y + to_xy.y) / 2};
-        
+
         // Get the name of the street from steet segment, and from that get number of intersections
         StreetIdx streetIdx = Segment_SegmentDetailedInfo[seg_id].streetID;
         int streetSegNumber = Streets_AllSegments[streetIdx].size();
@@ -192,9 +193,6 @@ void draw_main_canvas(ezgl::renderer *g)
             {
                 draw_street_segments(g, seg_id, from_xy, to_xy, highway_type);
             }
-            // Draw highlighted intersection(s)
-            draw_highlighted_intersections(g, from_id, from_xy);
-            draw_highlighted_intersections(g, to_id, to_xy);  
             
             seg_id_to_add = streetSegNumber * street_name_percent2;
             //std::cout << seg_id_to_add << std::endl;
@@ -208,10 +206,7 @@ void draw_main_canvas(ezgl::renderer *g)
             }
         } else if (curr_world_width <= ZOOM_LIMIT_3)
         {
-            draw_street_segments(g, seg_id, from_xy, to_xy, highway_type);   
-            // Draw highlighted intersection(s)
-            draw_highlighted_intersections(g, from_id, from_xy);
-            draw_highlighted_intersections(g, to_id, to_xy);                
+            draw_street_segments(g, seg_id, from_xy, to_xy, highway_type);                 
             // draw_street_segment_names(g, seg_id, mid_xy);            // TODO: avoid displaying too many text boxes
             seg_id_to_add = streetSegNumber * street_name_percent3;
             //std::cout << seg_id_to_add << std::endl;
@@ -224,8 +219,15 @@ void draw_main_canvas(ezgl::renderer *g)
                 }
             }
         }
-        
     }
+
+    // Draw highlighted intersection(s)
+    for (int i = 0; i < intersectionNum; i++)
+    {
+        if (Intersection_IntersectionInfo[i].highlight)
+            draw_highlighted_intersections(g, Intersection_IntersectionInfo[i].position_xy);
+    }
+          
 //    auto currTime = std::chrono::high_resolution_clock::now();
 //    auto wallClock = std::chrono::duration_cast<std::chrono::duration<double>>(currTime - startTime);
 //    std::cout << "draw main cavas took " << wallClock.count() << " seconds" << std::endl;
@@ -268,13 +270,7 @@ void act_on_mouse_click(ezgl::application* app, GdkEventButton* event, double x,
     Intersection_IntersectionInfo[id].highlight = !Intersection_IntersectionInfo[id].highlight;
     if (Intersection_IntersectionInfo[id].highlight)
     {   // Update mesasge if newly highlight an intersection
-        std::cout << "Name of intersection: " << 
-        Intersection_IntersectionInfo[id].name << std::endl;
-        std::cout << "Position of intersection: " <<
-            x << " " << y << std::endl; 
-        std::stringstream ss;
-        ss << "Intersection selected: " << Intersection_IntersectionInfo[id].name;
-        app->update_message(ss.str());
+        app->update_message("Intersection selected: " + Intersection_IntersectionInfo[id].name);
     }
     app->refresh_drawing();
 }
@@ -449,16 +445,11 @@ int get_line_width(std::string street_type)
 }
 
 // Display intersection if highlighted
-void draw_highlighted_intersections(ezgl::renderer* g, IntersectionIdx inter_id, ezgl::point2d inter_xy)
+void draw_highlighted_intersections(ezgl::renderer* g, ezgl::point2d inter_xy)
 {
-    float width = 6;
-    float height = width;
-
-    if(Intersection_IntersectionInfo[inter_id].highlight)
-    {
-        g->set_color(ezgl::RED);
-        g->fill_rectangle(ezgl::point2d(inter_xy.x - width/2, inter_xy.y - width/2), width, height);   
-    }
+    ezgl::surface *png_surface = g->load_png("libstreetmap/resources/red_pin.png");
+    g->draw_surface(png_surface, inter_xy, 0.05);
+    g->free_surface(png_surface);
 }
 
 // Draws text on street segments
