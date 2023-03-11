@@ -212,7 +212,7 @@
               </packing>
             </child>
             <child>
-              <object class="GtkEntry">
+              <object class="GtkEntry" id="StreetEntry1">
                 <property name="visible">True</property>
                 <property name="can-focus">True</property>
               </object>
@@ -223,7 +223,7 @@
               </packing>
             </child>
             <child>
-              <object class="GtkEntry">
+              <object class="GtkEntry" id="StreetEntry2">
                 <property name="visible">True</property>
                 <property name="can-focus">True</property>
               </object>
