@@ -165,9 +165,9 @@ void draw_main_canvas(ezgl::renderer *g)
     // Defining 3x4 regions on the screen based on visible world
     std::vector<ezgl::rectangle> visible_regions;
     // For each region, allow showing 1 name and 2 arrows
-    std::vector<std::vector<int>> available_region = {{1, 2}, {1, 2}, {1, 2}, {1, 2}, 
-                                                      {1, 2}, {1, 2}, {1, 2}, {1, 2},
-                                                      {1, 2}, {1, 2}, {1, 2}, {1, 2}};
+    std::vector<std::vector<int>> available_region = {{1, 1}, {1, 1}, {1, 1}, {1, 1}, 
+                                                      {1, 1}, {1, 1}, {1, 1}, {1, 1},
+                                                      {1, 1}, {1, 1}, {1, 1}, {1, 1}};
 
     if (curr_world_width < ZOOM_LIMIT_2)
     {
@@ -227,7 +227,6 @@ void draw_main_canvas(ezgl::renderer *g)
 
     // Draw features
     int numOfFeatureDisplay = featureNum;
-    std::cout<<featureNum;
     if (curr_world_width >= ZOOM_LIMIT_0)
     {
         numOfFeatureDisplay = featureNum * 0.1 / 100;
@@ -303,14 +302,14 @@ void draw_main_canvas(ezgl::renderer *g)
                         draw_street_segment_meters(g, seg_id, from_xy, to_xy, highway_type);
                         // Get street names and position of segments chosen to display name/arrow
                         if (street_name != "<unknown>" && (highway_type == "motorway" || 
-                        highway_type == "primary" || highway_type == "secondary" || 
-                        highway_type == "tertiary" || highway_type == "residential") && (i != 0))
+                        highway_type == "primary" || highway_type == "secondary") && (i != 0))
                         {
+                            if (Segment_SegmentDetailedInfo[seg_id].length < 100) continue;        // Skip segments that are too short
                             SegShortInfo short_info;
                             short_info.street_name = street_name;
                             short_info.from_xy = from_xy;
                             short_info.to_xy = to_xy;
-                            // Separate between name-displaying segments and arrow-displaying segments          // TODO: Skip segments that are too short
+                            // Separate between name-displaying segments and arrow-displaying segments
                             bool arrow = false;
                             if (Segment_SegmentDetailedInfo[seg_id].oneWay && (i % 2 == 0)) arrow = true;
                             short_info.arrow = arrow;
@@ -325,6 +324,7 @@ void draw_main_canvas(ezgl::renderer *g)
                         highway_type == "primary" || highway_type == "secondary" || 
                         highway_type == "tertiary" || highway_type == "residential") && (i != 0))
                     {
+                        if (Segment_SegmentDetailedInfo[seg_id].length < 20) continue;            // Skip segments that are too short
                         SegShortInfo short_info;
                         short_info.street_name = street_name;
                         short_info.from_xy = from_xy;
@@ -359,9 +359,9 @@ void draw_main_canvas(ezgl::renderer *g)
                     {   // Display arrow
                         draw_name_or_arrow(g, seg_info.street_name, seg_info.arrow, 
                                             seg_info.from_xy, seg_info.to_xy);
-                        available_region[region][1]--;
+                        available_region[region][1] = 0;
                         count_arrows--;
-                        if (!available_region[region][1]) break;
+                        break;
                     } else if (available_region[region][0] && !seg_info.arrow)
                     {   // Display street name
                         draw_name_or_arrow(g, seg_info.street_name, seg_info.arrow, 
