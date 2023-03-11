@@ -232,13 +232,13 @@ void draw_main_canvas(ezgl::renderer *g)
         numOfFeatureDisplay = featureNum * 0.1 / 100;
     } else if (ZOOM_LIMIT_1 <= curr_world_width && curr_world_width < ZOOM_LIMIT_0)
     {
-        numOfFeatureDisplay = featureNum * 5 / 100;
+        numOfFeatureDisplay = featureNum * 1 / 100;
     } else if (ZOOM_LIMIT_2 <= curr_world_width && curr_world_width < ZOOM_LIMIT_1)
     {
-        numOfFeatureDisplay = featureNum * 30 / 100;
+        numOfFeatureDisplay = featureNum * 5 / 100;
     } else if (ZOOM_LIMIT_3 <= curr_world_width && curr_world_width < ZOOM_LIMIT_2)
     {
-        numOfFeatureDisplay = featureNum * 60 / 100;
+        numOfFeatureDisplay = featureNum * 10 / 100;
     }
     for (int j = 0; j < numOfFeatureDisplay; j++)
     {
