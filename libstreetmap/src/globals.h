@@ -31,6 +31,7 @@ extern int intersectionNum;
 extern int segmentNum;
 extern int streetNum;
 extern int featureNum;
+extern int POINum;
 
 // *******************************************************************
 // Street Segments
@@ -98,6 +99,18 @@ struct FeatureDetailedInfo{
 };
 //Index: FeatureIdx, Value: structure that stores all feature information
 extern std::vector<FeatureDetailedInfo> Features_AllInfo;
+
+// *******************************************************************
+// POI
+// *******************************************************************
+struct POIDetailedInfo{
+    std::string POIType;
+    std::string POIName;
+    ezgl::point2d POIPoint;
+    OSMID POIOSMID;
+};
+//Index: POIIdx, Value: structure that stores all POI information
+extern std::vector<POIDetailedInfo> POI_AllInfo;
 
 // *******************************************************************
 // OSMNode

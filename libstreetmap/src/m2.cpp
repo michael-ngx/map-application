@@ -54,6 +54,12 @@ struct SegShortInfo
     bool arrow;
 };
 
+struct POIShortInfo
+{
+    std::string POIName;
+    ezgl::point2d POIPoint;
+};
+
 /*******************************************************************************************************************************
  * FUNCTION DECLARATIONS
  ********************************************************************************************************************************/
@@ -161,7 +167,9 @@ void draw_main_canvas(ezgl::renderer *g)
 
     // All segments whose street name or arrows will be displayed
     std::vector<SegShortInfo> seg_names_and_arrows;
-
+    // All POI whose name will be displayed
+    std::vector<std::vector<POIDetailedInfo>> poi_display;
+    
     // Defining 3x4 regions on the screen based on visible world
     std::vector<ezgl::rectangle> visible_regions;
     // For each region, allow showing 1 name and 2 arrows
@@ -374,6 +382,37 @@ void draw_main_canvas(ezgl::renderer *g)
             }
         }
     }
+    
+    //Draw POI
+    
+    if (curr_world_width < ZOOM_LIMIT_3)
+    {
+        poi_display.resize(NUM_REGIONS);
+        // Get POI names and position chosen to display
+        for (int tempIdx = 0; tempIdx < POINum; tempIdx++)
+        {
+            POIDetailedInfo tempPOI = POI_AllInfo[tempIdx];
+            for (int regionIdx = 0; regionIdx < NUM_REGIONS; regionIdx++)
+            {
+                if (visible_regions[regionIdx].contains(tempPOI.POIPoint))
+                {
+                    poi_display[regionIdx].push_back(tempPOI);
+                }
+            }
+        }
+        for (int regionIdx = 0; regionIdx < NUM_REGIONS; regionIdx++)
+        {
+            int regionSize = poi_display[regionIdx].size();
+            if (!regionSize) continue;                                      //skip if no POI is in the region
+            int middlePOIIdx = regionSize / 2;
+            std::string tempPOIName = poi_display[regionIdx][middlePOIIdx].POIName;
+            if (tempPOIName.size() > 50) continue;                          //skip if the POI name is too long
+            g->set_text_rotation(0);
+            g->set_color(51,102,0);
+            g->draw_text(poi_display[regionIdx][middlePOIIdx].POIPoint, tempPOIName);
+        }
+    }
+
 
     // Draw highlighted intersection(s)
     for (int i = 0; i < intersectionNum; i++)

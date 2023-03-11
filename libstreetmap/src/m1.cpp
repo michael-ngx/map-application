@@ -42,6 +42,7 @@ void init_segments();
 void init_intersections();
 void init_streets();
 void init_features();
+void init_POI();
 void init_osm();
 void init_osm_highways();
 bool compareFeatureArea (FeatureDetailedInfo F1, FeatureDetailedInfo F2);
@@ -61,6 +62,7 @@ int intersectionNum;
 int segmentNum;
 int streetNum;
 int featureNum;
+int POINum;
 
 // *******************************************************************
 // Street Segments
@@ -93,6 +95,12 @@ std::multimap<std::string, StreetIdx> StreetName_StreetIdx;
 // *******************************************************************
 //Index: FeatureIdx, Value: structure that stores all feature information
 std::vector<FeatureDetailedInfo> Features_AllInfo;
+
+// *******************************************************************
+// POI
+// *******************************************************************
+//Index: POIIdx, Value: structure that stores all POI information
+std::vector<POIDetailedInfo> POI_AllInfo;
 
 // *******************************************************************
 // OSMNode
@@ -418,8 +426,10 @@ void m1_init(){
     streetNum = getNumStreets();
     intersectionNum = getNumIntersections();
     featureNum = getNumFeatures();
+    POINum = getNumPointsOfInterest();
     // Init database
     init_features();
+    init_POI();
     init_intersections();
     init_segments();
     init_streets();    
@@ -631,6 +641,20 @@ LatLon latlon_from_xy(double x, double y){
     double lat = y / (kEarthRadiusInMeters * kDegreeToRadian);
     return LatLon(lat, lon);
 }
+
+// *******************************************************************
+// POI
+// *******************************************************************
+void init_POI(){
+    for (int tempIdx = 0; tempIdx < POINum; tempIdx++){
+        POIDetailedInfo tempPOIInfo;
+        tempPOIInfo.POIPoint = xy_from_latlon(getPOIPosition(tempIdx));
+        tempPOIInfo.POIType = getPOIType(tempIdx);
+        tempPOIInfo.POIName = getPOIName(tempIdx);
+        POI_AllInfo.push_back(tempPOIInfo);
+    }
+}
+
 
 // *******************************************************************
 // OSMNode
