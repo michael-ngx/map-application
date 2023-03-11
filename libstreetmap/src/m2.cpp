@@ -41,9 +41,8 @@ const float ZOOM_LIMIT_2 = 5000;
 const float ZOOM_LIMIT_3 = 2000;
 // Current world width in meters
 ezgl::rectangle visible_world;
+// Number of screen regions for displaying street names and arrows
 const int NUM_REGIONS = 12;
-
-std::string stName1, stName2;
 
 // Short info for segments whose street name will be displayed
 struct SegShortInfo
@@ -60,6 +59,12 @@ struct POIShortInfo
     ezgl::point2d POIPoint;
 };
 
+//Getting a pointer to our GtkEntry named "StreetEntry1" and "StreetEntry2"
+GObject *entry_object_1;
+GObject *entry_object_2;
+GtkEntry* gtk_entry_1;
+GtkEntry* gtk_entry_2;
+
 /*******************************************************************************************************************************
  * FUNCTION DECLARATIONS
  ********************************************************************************************************************************/
@@ -72,7 +77,7 @@ struct POIShortInfo
 void draw_main_canvas(ezgl::renderer *g);
 
 /*************************************************************
- * Initial Setup is a mandatory function for any EZGL application, and is run whenever a window is opened. 
+ * Initial Setup is run whenever a window is opened. 
  *************************************************************/
 void initial_setup(ezgl::application *application, bool new_window);
 
@@ -166,7 +171,7 @@ void draw_main_canvas(ezgl::renderer *g)
     // Check for current zoom level through visible width (in meters) of world
     visible_world = g->get_visible_world();
     double curr_world_width = visible_world.width();
-    std::cout << "world width (meters): " << curr_world_width << std::endl;
+    // std::cout << "world width (meters): " << curr_world_width << std::endl;
 
     // All segments whose street name or arrows will be displayed
     std::vector<SegShortInfo> seg_names_and_arrows;
@@ -236,24 +241,27 @@ void draw_main_canvas(ezgl::renderer *g)
         visible_regions.push_back(RECT_2_3);
     }
 
-    // Draw features
+    // Draw features. Features are sorted by descending areas in Features_AllInfo
+    // Determine number of features to be drawn to screen based on zoom levels
     int numOfFeatureDisplay = featureNum;
     if (curr_world_width >= ZOOM_LIMIT_0)
     {
-        numOfFeatureDisplay = featureNum * 0.1 / 100;
+        numOfFeatureDisplay = featureNum * 0.001;
     } else if (ZOOM_LIMIT_1 <= curr_world_width && curr_world_width < ZOOM_LIMIT_0)
     {
-        numOfFeatureDisplay = featureNum * 1 / 100;
+        numOfFeatureDisplay = featureNum * 0.01;
     } else if (ZOOM_LIMIT_2 <= curr_world_width && curr_world_width < ZOOM_LIMIT_1)
     {
-        numOfFeatureDisplay = featureNum * 5 / 100;
+        numOfFeatureDisplay = featureNum * 0.05;
     } else if (ZOOM_LIMIT_3 <= curr_world_width && curr_world_width < ZOOM_LIMIT_2)
     {
-        numOfFeatureDisplay = featureNum * 10 / 100;
+        numOfFeatureDisplay = featureNum * 0.1;
     }
     for (int j = 0; j < numOfFeatureDisplay; j++)
     {
         FeatureDetailedInfo tempFeatureInfo = Features_AllInfo[j];
+        // TODO: Skip if feature is outside of current visible world
+        // if () continue;
         draw_feature_area(g, tempFeatureInfo);
     }
     
@@ -438,10 +446,8 @@ void initial_setup(ezgl::application *application, bool /*new_window*/)
     
     // We will increment row each time we insert a new element. Insert search city after find intersections
     int row = 12;
-    // Runtime: Button to ask user to input names of two streets              // TODO: segmentation fault if street name not found
-    //   application->create_button("Search intersections", row++, input_streets_cbk);
-
-    // Creates a pointer to example switch
+    
+    // Creates a pointer to night mode switch
     GObject *example_switch = application->get_object("NightModeSwitch");
     g_signal_connect(
         example_switch, // pointer to the UI widget
@@ -451,7 +457,7 @@ void initial_setup(ezgl::application *application, bool /*new_window*/)
         application // passing an application pointer to callback function
     );  
 
-    // Creates a pointer to test entry
+    // Button to ask user to input names of two streets
     GObject *search_button = application->get_object("SearchButton");
     g_signal_connect(
         search_button, // pointer to the UI widget
@@ -534,11 +540,10 @@ void night_mode_cbk(GtkSwitch* /*self*/, gboolean state, ezgl::application* appl
 */
 void search_button_cbk(GtkWidget */*widget*/, ezgl::application *application)
 {
-    //Getting a pointer to our GtkEntry named "StreetEntry1" and "StreetEntry2"
-    GObject *entry_object_1 = application->get_object("StreetEntry1");
-    GObject *entry_object_2 = application->get_object("StreetEntry2");
-    GtkEntry* gtk_entry_1 = GTK_ENTRY(entry_object_1);
-    GtkEntry* gtk_entry_2 = GTK_ENTRY(entry_object_2);
+    entry_object_1 = application->get_object("StreetEntry1");
+    entry_object_2 = application->get_object("StreetEntry2");
+    gtk_entry_1 = GTK_ENTRY(entry_object_1);
+    gtk_entry_2 = GTK_ENTRY(entry_object_2);
     
     // Getting text from search entries
     const gchar* text_1 = gtk_entry_get_text(gtk_entry_1);
@@ -934,39 +939,57 @@ void search_response(std::string& input_1, std::string& input_2, ezgl::applicati
         street_name_2.push_back(char(tolower(c))); // Find names as lowercase, no space
     }
 
-    // Find street 1
-    auto it_1 = StreetName_StreetIdx.find(street_name_1);
-    if (it_1 == StreetName_StreetIdx.end())
+    // There may be multiple streets given an input street name. Display all intersections found for all streets
+    std::pair <std::multimap<std::string, int>::iterator, std::multimap<std::string, int>::iterator> it_1_range, it_2_range;
+
+    // Find street(s) 1
+    it_1_range = StreetName_StreetIdx.equal_range(street_name_1);
+    if (it_1_range.first->second == it_1_range.second->second)
     {
         application->update_message("Street 1 not found!");
         return;
-    }
-
-    // Find street 2
-    auto it_2 = StreetName_StreetIdx.find(street_name_2);
-    if (it_2 == StreetName_StreetIdx.end())
+    } 
+    
+    // Find street(s) 2
+    it_2_range = StreetName_StreetIdx.equal_range(street_name_2);
+    if (it_2_range.first->second == it_2_range.second->second)
     {
         application->update_message("Street 2 not found!");
         return;
     }
 
-    // Provide feedback if not found
-    std::vector<IntersectionIdx> foundIntersections = findIntersectionsOfTwoStreets(it_1->second, it_2->second);
-    if(!foundIntersections.size()){
-        application->update_message("No intersections between 2 streets found!");
-        return;
-    }
-    // Provide message if found. Draw all intersections between 2 streets
-    application->update_message("Intersections found! Deatiled info printed in terminal");
-    for (int i = 0; i < foundIntersections.size(); i++)
+    // Finding and displaying intersections between 2 streets
+    int count = 0;  // For checking if any intersections are found
+    for (std::multimap<std::string, int>::iterator it_1 = it_1_range.first; it_1 != it_1_range.second; ++it_1)
     {
-        Intersection_IntersectionInfo[foundIntersections[i]].highlight = true;
-        std::cout << std::endl;
-        std::cout << "Info of this intersection --------" << std::endl;
-        std::cout << "Name of Intersection: " << Intersection_IntersectionInfo[foundIntersections[i]].name << std::endl;
-        std::cout << "X position: " << Intersection_IntersectionInfo[foundIntersections[i]].position_xy.x << std::endl
-                    << "Y position: " << Intersection_IntersectionInfo[foundIntersections[i]].position_xy.y << std::endl;
+        for (std::multimap<std::string, int>::iterator it_2 = it_2_range.first; it_2 != it_2_range.second; ++it_2)
+        {
+            std::vector<IntersectionIdx> foundIntersections = findIntersectionsOfTwoStreets(it_1->second, it_2->second);
+            if(foundIntersections.size() == 0) continue;
+            else
+            {
+                // Draw all intersections between 2 streets
+                for (int i = 0; i < foundIntersections.size(); i++)
+                {
+                    Intersection_IntersectionInfo[foundIntersections[i]].highlight = true;
+                    std::cout << std::endl;
+                    std::cout << "Intersection: --------" << std::endl;
+                    std::cout << "Name: " << Intersection_IntersectionInfo[foundIntersections[i]].name << std::endl;
+                    std::cout << "X position: " << Intersection_IntersectionInfo[foundIntersections[i]].position_xy.x << std::endl
+                                <<
+                                 "Y position: " << Intersection_IntersectionInfo[foundIntersections[i]].position_xy.y << std::endl;
+                }
+                count++;
+            }
+        }
     }
+
+    // Provide feedback if found/not found
+    if (count)
+        application->update_message("Intersections found! Detailed info printed in terminal");
+    else
+        application->update_message("No intersections between 2 streets found!");
+
     // Redraw the main canvas
     application->refresh_drawing();
 }
