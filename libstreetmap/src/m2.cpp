@@ -518,10 +518,9 @@ void input_streets_cbk(GtkWidget */*widget*/, ezgl::application* app){
             std::cout << "Name of Intersection: " << Intersection_IntersectionInfo[interIdx].name << std::endl;
             std::cout << "X position: " << Intersection_IntersectionInfo[interIdx].position_xy.x << std::endl
                      << "Y position: " << Intersection_IntersectionInfo[interIdx].position_xy.y << std::endl;
-            //draw_highlighted_intersections(g, Intersection_IntersectionInfo[interIdx].position_xy);
-//            ezgl::surface *png_surface = ezgl::renderer::load_png("libstreetmap/resources/red_pin.png");
-//            ezgl::renderer->draw_surface(png_surface, Intersection_IntersectionInfo[interIdx].position_xy);
-//            ezgl::renderer::free_surface(png_surface);
+            Intersection_IntersectionInfo[interIdx].highlight = true;
+            if(Intersection_IntersectionInfo[interIdx].highlight)
+                app->refresh_drawing();
         }
         break;
     }   
