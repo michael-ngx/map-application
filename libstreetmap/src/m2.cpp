@@ -225,12 +225,25 @@ void draw_main_canvas(ezgl::renderer *g)
     }
 
     // Draw features
-    for (int j = 0; j < featureNum; j++)
+    int numOfFeatureDisplay = featureNum;
+    if (curr_world_width >= ZOOM_LIMIT_0)
+    {
+        numOfFeatureDisplay = featureNum * 20 / 100;
+    } else if (ZOOM_LIMIT_1 <= curr_world_width && curr_world_width < ZOOM_LIMIT_0)
+    {
+        numOfFeatureDisplay = featureNum * 40 / 100;
+    } else if (ZOOM_LIMIT_2 <= curr_world_width && curr_world_width < ZOOM_LIMIT_1)
+    {
+        numOfFeatureDisplay = featureNum * 60 / 100;
+    } else if (ZOOM_LIMIT_3 <= curr_world_width && curr_world_width < ZOOM_LIMIT_2)
+    {
+        numOfFeatureDisplay = featureNum * 80 / 100;
+    }
+    for (int j = 0; j < numOfFeatureDisplay; j++)
     {
         FeatureDetailedInfo tempFeatureInfo = Features_AllInfo[j];
         draw_feature_area(g, tempFeatureInfo);
     }
-    
     // Loop through streets
     for (StreetIdx street_id = 0; street_id < streetNum; street_id++)
     {

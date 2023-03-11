@@ -23,11 +23,12 @@
 #include "OSMDatabaseAPI.h"
 #include <iostream>
 #include <set>
-#include <deque>
 #include <unordered_map>
 #include <cmath>
 #include <bits/stdc++.h>
 #include <cctype>
+#include <bits/stdc++.h>
+
 
 /*******************************************************************************************************************************
  * GLOBAL VARIABLES AND HELPER FUNCTION DECLARATION
@@ -43,6 +44,7 @@ void init_streets();
 void init_features();
 void init_osm();
 void init_osm_highways();
+bool compareFeatureArea (FeatureDetailedInfo F1, FeatureDetailedInfo F2);
 
 // *******************************************************************
 // Latlon bounds of current city
@@ -90,7 +92,7 @@ std::multimap<std::string, StreetIdx> StreetName_StreetIdx;
 // Features
 // *******************************************************************
 //Index: FeatureIdx, Value: structure that stores all feature information
-std::deque<FeatureDetailedInfo> Features_AllInfo;
+std::vector<FeatureDetailedInfo> Features_AllInfo;
 
 // *******************************************************************
 // OSMNode
@@ -580,18 +582,40 @@ void init_features(){
     //Load pre-processed data into Features_AllPoints
     for (int featureIdx = 0; featureIdx < featureNum; featureIdx++){
         FeatureDetailedInfo tempFeatureInfo;
-        FeatureType tempType = getFeatureType(featureIdx);
         tempFeatureInfo.featureType = getFeatureType(featureIdx);
         tempFeatureInfo.featureOSMID = getFeatureOSMID(featureIdx);
+        double tempMinX = 0, tempMinY = 0, tempMaxX = 0, tempMaxY = 0;
         for (int pointIdx = 0; pointIdx < getNumFeaturePoints(featureIdx); pointIdx++){
-            tempFeatureInfo.featurePoints.push_back(xy_from_latlon(getFeaturePoint(featureIdx, pointIdx)));
+            ezgl::point2d tempPoint = xy_from_latlon(getFeaturePoint(featureIdx, pointIdx));
+            tempFeatureInfo.featurePoints.push_back(tempPoint);
+            if (pointIdx == 0){
+                tempMinX = tempPoint.x;
+                tempMinY = tempPoint.y;
+                tempMaxX = tempPoint.x;
+                tempMaxY = tempPoint.y;
+            } else{
+                tempMinX = std::min(tempMinX, tempPoint.x);
+                tempMinY = std::min(tempMinY, tempPoint.y);
+                tempMaxX = std::max(tempMaxX, tempPoint.x);
+                tempMaxY = std::max(tempMaxY, tempPoint.y);
+            }
         }
-        if (tempType == LAKE || tempType == ISLAND || tempType == BEACH){
-            Features_AllInfo.push_back(tempFeatureInfo);
-        } else {
-            Features_AllInfo.push_front(tempFeatureInfo);
-        }
+        tempFeatureInfo.featureRectangle = ezgl::rectangle(ezgl::point2d(tempMinX, tempMinY), 
+                                                           ezgl::point2d(tempMaxX, tempMaxY));
+        tempFeatureInfo.featureArea = findFeatureArea(featureIdx);
+        Features_AllInfo.push_back(tempFeatureInfo);
+//        if (tempType == LAKE || tempType == ISLAND || tempType == BEACH){
+//            Features_AllInfo.push_back(tempFeatureInfo);
+//        } else {
+//            Features_AllInfo.push_front(tempFeatureInfo);
+//        }
     }
+    std::sort(Features_AllInfo.begin(), Features_AllInfo.end(), compareFeatureArea);
+}
+
+//Helper function for sorting feature areas
+bool compareFeatureArea (FeatureDetailedInfo F1, FeatureDetailedInfo F2){
+    return (F1.featureArea > F2.featureArea);
 }
 
 // *******************************************************************
