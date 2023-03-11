@@ -86,7 +86,8 @@ void act_on_key_press(ezgl::application *application, GdkEventKey *event, char *
 void city_change_cbk(GtkComboBoxText* self, ezgl::application* app);
 void input_streets_cbk(GtkWidget */*widget*/, ezgl::application* app);
 void dialog_cbk(GtkDialog* self, gint response_id, ezgl::application* app);
-
+void example_cbk(GtkSwitch*, gboolean state, ezgl::application* app);
+void test_button_cbk(GtkWidget *, ezgl::application *application);
 /************************************************************
  * HELPER FUNCTIONS 
  ************************************************************/
@@ -379,8 +380,25 @@ void initial_setup(ezgl::application *application, bool /*new_window*/)
   int row = 6;
   // Ask user to input names of two streets              // TODO: segmentation fault if street name not found
   application->create_button("Search intersections", row++, input_streets_cbk);
-  
-  application->create_label(row++, "Select city:"); 
+  //creates a pointer to example switch
+  GObject *example_switch = application->get_object("ExampleSwitch");
+  g_signal_connect(
+    example_switch, // pointer to the UI widget
+    "state-set", // Signal state of switch being changed
+    G_CALLBACK(example_cbk), // name of callback function (you write this function:
+    // make sure its declaration is visible)
+    application // passing an application ptr.
+  );
+   //creates a pointer to test entry
+  GObject *entry_dialog = application->get_object("Test");
+  g_signal_connect(
+    entry_dialog, // pointer to the UI widget
+    "clicked", // Signal state of switch being changed
+    G_CALLBACK(test_button_cbk), // name of callback function (you write this function:
+    // make sure its declaration is visible)
+    application // passing an application ptr.
+  );
+  application->create_label(row++, "Select city:");     
   //Creating drop-down list for different cities, connected to city_change_cbk
   application->create_combo_box_text(
     "CitySelect", 
@@ -439,24 +457,55 @@ void city_change_cbk(GtkComboBoxText* self, ezgl::application* app){
     }
 }
 
+//Note we comment out the variable name for the button. this will prevent the compiler warning caused by an unused variable
+void example_cbk(GtkSwitch* /*self*/, gboolean state, ezgl::application* app){
+if(state)
+app->update_message("Switch got turned on");
+else
+app->update_message("Switch got turned off");
+}
+
+/**
+* A callback function to test the Test button. Changes application message when button
+is pressed
+*/
+void test_button_cbk(GtkWidget */*widget*/, ezgl::application *application)
+{
+    //Getting a pointer to our GtkEntry named "TextEntry"
+    GObject *entry_dialog = application->get_object("TextEntry");
+    GtkEntry* text_entry = GTK_ENTRY(entry_dialog);
+    //Getting text from our entry
+    const gchar* text = gtk_entry_get_text(text_entry);   
+    //Updating the status bar message to be the text in our entry
+    application->update_message("test pressed");
+    // Redraw the main canvas
+    application->refresh_drawing();
+}
+
 // asks user to input street names
 void input_streets_cbk(GtkWidget */*widget*/, ezgl::application* app){
     (void) app;
     //app->create_dialog_window(dialog_cbk, "Notice", "Please input street names!");
-    std::cout << "Please enter 2 street names (separated by 'enter'): " << std::endl;
+    std::cout << "Please enter 2 street names (separated by 'enter'): " << std::endl;    
     while(1){
         getline(std::cin, stName1);
         getline(std::cin, stName2);
         std::vector<StreetIdx> FoundInterIdx1 = findStreetIdsFromPartialStreetName(stName1);
         std::vector<StreetIdx> FoundInterIdx2 = findStreetIdsFromPartialStreetName(stName2);
-        
+
         if(!FoundInterIdx1.size() || !FoundInterIdx2.size()){
             std::cout << "No match!" << std::endl;
             break;
         }
-        
-        std::vector<IntersectionIdx> FoundInters 
-                                     = findIntersectionsOfTwoStreets(FoundInterIdx1[0], FoundInterIdx2[0]);
+                 
+        std::vector<IntersectionIdx> FoundInters;
+        for(StreetIdx interIdx1 : FoundInterIdx1){
+            for(StreetIdx interIdx2 : FoundInterIdx2){
+                std::vector<IntersectionIdx> foundIntersections = findIntersectionsOfTwoStreets(interIdx1, interIdx2);
+                for(IntersectionIdx foundInterIdx : foundIntersections)                   
+                    FoundInters.push_back(foundInterIdx);
+            }                       
+        }       
         
         if(!FoundInters.size()){
             std::cout << "No match!" << std::endl;
@@ -469,6 +518,10 @@ void input_streets_cbk(GtkWidget */*widget*/, ezgl::application* app){
             std::cout << "Name of Intersection: " << Intersection_IntersectionInfo[interIdx].name << std::endl;
             std::cout << "X position: " << Intersection_IntersectionInfo[interIdx].position_xy.x << std::endl
                      << "Y position: " << Intersection_IntersectionInfo[interIdx].position_xy.y << std::endl;
+            //draw_highlighted_intersections(g, Intersection_IntersectionInfo[interIdx].position_xy);
+//            ezgl::surface *png_surface = ezgl::renderer::load_png("libstreetmap/resources/red_pin.png");
+//            ezgl::renderer->draw_surface(png_surface, Intersection_IntersectionInfo[interIdx].position_xy);
+//            ezgl::renderer::free_surface(png_surface);
         }
         break;
     }   

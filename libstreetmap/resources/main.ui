@@ -154,7 +154,16 @@
               </packing>
             </child>
             <child>
-              <placeholder/>
+              <object class="GtkButton" id="Test">
+                <property name="label" translatable="yes">button</property>
+                <property name="visible">True</property>
+                <property name="can-focus">True</property>
+                <property name="receives-default">True</property>
+              </object>
+              <packing>
+                <property name="left-attach">1</property>
+                <property name="top-attach">1</property>
+              </packing>
             </child>
             <child>
               <placeholder/>
@@ -188,10 +197,29 @@
           </packing>
         </child>
         <child>
-          <placeholder/>
+          <object class="GtkSwitch" id="ExampleSwitch">
+            <property name="visible">True</property>
+            <property name="can-focus">True</property>
+            <property name="active">True</property>
+          </object>
+          <packing>
+            <property name="left-attach">1</property>
+            <property name="top-attach">2</property>
+          </packing>
         </child>
         <child>
-          <placeholder/>
+          <object class="GtkSearchEntry" id="TestEntry">
+            <property name="visible">True</property>
+            <property name="can-focus">True</property>
+            <property name="primary-icon-name">edit-find-symbolic</property>
+            <property name="primary-icon-activatable">False</property>
+            <property name="primary-icon-sensitive">False</property>
+            <property name="placeholder-text" translatable="yes">Search</property>
+          </object>
+          <packing>
+            <property name="left-attach">0</property>
+            <property name="top-attach">2</property>
+          </packing>
         </child>
         <child>
           <placeholder/>
@@ -205,4 +233,6 @@
       </object>
     </child>
   </object>
+  <object class="GtkEntryBuffer" id="entrybuffer1"/>
+  <object class="GtkEntryCompletion" id="entrycompletion1"/>
 </interface>
