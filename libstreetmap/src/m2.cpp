@@ -81,7 +81,7 @@ void initial_setup(ezgl::application *application, bool new_window);
  * 
  * These functions run whenever their corresponding event (key press, mouse move, or mouse click) occurs.
  *************************************************************/
-void act_on_mouse_click(ezgl::application* app, GdkEventButton* event, double x, double y);
+void act_on_mouse_click(ezgl::application* application, GdkEventButton* event, double x, double y);
 void act_on_mouse_move(ezgl::application *application, GdkEventButton *event, double x, double y);
 void act_on_key_press(ezgl::application *application, GdkEventKey *event, char *key_name);
 
@@ -90,11 +90,12 @@ void act_on_key_press(ezgl::application *application, GdkEventKey *event, char *
  * 
  * These are callback functions for the UI elements
  *************************************************************/
-void city_change_cbk(GtkComboBoxText* self, ezgl::application* app);
-void input_streets_cbk(GtkWidget */*widget*/, ezgl::application* app);
-void dialog_cbk(GtkDialog* self, gint response_id, ezgl::application* app);
-void example_cbk(GtkSwitch*, gboolean state, ezgl::application* app);
-void test_button_cbk(GtkWidget *, ezgl::application *application);
+void city_change_cbk(GtkComboBoxText* self, ezgl::application* application);
+void input_streets_cbk(GtkWidget */*widget*/, ezgl::application* application);
+void dialog_cbk(GtkDialog* self, gint response_id, ezgl::application* application);
+void night_mode_cbk(GtkSwitch*, gboolean state, ezgl::application* application);
+void search_button_cbk(GtkWidget *, ezgl::application *application);
+
 /************************************************************
  * HELPER FUNCTIONS 
  ************************************************************/
@@ -124,6 +125,8 @@ void draw_highlighted_intersections(ezgl::renderer* g, ezgl::point2d inter_xy);
 
 // Get new map path, for drop-down list callback
 std::string get_new_map_path(std::string text_string);
+// Response to search button callback
+void search_response(std::string& input_1, std::string& input_2, ezgl::application *application);
 
 /*******************************************************************************************************************************
  * DRAW MAP
@@ -430,47 +433,48 @@ void draw_main_canvas(ezgl::renderer *g)
 // Function called before the activation of the application
 void initial_setup(ezgl::application *application, bool /*new_window*/)
 {
-  // Update the status bar message
-  application->update_message("EZGL Application");
-  
-  // Setting our starting row for insertion at 6 (Default zoom/pan buttons created by EZGL take up first five rows);
-  // We will increment row each time we insert a new element. 
-  int row = 6;
-  // Ask user to input names of two streets              // TODO: segmentation fault if street name not found
-  application->create_button("Search intersections", row++, input_streets_cbk);
-  //creates a pointer to example switch
-  GObject *example_switch = application->get_object("ExampleSwitch");
-  g_signal_connect(
-    example_switch, // pointer to the UI widget
-    "state-set", // Signal state of switch being changed
-    G_CALLBACK(example_cbk), // name of callback function (you write this function:
-    // make sure its declaration is visible)
-    application // passing an application ptr.
-  );
-   //creates a pointer to test entry
-  GObject *entry_dialog = application->get_object("Test");
-  g_signal_connect(
-    entry_dialog, // pointer to the UI widget
-    "clicked", // Signal state of switch being changed
-    G_CALLBACK(test_button_cbk), // name of callback function (you write this function:
-    // make sure its declaration is visible)
-    application // passing an application ptr.
-  );
-  application->create_label(row++, "Select city:");     
-  //Creating drop-down list for different cities, connected to city_change_cbk
-  application->create_combo_box_text(
-    "CitySelect", 
-    row++,
-    city_change_cbk,
-    {" ", "Toronto", "Beijing", "Cairo", "Cape Town", "Golden Horseshoe", 
-    "Hamilton", "Hong Kong", "Iceland", "Interlaken", "Kyiv",
-    "London", "New Delhi", "New York", "Rio de Janeiro", "Saint Helena",
-    "Singapore", "Sydney", "Tehran", "Tokyo"}
-  );
+    // Update the status bar message
+    application->update_message("Welcome!");
+    
+    // We will increment row each time we insert a new element. Insert search city after find intersections
+    int row = 12;
+    // Runtime: Button to ask user to input names of two streets              // TODO: segmentation fault if street name not found
+    //   application->create_button("Search intersections", row++, input_streets_cbk);
+
+    // Creates a pointer to example switch
+    GObject *example_switch = application->get_object("NightModeSwitch");
+    g_signal_connect(
+        example_switch, // pointer to the UI widget
+        "state-set", // Signal state of switch being changed
+        G_CALLBACK(night_mode_cbk), // name of callback function (you write this function:
+        // make sure its declaration is visible)
+        application // passing an application pointer to callback function
+    );  
+
+    // Creates a pointer to test entry
+    GObject *search_button = application->get_object("SearchButton");
+    g_signal_connect(
+        search_button, // pointer to the UI widget
+        "clicked", // Signal state of switch being changed
+        G_CALLBACK(search_button_cbk), // Callback function
+        application // passing an application pointer to callback function
+    );
+
+    // Runtime: Creating drop-down list for different cities, connected to city_change_cbk
+    application->create_label(row++, "Switch city:");     
+    application->create_combo_box_text(
+        "CitySelect", 
+        row++,
+        city_change_cbk,
+        {" ", "Toronto", "Beijing", "Cairo", "Cape Town", "Golden Horseshoe", 
+        "Hamilton", "Hong Kong", "Iceland", "Interlaken", "Kyiv",
+        "London", "New Delhi", "New York", "Rio de Janeiro", "Saint Helena",
+        "Singapore", "Sydney", "Tehran", "Tokyo"}
+    );
 }
 
 // Storing state of mouse clicks
-void act_on_mouse_click(ezgl::application* app, GdkEventButton* event, double x, double y)
+void act_on_mouse_click(ezgl::application* application, GdkEventButton* event, double x, double y)
 {
     (void) event;
 
@@ -480,9 +484,9 @@ void act_on_mouse_click(ezgl::application* app, GdkEventButton* event, double x,
     Intersection_IntersectionInfo[id].highlight = !Intersection_IntersectionInfo[id].highlight;
     if (Intersection_IntersectionInfo[id].highlight)
     {   // Update mesasge if newly highlight an intersection
-        app->update_message("Intersection selected: " + Intersection_IntersectionInfo[id].name);
+        application->update_message("Intersection selected: " + Intersection_IntersectionInfo[id].name);
     }
-    app->refresh_drawing();
+    application->refresh_drawing();
 }
 
 /*******************************************************************************************************************************
@@ -491,7 +495,7 @@ void act_on_mouse_click(ezgl::application* app, GdkEventButton* event, double x,
 
 // Callback function for the city change drop down list.
 // Function trigerred when currently selected option changes. 
-void city_change_cbk(GtkComboBoxText* self, ezgl::application* app){
+void city_change_cbk(GtkComboBoxText* self, ezgl::application* application){
     //Getting current text content
     auto text = gtk_combo_box_text_get_active_text(self);
     std::string text_string = text;
@@ -510,98 +514,60 @@ void city_change_cbk(GtkComboBoxText* self, ezgl::application* app){
         ezgl::rectangle new_world(xy_from_latlon(latlon_bound.min),
                                     xy_from_latlon(latlon_bound.max));
        
-        app->change_canvas_world_coordinates("MainCanvas", new_world);
-        app->refresh_drawing();
+        application->change_canvas_world_coordinates("MainCanvas", new_world);
+        application->refresh_drawing();
+
+        application->update_message("Switched city: " + CURRENT_CITY);
     }
 }
 
-//Note we comment out the variable name for the button. this will prevent the compiler warning caused by an unused variable
-void example_cbk(GtkSwitch* /*self*/, gboolean state, ezgl::application* app){
-if(state)
-app->update_message("Switch got turned on");
-else
-app->update_message("Switch got turned off");
+// Callback function for switching ON/OFF night mode
+void night_mode_cbk(GtkSwitch* /*self*/, gboolean state, ezgl::application* application){
+    if(state)
+        application->update_message("Night mode turned on");
+    else
+        application->update_message("Night mode turned off");
 }
 
 /**
-* A callback function to test the Test button. Changes application message when button
-is pressed
+* Callback function for Search button
 */
-void test_button_cbk(GtkWidget */*widget*/, ezgl::application *application)
+void search_button_cbk(GtkWidget */*widget*/, ezgl::application *application)
 {
-    //Getting a pointer to our GtkEntry named "TextEntry"
-    GObject *entry_dialog = application->get_object("TextEntry");
-    GtkEntry* text_entry = GTK_ENTRY(entry_dialog);
-    //Getting text from our entry
-    const gchar* text = gtk_entry_get_text(text_entry);   
-    //Updating the status bar message to be the text in our entry
-    application->update_message("test pressed");
-    // Redraw the main canvas
-    application->refresh_drawing();
-}
+    //Getting a pointer to our GtkEntry named "StreetEntry1" and "StreetEntry2"
+    GObject *entry_object_1 = application->get_object("StreetEntry1");
+    GObject *entry_object_2 = application->get_object("StreetEntry2");
+    GtkEntry* gtk_entry_1 = GTK_ENTRY(entry_object_1);
+    GtkEntry* gtk_entry_2 = GTK_ENTRY(entry_object_2);
+    
+    // Getting text from search entries
+    const gchar* text_1 = gtk_entry_get_text(gtk_entry_1);
+    const gchar* text_2 = gtk_entry_get_text(gtk_entry_2);
+    std::string input_1(text_1);
+    std::string input_2(text_2);
 
-// asks user to input street names
-void input_streets_cbk(GtkWidget */*widget*/, ezgl::application* app){
-    (void) app;
-    //app->create_dialog_window(dialog_cbk, "Notice", "Please input street names!");
-    std::cout << "Please enter 2 street names (separated by 'enter'): " << std::endl;    
-    while(1){
-        getline(std::cin, stName1);
-        getline(std::cin, stName2);
-        std::vector<StreetIdx> FoundInterIdx1 = findStreetIdsFromPartialStreetName(stName1);
-        std::vector<StreetIdx> FoundInterIdx2 = findStreetIdsFromPartialStreetName(stName2);
-
-        if(!FoundInterIdx1.size() || !FoundInterIdx2.size()){
-            std::cout << "No match!" << std::endl;
-            break;
-        }
-                 
-        std::vector<IntersectionIdx> FoundInters;
-        for(StreetIdx interIdx1 : FoundInterIdx1){
-            for(StreetIdx interIdx2 : FoundInterIdx2){
-                std::vector<IntersectionIdx> foundIntersections = findIntersectionsOfTwoStreets(interIdx1, interIdx2);
-                for(IntersectionIdx foundInterIdx : foundIntersections)                   
-                    FoundInters.push_back(foundInterIdx);
-            }                       
-        }       
-        
-        if(!FoundInters.size()){
-            std::cout << "No match!" << std::endl;
-            break;
-        }
-        
-        for(auto interIdx : FoundInters){
-            std::cout << std::endl;
-            std::cout << "Info of this intersection --------" << std::endl;
-            std::cout << "Name of Intersection: " << Intersection_IntersectionInfo[interIdx].name << std::endl;
-            std::cout << "X position: " << Intersection_IntersectionInfo[interIdx].position_xy.x << std::endl
-                     << "Y position: " << Intersection_IntersectionInfo[interIdx].position_xy.y << std::endl;
-            Intersection_IntersectionInfo[interIdx].highlight = true;
-            if(Intersection_IntersectionInfo[interIdx].highlight)
-                app->refresh_drawing();
-        }
-        break;
-    }   
+    // Determine how UI resopnses based on street inputs
+    search_response(input_1, input_2, application);
 }
 
 /**
  * Callback function for dialog window created by "Create Dialog Window" button. 
  * Updates application message to reflect user answer to dialog window. 
  */
-void dialog_cbk(GtkDialog* self, gint response_id, ezgl::application* app){
+void dialog_cbk(GtkDialog* self, gint response_id, ezgl::application* application){
   //Response_id is an integer/enumeration, so we can use a switch to read its value and act accordingly
   switch(response_id){
     case GTK_RESPONSE_ACCEPT:
-      app->update_message("USER ACCEPTED");
+      application->update_message("USER ACCEPTED");
       break;
     case GTK_RESPONSE_REJECT:
-      app->update_message("USER REJECTED");
+      application->update_message("USER REJECTED");
       break;
     case GTK_RESPONSE_DELETE_EVENT:
-      app->update_message("USER CLOSED WINDOW");
+      application->update_message("USER CLOSED WINDOW");
       break;
     default:
-      app->update_message("YOU SHOULD NOT SEE THIS");
+      application->update_message("YOU SHOULD NOT SEE THIS");
   }
 
   //We always have to destroy the dialog window in the callback function or it will never close
@@ -609,13 +575,12 @@ void dialog_cbk(GtkDialog* self, gint response_id, ezgl::application* app){
 }
 
 /*******************************************************************************************************************************
- * HELPER FUNCTIONS
+ * DRAWING HELPER FUNCTIONS
  ********************************************************************************************************************************/
 
 /************************************************************
 // Draw street segments
 *************************************************************/
-
 // Draw street segments with pixels (for far zoom levels)
 void draw_street_segment_pixel(ezgl::renderer *g, StreetSegmentIdx seg_id, 
                           ezgl::point2d from_xy, ezgl::point2d to_xy, 
@@ -772,18 +737,6 @@ int get_street_width_meters(std::string& street_type)
 }
 
 /************************************************************
-// Draw Intersections
-*************************************************************/
-
-// Display intersection if highlighted
-void draw_highlighted_intersections(ezgl::renderer* g, ezgl::point2d inter_xy)
-{
-    ezgl::surface *png_surface = g->load_png("libstreetmap/resources/red_pin.png");
-    g->draw_surface(png_surface, inter_xy);
-    g->free_surface(png_surface);
-}
-
-/************************************************************
 // Draw street names
 *************************************************************/
 // Draws text on street segments
@@ -826,34 +779,6 @@ void draw_name_or_arrow(ezgl::renderer *g, std::string street_name, bool arrow,
         g->set_font_size(10);
         g->draw_text(mid_xy, street_name);
     }
-}
-
-/************************************************************
-// Get map path for reloading from string of city name
-*************************************************************/
-std::string get_new_map_path(std::string text_string)
-{
-    std::string new_map_path;
-    if (text_string == "Toronto") new_map_path = "/cad2/ece297s/public/maps/toronto_canada.streets.bin";
-    else if (text_string == "Beijing") new_map_path = "/cad2/ece297s/public/maps/beijing_china.streets.bin";
-    else if (text_string == "Cairo") new_map_path = "/cad2/ece297s/public/maps/cairo_egypt.streets.bin";
-    else if (text_string == "Cape Town") new_map_path = "/cad2/ece297s/public/maps/cape-town_south-africa.streets.bin";
-    else if (text_string == "Golden Horseshoe") new_map_path = "/cad2/ece297s/public/maps/golden-horseshoe_canada.streets.bin";
-    else if (text_string == "Hamilton") new_map_path = "/cad2/ece297s/public/maps/hamilton_canada.streets.bin";
-    else if (text_string == "Hong Kong") new_map_path = "/cad2/ece297s/public/maps/hong-kong_china.streets.bin";
-    else if (text_string == "Iceland") new_map_path = "/cad2/ece297s/public/maps/iceland.streets.bin";
-    else if (text_string == "Interlaken") new_map_path = "/cad2/ece297s/public/maps/interlaken_switzerland.streets.bin";
-    else if (text_string == "Kyiv") new_map_path = "/cad2/ece297s/public/maps/kyiv_ukraine.streets.bin";
-    else if (text_string == "London") new_map_path = "/cad2/ece297s/public/maps/london_england.streets.bin";
-    else if (text_string == "New Delhi") new_map_path = "/cad2/ece297s/public/maps/new-delhi_india.streets.bin";
-    else if (text_string == "New York") new_map_path = "/cad2/ece297s/public/maps/new-york_usa.streets.bin";
-    else if (text_string == "Rio de Janeiro") new_map_path = "/cad2/ece297s/public/maps/rio-de-janeiro_brazil.streets.bin";
-    else if (text_string == "Saint Helena") new_map_path = "/cad2/ece297s/public/maps/saint-helena.streets.bin";
-    else if (text_string == "Singapore") new_map_path = "/cad2/ece297s/public/maps/singapore.streets.bin";
-    else if (text_string == "Sydney") new_map_path = "/cad2/ece297s/public/maps/sydney_australia.streets.bin";
-    else if (text_string == "Tehran") new_map_path = "/cad2/ece297s/public/maps/tehran_iran.streets.bin";
-    else if (text_string == "Tokyo") new_map_path = "/cad2/ece297s/public/maps/tokyo_japan.streets.bin";
-    return new_map_path;
 }
 
 /************************************************************
@@ -941,4 +866,107 @@ void draw_feature_area(ezgl::renderer *g, FeatureDetailedInfo tempFeatureInfo)
         }
     }
     return;
+}
+
+/************************************************************
+// Draw Intersections
+*************************************************************/
+
+// Display intersection if highlighted
+void draw_highlighted_intersections(ezgl::renderer* g, ezgl::point2d inter_xy)
+{
+    ezgl::surface *png_surface = g->load_png("libstreetmap/resources/red_pin.png");
+    g->draw_surface(png_surface, inter_xy);
+    g->free_surface(png_surface);
+}
+
+/*******************************************************************************************************************************
+ * UI CALLBACK HELPER FUNCTIONS
+ ********************************************************************************************************************************/
+
+/************************************************************
+// Get map path for reloading from string of city name
+*************************************************************/
+std::string get_new_map_path(std::string text_string)
+{
+    std::string new_map_path;
+    if (text_string == "Toronto") new_map_path = "/cad2/ece297s/public/maps/toronto_canada.streets.bin";
+    else if (text_string == "Beijing") new_map_path = "/cad2/ece297s/public/maps/beijing_china.streets.bin";
+    else if (text_string == "Cairo") new_map_path = "/cad2/ece297s/public/maps/cairo_egypt.streets.bin";
+    else if (text_string == "Cape Town") new_map_path = "/cad2/ece297s/public/maps/cape-town_south-africa.streets.bin";
+    else if (text_string == "Golden Horseshoe") new_map_path = "/cad2/ece297s/public/maps/golden-horseshoe_canada.streets.bin";
+    else if (text_string == "Hamilton") new_map_path = "/cad2/ece297s/public/maps/hamilton_canada.streets.bin";
+    else if (text_string == "Hong Kong") new_map_path = "/cad2/ece297s/public/maps/hong-kong_china.streets.bin";
+    else if (text_string == "Iceland") new_map_path = "/cad2/ece297s/public/maps/iceland.streets.bin";
+    else if (text_string == "Interlaken") new_map_path = "/cad2/ece297s/public/maps/interlaken_switzerland.streets.bin";
+    else if (text_string == "Kyiv") new_map_path = "/cad2/ece297s/public/maps/kyiv_ukraine.streets.bin";
+    else if (text_string == "London") new_map_path = "/cad2/ece297s/public/maps/london_england.streets.bin";
+    else if (text_string == "New Delhi") new_map_path = "/cad2/ece297s/public/maps/new-delhi_india.streets.bin";
+    else if (text_string == "New York") new_map_path = "/cad2/ece297s/public/maps/new-york_usa.streets.bin";
+    else if (text_string == "Rio de Janeiro") new_map_path = "/cad2/ece297s/public/maps/rio-de-janeiro_brazil.streets.bin";
+    else if (text_string == "Saint Helena") new_map_path = "/cad2/ece297s/public/maps/saint-helena.streets.bin";
+    else if (text_string == "Singapore") new_map_path = "/cad2/ece297s/public/maps/singapore.streets.bin";
+    else if (text_string == "Sydney") new_map_path = "/cad2/ece297s/public/maps/sydney_australia.streets.bin";
+    else if (text_string == "Tehran") new_map_path = "/cad2/ece297s/public/maps/tehran_iran.streets.bin";
+    else if (text_string == "Tokyo") new_map_path = "/cad2/ece297s/public/maps/tokyo_japan.streets.bin";
+    return new_map_path;
+}
+
+// Response to search button callback
+void search_response(std::string& input_1, std::string& input_2, ezgl::application *application)
+{
+    if (input_1.empty() || input_2.empty())
+    {
+        application->update_message("Street name missing. Enter street names in both fields!");
+        return;
+    }
+    // Updating the status bar message saying search pressed
+    application->update_message("Searching...");
+    
+    std::string street_name_1 = "";
+    for (auto& c : input_1){
+        if (c == ' ') continue;
+        street_name_1.push_back(char(tolower(c))); // Find names as lowercase, no space
+    }
+    std::string street_name_2 = "";
+    for (auto& c : input_2){
+        if (c == ' ') continue;
+        street_name_2.push_back(char(tolower(c))); // Find names as lowercase, no space
+    }
+
+    // Find street 1
+    auto it_1 = StreetName_StreetIdx.find(street_name_1);
+    if (it_1 == StreetName_StreetIdx.end())
+    {
+        application->update_message("Street 1 not found!");
+        return;
+    }
+
+    // Find street 2
+    auto it_2 = StreetName_StreetIdx.find(street_name_2);
+    if (it_2 == StreetName_StreetIdx.end())
+    {
+        application->update_message("Street 2 not found!");
+        return;
+    }
+
+    // Provide feedback if not found
+    std::vector<IntersectionIdx> foundIntersections = findIntersectionsOfTwoStreets(it_1->second, it_2->second);
+    if(!foundIntersections.size()){
+        application->update_message("No intersections between 2 streets found!");
+        return;
+    }
+    // Provide message if found. Draw all intersections between 2 streets
+    application->update_message("Intersections found! Deatiled info printed in terminal");
+    for (int i = 0; i < foundIntersections.size(); i++)
+    {
+        Intersection_IntersectionInfo[foundIntersections[i]].highlight = true;
+        std::cout << std::endl;
+        std::cout << "Info of this intersection --------" << std::endl;
+        std::cout << "Name of Intersection: " << Intersection_IntersectionInfo[foundIntersections[i]].name << std::endl;
+        std::cout << "X position: " << Intersection_IntersectionInfo[foundIntersections[i]].position_xy.x << std::endl
+                    << "Y position: " << Intersection_IntersectionInfo[foundIntersections[i]].position_xy.y << std::endl;
+    }
+    // Redraw the main canvas
+    application->refresh_drawing();
 }
