@@ -51,6 +51,7 @@ struct SegShortInfo
     std::string street_name;
     ezgl::point2d from_xy;
     ezgl::point2d to_xy;
+    bool arrow;
 };
 
 /*******************************************************************************************************************************
@@ -109,8 +110,8 @@ void draw_line_meters(ezgl::renderer *g, ezgl::point2d from_xy,
 int get_street_width_meters(std::string& street_type);
 
 // Draw street names on street segments
-void draw_street_segment_names(ezgl::renderer *g, std::string street_name,
-                               ezgl::point2d from_xy, ezgl::point2d to_xy);
+void draw_name_or_arrow(ezgl::renderer *g, std::string street_name, bool arrow,
+                        ezgl::point2d from_xy, ezgl::point2d to_xy);
 
 // Draw highlighted intersections
 void draw_highlighted_intersections(ezgl::renderer* g, ezgl::point2d inter_xy);
@@ -158,14 +159,15 @@ void draw_main_canvas(ezgl::renderer *g)
     double curr_world_width = visible_world.width();
     std::cout << "world width (meters): " << curr_world_width << std::endl;
 
-    // All segments whose street name will be displayed
-    std::vector<SegShortInfo> seg_names_to_display;
+    // All segments whose street name or arrows will be displayed
+    std::vector<SegShortInfo> seg_names_and_arrows;
 
     // Defining 3x4 regions on the screen based on visible world
     std::vector<ezgl::rectangle> visible_regions;
-    std::vector<int> available_region = {1, 1, 1, 1, 
-                                        1, 1, 1, 1,
-                                        1, 1, 1, 1};
+    // For each region, allow showing 1 name and 2 arrows
+    std::vector<std::vector<int>> available_region = {{1, 2}, {1, 2}, {1, 2}, {1, 2}, 
+                                                      {1, 2}, {1, 2}, {1, 2}, {1, 2},
+                                                      {1, 2}, {1, 2}, {1, 2}, {1, 2}};
 
     if (curr_world_width < ZOOM_LIMIT_2)
     {
@@ -254,14 +256,14 @@ void draw_main_canvas(ezgl::renderer *g)
         
         // Street name of current street
         std::string street_name = Segment_SegmentDetailedInfo[all_segments[0]].streetName;
-        
+
         for (int i = 0; i < total_segment_amount; i++)
         {
             StreetSegmentIdx seg_id = all_segments[i];
             // Get LatLon information of from and to intersections from each segments
             IntersectionIdx from_id = Segment_SegmentDetailedInfo[seg_id].from;
-            IntersectionIdx to_id = Segment_SegmentDetailedInfo[seg_id].to;
             ezgl::point2d from_xy = Intersection_IntersectionInfo[from_id].position_xy;
+            IntersectionIdx to_id = Segment_SegmentDetailedInfo[seg_id].to;
             ezgl::point2d to_xy = Intersection_IntersectionInfo[to_id].position_xy;
 
             // Check the type of street this segment belongs to through wayOSMID
@@ -299,33 +301,39 @@ void draw_main_canvas(ezgl::renderer *g)
                         || highway_type == "unclassified" || highway_type == "residential" )
                     {
                         draw_street_segment_meters(g, seg_id, from_xy, to_xy, highway_type);
-                        // Get street names and position of segment chosen to display name
-                        if (street_name != "<unknown>" && (i != 0) &&
-                        (highway_type == "motorway" || highway_type == "primary" || 
-                        highway_type == "secondary" || highway_type == "tertiary" ||
-                        highway_type == "residential"))
+                        // Get street names and position of segments chosen to display name/arrow
+                        if (street_name != "<unknown>" && (highway_type == "motorway" || 
+                        highway_type == "primary" || highway_type == "secondary" || 
+                        highway_type == "tertiary" || highway_type == "residential") && (i != 0))
                         {
                             SegShortInfo short_info;
                             short_info.street_name = street_name;
                             short_info.from_xy = from_xy;
                             short_info.to_xy = to_xy;
-                            seg_names_to_display.push_back(short_info);
+                            // Separate between name-displaying segments and arrow-displaying segments          // TODO: Skip segments that are too short
+                            bool arrow = false;
+                            if (Segment_SegmentDetailedInfo[seg_id].oneWay && (i % 2 == 0)) arrow = true;
+                            short_info.arrow = arrow;
+                            seg_names_and_arrows.push_back(short_info);
                         }
                     }
                 } else
                 {
                     draw_street_segment_meters(g, seg_id, from_xy, to_xy, highway_type);
                     // Get street names and position of segment chosen to display name
-                    if (street_name != "<unknown>" && (i != 0) &&
-                        (highway_type == "motorway" || highway_type == "primary" || 
-                        highway_type == "secondary" || highway_type == "tertiary" ||
-                        highway_type == "residential"))
+                    if (street_name != "<unknown>" && (highway_type == "motorway" || 
+                        highway_type == "primary" || highway_type == "secondary" || 
+                        highway_type == "tertiary" || highway_type == "residential") && (i != 0))
                     {
                         SegShortInfo short_info;
                         short_info.street_name = street_name;
                         short_info.from_xy = from_xy;
                         short_info.to_xy = to_xy;
-                        seg_names_to_display.push_back(short_info);
+                        // Separate between name-displaying segments and arrow-displaying segments
+                        bool arrow = false;
+                        if (Segment_SegmentDetailedInfo[seg_id].oneWay && (i % 2 == 0)) arrow = true;
+                        short_info.arrow = arrow;
+                        seg_names_and_arrows.push_back(short_info);
                     }
                 }
             }
@@ -336,21 +344,32 @@ void draw_main_canvas(ezgl::renderer *g)
     // Draw street names in rectangular regions if region is available
     if (curr_world_width < ZOOM_LIMIT_2)
     {
-        // If all regions are unavailable, break for loop
-        int count = 0;
-        for (int i = 0; i < seg_names_to_display.size() && count != 11; i++)
+        // If all regions are unavailable, break for-loop early
+        int count_names = NUM_REGIONS;
+        int count_arrows = NUM_REGIONS * 2;
+        for (int i = 0; i < seg_names_and_arrows.size() && count_names && count_arrows; i++)
         {
-            SegShortInfo seg_info = seg_names_to_display[i];
-            for (int j = 0; j < NUM_REGIONS; j++)
+            SegShortInfo seg_info = seg_names_and_arrows[i];
+            for (int region = 0; region < NUM_REGIONS; region++)
             {
-                if (visible_regions[j].contains(seg_info.from_xy) && 
-                    visible_regions[j].contains(seg_info.to_xy) &&
-                    available_region[j])
+                if (visible_regions[region].contains(seg_info.from_xy) && 
+                    visible_regions[region].contains(seg_info.to_xy))
                 {
-                    draw_street_segment_names(g, seg_info.street_name, seg_info.from_xy, seg_info.to_xy);
-                    available_region[j] = 0;
-                    count++;
-                    break;
+                    if (available_region[region][1] && seg_info.arrow)
+                    {   // Display arrow
+                        draw_name_or_arrow(g, seg_info.street_name, seg_info.arrow, 
+                                            seg_info.from_xy, seg_info.to_xy);
+                        available_region[region][1]--;
+                        count_arrows--;
+                        if (!available_region[region][1]) break;
+                    } else if (available_region[region][0] && !seg_info.arrow)
+                    {   // Display street name
+                        draw_name_or_arrow(g, seg_info.street_name, seg_info.arrow, 
+                                            seg_info.from_xy, seg_info.to_xy);
+                        available_region[region][0] = 0;
+                        count_names--;
+                        break;
+                    }
                 }
             }
         }
@@ -729,28 +748,45 @@ void draw_highlighted_intersections(ezgl::renderer* g, ezgl::point2d inter_xy)
 // Draw street names
 *************************************************************/
 // Draws text on street segments
-void draw_street_segment_names(ezgl::renderer *g, std::string street_name, ezgl::point2d from_xy, ezgl::point2d to_xy)
+void draw_name_or_arrow(ezgl::renderer *g, std::string street_name, bool arrow,
+                        ezgl::point2d from_xy, ezgl::point2d to_xy)
 {
     // Calculate text rotation based on segment slope                   // TODO: Curved segments!
     double angle_degree;
-    if (to_xy.x == from_xy.x)
-        angle_degree = 90;
+    if (from_xy.x == to_xy.x)
+    {
+        if (from_xy.y > to_xy.y && arrow) angle_degree = 270;
+        else if (from_xy.y == to_xy.y && arrow) return;
+        else angle_degree = 90;
+    }
     else
     {
         double slope = (to_xy.y - from_xy.y)/(to_xy.x - from_xy.x);
         if (slope >= 0)
-            angle_degree = atan2(abs(to_xy.y - from_xy.y), abs(to_xy.x - from_xy.x))/kDegreeToRadian;
+        {
+            angle_degree = atan2(abs(to_xy.y - from_xy.y), abs(to_xy.x - from_xy.x))/kDegreeToRadian;   // 1,0 to 0,1
+            if (arrow && from_xy.y > to_xy.y) angle_degree = angle_degree + 180;    // 0,1 to 1,0
+        }
         else
-            angle_degree = 360 - atan2(abs(to_xy.y - from_xy.y), abs(to_xy.x - from_xy.x))/kDegreeToRadian;
+        {
+            angle_degree = 360 - atan2(abs(to_xy.y - from_xy.y), abs(to_xy.x - from_xy.x))/kDegreeToRadian; // 1,1 to 0,0
+            if (arrow && from_xy.y < to_xy.y) angle_degree = angle_degree - 180;    // 0,0 to 1,1
+        }
     }
-    
     g->set_text_rotation(angle_degree);
-    g->set_color(0, 0, 0);
-    g->set_font_size(7);
-    // Draw name at position between from_xy and to_xy
+    // Draw name or arrow at position between from_xy and to_xy
     ezgl::point2d mid_xy = {(from_xy.x + to_xy.x) / 2, (from_xy.y + to_xy.y) / 2};
-    g->draw_text(mid_xy, street_name);
-
+    if (arrow)
+    {
+        g->set_color(0, 0, 0);
+        g->set_font_size(10);
+        g->draw_text(mid_xy, "->");
+    } else 
+    {
+        g->set_color(0, 0, 0);
+        g->set_font_size(10);
+        g->draw_text(mid_xy, street_name);
+    }
 }
 
 /************************************************************
@@ -848,7 +884,7 @@ void draw_feature_area(ezgl::renderer *g, FeatureDetailedInfo tempFeatureInfo)
     {
         auto tempPointIdx = tempPoints.begin();
         g->set_color(153, 204, 255);
-        g->set_line_width(5);
+        g->set_line_width(10);
         for (int count = 0; count < (tempPoints.size() - 1); count++)
         {
             g->draw_line(*tempPointIdx, *(tempPointIdx + 1));
@@ -858,7 +894,7 @@ void draw_feature_area(ezgl::renderer *g, FeatureDetailedInfo tempFeatureInfo)
     {
         auto tempPointIdx = tempPoints.begin();
         g->set_color(153, 204, 255);
-        g->set_line_width(2);
+        g->set_line_width(0);
         for (int count = 0; count < (tempPoints.size() - 1); count++)
         {
             g->draw_line(*tempPointIdx, *(tempPointIdx + 1));
