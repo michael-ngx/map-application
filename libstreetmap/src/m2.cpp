@@ -159,8 +159,6 @@ void draw_main_canvas(ezgl::renderer *g)
 
     // All segments whose street name will be displayed
     std::vector<SegShortInfo> seg_names_to_display;
-    // Steps between street segments within a street that can display names
-    int step = 3;
 
     // Defining 3x4 regions on the screen based on visible world
     std::vector<ezgl::rectangle> visible_regions;
@@ -245,6 +243,7 @@ void draw_main_canvas(ezgl::renderer *g)
         FeatureDetailedInfo tempFeatureInfo = Features_AllInfo[j];
         draw_feature_area(g, tempFeatureInfo);
     }
+    
     // Loop through streets
     for (StreetIdx street_id = 0; street_id < streetNum; street_id++)
     {
@@ -300,7 +299,7 @@ void draw_main_canvas(ezgl::renderer *g)
                     {
                         draw_street_segment_meters(g, seg_id, from_xy, to_xy, highway_type);
                         // Get street names and position of segment chosen to display name
-                        if (street_name != "<unknown>" && (i % step == 0) &&
+                        if (street_name != "<unknown>" && (i != 0) &&
                         (highway_type == "motorway" || highway_type == "primary" || 
                         highway_type == "secondary" || highway_type == "tertiary" ||
                         highway_type == "residential"))
@@ -316,7 +315,7 @@ void draw_main_canvas(ezgl::renderer *g)
                 {
                     draw_street_segment_meters(g, seg_id, from_xy, to_xy, highway_type);
                     // Get street names and position of segment chosen to display name
-                    if (street_name != "<unknown>" && (i % step == 0) &&
+                    if (street_name != "<unknown>" && (i != 0) &&
                         (highway_type == "motorway" || highway_type == "primary" || 
                         highway_type == "secondary" || highway_type == "tertiary" ||
                         highway_type == "residential"))

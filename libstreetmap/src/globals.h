@@ -87,11 +87,14 @@ extern std::multimap<std::string, StreetIdx> StreetName_StreetIdx;
 // *******************************************************************
 //Stores pre-processed information of features
 struct FeatureDetailedInfo{
-    FeatureType featureType;                    //Type of the feature
-    TypedOSMID  featureOSMID;                   //OSMID of the feature
-    std::vector<ezgl::point2d> featurePoints;   //Coordinates of the feature in point2d
+    FeatureType featureType;                    // Type of the feature
+    TypedOSMID  featureOSMID;                   // OSMID of the feature
+    std::vector<ezgl::point2d> featurePoints;   // Coordinates of the feature in point2d
     ezgl::rectangle featureRectangle;
     double featureArea;
+
+    double temp_max_lat, temp_max_lon;          // For temporary storage only
+    double temp_min_lat, temp_min_lon;          
 };
 //Index: FeatureIdx, Value: structure that stores all feature information
 extern std::vector<FeatureDetailedInfo> Features_AllInfo;
