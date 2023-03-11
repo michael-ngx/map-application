@@ -226,18 +226,19 @@ void draw_main_canvas(ezgl::renderer *g)
 
     // Draw features
     int numOfFeatureDisplay = featureNum;
+    std::cout<<featureNum;
     if (curr_world_width >= ZOOM_LIMIT_0)
     {
-        numOfFeatureDisplay = featureNum * 20 / 100;
+        numOfFeatureDisplay = featureNum * 0.1 / 100;
     } else if (ZOOM_LIMIT_1 <= curr_world_width && curr_world_width < ZOOM_LIMIT_0)
     {
-        numOfFeatureDisplay = featureNum * 40 / 100;
+        numOfFeatureDisplay = featureNum * 5 / 100;
     } else if (ZOOM_LIMIT_2 <= curr_world_width && curr_world_width < ZOOM_LIMIT_1)
     {
-        numOfFeatureDisplay = featureNum * 60 / 100;
+        numOfFeatureDisplay = featureNum * 30 / 100;
     } else if (ZOOM_LIMIT_3 <= curr_world_width && curr_world_width < ZOOM_LIMIT_2)
     {
-        numOfFeatureDisplay = featureNum * 80 / 100;
+        numOfFeatureDisplay = featureNum * 60 / 100;
     }
     for (int j = 0; j < numOfFeatureDisplay; j++)
     {
@@ -738,52 +739,80 @@ void draw_feature_area(ezgl::renderer *g, FeatureDetailedInfo tempFeatureInfo)
     std::vector<ezgl::point2d> tempPoints = tempFeatureInfo.featurePoints;
     if (tempType == PARK)
     {
-        if (tempPoints.size() > 1){
+        if (tempPoints.size() > 1)
+        {
             g->set_color(206, 234, 214);
             g->fill_poly(tempPoints);
         }
     } else if (tempType == BEACH)
     {
-        if (tempPoints.size() > 1){
+        if (tempPoints.size() > 1)
+        {
             g->set_color(255, 235, 205);
             g->fill_poly(tempPoints);
         }
     } else if (tempType == LAKE)
     {
-        if (tempPoints.size() > 1){
+        if (tempPoints.size() > 1)
+        {
             g->set_color(153, 204, 255);
             g->fill_poly(tempPoints);
         }
     } else if (tempType == ISLAND)
     {
-        if (tempPoints.size() > 1){
+        if (tempPoints.size() > 1)
+        {
             g->set_color(168, 218, 181);
             g->fill_poly(tempPoints);
         }
     } else if (tempType == BUILDING)
     {
-        if (tempPoints.size() > 1){
+        if (tempPoints.size() > 1)
+        {
             g->set_color(230, 230, 230);
             g->fill_poly(tempPoints);
         }
     } else if (tempType == GREENSPACE)
     {
-        if (tempPoints.size() > 1){
+        if (tempPoints.size() > 1)
+        {
             g->set_color(206, 234, 214);
             g->fill_poly(tempPoints);
         }
     } else if (tempType == GOLFCOURSE)
     {
-        if (tempPoints.size() > 1){
+        if (tempPoints.size() > 1)
+        {
             g->set_color(168, 218, 181);
             g->fill_poly(tempPoints);
         }
     } else if (tempType == GLACIER)
     {
-        if (tempPoints.size() > 1){
+        if (tempPoints.size() > 1)
+        {
             g->set_color(114, 157, 200);
             g->fill_poly(tempPoints);
         }
-    } 
+    } else if (tempType == RIVER)
+    {
+        auto tempPointIdx = tempPoints.begin();
+        g->set_color(153, 204, 255);
+        g->set_line_width(5);
+        for (int count = 0; count < (tempPoints.size() - 1); count++)
+        {
+            g->draw_line(*tempPointIdx, *(tempPointIdx + 1));
+            tempPointIdx++;
+        }
+    } else if (tempType == STREAM)
+    {
+        auto tempPointIdx = tempPoints.begin();
+        g->set_color(153, 204, 255);
+        g->set_line_width(2);
+        for (int count = 0; count < (tempPoints.size() - 1); count++)
+        {
+            g->draw_line(*tempPointIdx, *(tempPointIdx + 1));
+            tempPointIdx++;
+        }
+    }
     return;
 }
