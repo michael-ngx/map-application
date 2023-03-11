@@ -41,6 +41,7 @@ const float ZOOM_LIMIT_2 = 5000;
 const float ZOOM_LIMIT_3 = 2000;
 // Current world width in meters
 ezgl::rectangle visible_world;
+const int NUM_REGIONS = 12;
 
 std::string stName1, stName2;
 
@@ -51,8 +52,6 @@ struct SegShortInfo
     ezgl::point2d from_xy;
     ezgl::point2d to_xy;
 };
-// All segments whose street name will be displayed
-std::vector<SegShortInfo> seg_names_to_display;
 
 /*******************************************************************************************************************************
  * FUNCTION DECLARATIONS
@@ -157,7 +156,74 @@ void draw_main_canvas(ezgl::renderer *g)
     visible_world = g->get_visible_world();
     double curr_world_width = visible_world.width();
     std::cout << "world width (meters): " << curr_world_width << std::endl;
-    
+
+    // All segments whose street name will be displayed
+    std::vector<SegShortInfo> seg_names_to_display;
+    // Steps between street segments within a street that can display names
+    int step = 3;
+
+    // Defining 3x4 regions on the screen based on visible world
+    std::vector<ezgl::rectangle> visible_regions;
+    std::vector<int> available_region = {1, 1, 1, 1, 
+                                        1, 1, 1, 1,
+                                        1, 1, 1, 1};
+
+    if (curr_world_width < ZOOM_LIMIT_2)
+    {
+        double fourth_curr_world_width = curr_world_width*0.25;
+        double third_curr_world_height = visible_world.height()*0.333333;
+        ezgl::rectangle RECT_0_0({visible_world.left(), 
+                                visible_world.top() - third_curr_world_height}, 
+                                fourth_curr_world_width, third_curr_world_height);
+        ezgl::rectangle RECT_0_1({visible_world.left() + fourth_curr_world_width, 
+                                visible_world.top() - third_curr_world_height}, 
+                                fourth_curr_world_width, third_curr_world_height);
+        ezgl::rectangle RECT_0_2({visible_world.left() + fourth_curr_world_width * 2, 
+                                visible_world.top() - third_curr_world_height}, 
+                                fourth_curr_world_width, third_curr_world_height);
+        ezgl::rectangle RECT_0_3({visible_world.right() - fourth_curr_world_width, 
+                                visible_world.top() - third_curr_world_height}, 
+                                fourth_curr_world_width, third_curr_world_height);
+
+        ezgl::rectangle RECT_1_0({visible_world.left(), 
+                                visible_world.bottom() + third_curr_world_height}, 
+                                fourth_curr_world_width, third_curr_world_height);
+        ezgl::rectangle RECT_1_1({visible_world.left() + fourth_curr_world_width, 
+                                visible_world.bottom() + third_curr_world_height}, 
+                                fourth_curr_world_width, third_curr_world_height);
+        ezgl::rectangle RECT_1_2({visible_world.left() + fourth_curr_world_width * 2, 
+                                visible_world.bottom() + third_curr_world_height}, 
+                                fourth_curr_world_width, third_curr_world_height);
+        ezgl::rectangle RECT_1_3({visible_world.right() - fourth_curr_world_width, 
+                                visible_world.bottom() + third_curr_world_height}, 
+                                fourth_curr_world_width, third_curr_world_height);
+
+        ezgl::rectangle RECT_2_0({visible_world.left(), 
+                                visible_world.bottom()}, 
+                                fourth_curr_world_width, third_curr_world_height);
+        ezgl::rectangle RECT_2_1({visible_world.left() + fourth_curr_world_width, 
+                                visible_world.bottom()}, 
+                                fourth_curr_world_width, third_curr_world_height);
+        ezgl::rectangle RECT_2_2({visible_world.left() + fourth_curr_world_width * 2, 
+                                visible_world.bottom()}, 
+                                fourth_curr_world_width, third_curr_world_height);
+        ezgl::rectangle RECT_2_3({visible_world.right() - fourth_curr_world_width, 
+                                visible_world.bottom()}, 
+                                fourth_curr_world_width, third_curr_world_height);
+        visible_regions.push_back(RECT_0_0);
+        visible_regions.push_back(RECT_0_1);
+        visible_regions.push_back(RECT_0_2);
+        visible_regions.push_back(RECT_0_3);
+        visible_regions.push_back(RECT_1_0);
+        visible_regions.push_back(RECT_1_1);
+        visible_regions.push_back(RECT_1_2);
+        visible_regions.push_back(RECT_1_3);
+        visible_regions.push_back(RECT_2_0);
+        visible_regions.push_back(RECT_2_1);
+        visible_regions.push_back(RECT_2_2);
+        visible_regions.push_back(RECT_2_3);
+    }
+
     // Draw features
     for (int j = 0; j < featureNum; j++)
     {
@@ -169,13 +235,12 @@ void draw_main_canvas(ezgl::renderer *g)
     for (StreetIdx street_id = 0; street_id < streetNum; street_id++)
     {
         // Get vector of all segments
-        std::vector<StreetSegmentIdx> all_segments = Streets_AllSegments.find(street_id)->second;         // Vector of all segments
+        std::vector<StreetSegmentIdx> all_segments = Streets_AllSegments.find(street_id)->second;
         int total_segment_amount = all_segments.size();
-
-        int step = 20;
-        // Draw street names based on number of segments of each street and zoom levels
-        // Draw street names starting at lowest 2 zoom level
+        
+        // Street name of current street
         std::string street_name = Segment_SegmentDetailedInfo[all_segments[0]].streetName;
+        
         for (int i = 0; i < total_segment_amount; i++)
         {
             StreetSegmentIdx seg_id = all_segments[i];
@@ -211,15 +276,36 @@ void draw_main_canvas(ezgl::renderer *g)
                 {
                     draw_street_segment_pixel(g, seg_id, from_xy, to_xy, highway_type);
                 }
-            } else if (ZOOM_LIMIT_3 <= curr_world_width && curr_world_width < ZOOM_LIMIT_2)
-            {
-                if (highway_type == "motorway" || highway_type == "motorway_link" || highway_type == "trunk"
-                    || highway_type == "primary" || highway_type == "secondary" || highway_type == "tertiary" 
-                    || highway_type == "unclassified" || highway_type == "residential" )
+            } else // Displaying street names and POIs start here
+            {                
+                if (ZOOM_LIMIT_3 <= curr_world_width && curr_world_width < ZOOM_LIMIT_2)
+                {
+                    if (highway_type == "motorway" || highway_type == "motorway_link" || highway_type == "trunk"
+                        || highway_type == "primary" || highway_type == "secondary" || highway_type == "tertiary" 
+                        || highway_type == "unclassified" || highway_type == "residential" )
+                    {
+                        draw_street_segment_meters(g, seg_id, from_xy, to_xy, highway_type);
+                        // Get street names and position of segment chosen to display name
+                        if (street_name != "<unknown>" && (i % step == 0) &&
+                        (highway_type == "motorway" || highway_type == "primary" || 
+                        highway_type == "secondary" || highway_type == "tertiary" ||
+                        highway_type == "residential"))
+                        {
+                            SegShortInfo short_info;
+                            short_info.street_name = street_name;
+                            short_info.from_xy = from_xy;
+                            short_info.to_xy = to_xy;
+                            seg_names_to_display.push_back(short_info);
+                        }
+                    }
+                } else
                 {
                     draw_street_segment_meters(g, seg_id, from_xy, to_xy, highway_type);
-                    // If displaying street name on segment, get street names and position
-                    if (i % step == 2 && street_name != "<unknown>")
+                    // Get street names and position of segment chosen to display name
+                    if (street_name != "<unknown>" && (i % step == 0) &&
+                        (highway_type == "motorway" || highway_type == "primary" || 
+                        highway_type == "secondary" || highway_type == "tertiary" ||
+                        highway_type == "residential"))
                     {
                         SegShortInfo short_info;
                         short_info.street_name = street_name;
@@ -228,32 +314,32 @@ void draw_main_canvas(ezgl::renderer *g)
                         seg_names_to_display.push_back(short_info);
                     }
                 }
-            } else
-            {
-                draw_street_segment_meters(g, seg_id, from_xy, to_xy, highway_type);
-                // If displaying street name on segment, get street names and position
-                if (i % step == 2 && street_name != "<unknown>")
-                {
-                    SegShortInfo short_info;
-                    short_info.street_name = street_name;
-                    short_info.from_xy = from_xy;
-                    short_info.to_xy = to_xy;
-                    seg_names_to_display.push_back(short_info);
-                }
             }
+            
         }
     }
 
-    // Draw street names
-    if ((ZOOM_LIMIT_3 <= curr_world_width && curr_world_width < ZOOM_LIMIT_2)
-        || (curr_world_width < ZOOM_LIMIT_3))
+    // Draw street names in rectangular regions if region is available
+    if (curr_world_width < ZOOM_LIMIT_2)
     {
-        for (auto &seg_info : seg_names_to_display)
+        // If all regions are unavailable, break for loop
+        int count = 0;
+        for (int i = 0; i < seg_names_to_display.size() && count != 11; i++)
         {
-            draw_street_segment_names(g, seg_info.street_name, seg_info.from_xy, seg_info.to_xy);
+            SegShortInfo seg_info = seg_names_to_display[i];
+            for (int j = 0; j < NUM_REGIONS; j++)
+            {
+                if (visible_regions[j].contains(seg_info.from_xy) && 
+                    visible_regions[j].contains(seg_info.to_xy) &&
+                    available_region[j])
+                {
+                    draw_street_segment_names(g, seg_info.street_name, seg_info.from_xy, seg_info.to_xy);
+                    available_region[j] = 0;
+                    count++;
+                    break;
+                }
+            }
         }
-        // Clear vector every frame to avoid multiple drawings
-        seg_names_to_display.clear();
     }
 
     // Draw highlighted intersection(s)
@@ -581,7 +667,6 @@ void draw_highlighted_intersections(ezgl::renderer* g, ezgl::point2d inter_xy)
 void draw_street_segment_names(ezgl::renderer *g, std::string street_name, ezgl::point2d from_xy, ezgl::point2d to_xy)
 {
     // Calculate text rotation based on segment slope                   // TODO: Curved segments!
-                                                                        // TODO: Boundaries and overlapping
     double angle_degree;
     if (to_xy.x == from_xy.x)
         angle_degree = 90;
@@ -597,6 +682,7 @@ void draw_street_segment_names(ezgl::renderer *g, std::string street_name, ezgl:
     g->set_text_rotation(angle_degree);
     g->set_color(0, 0, 0);
     g->set_font_size(7);
+    // Draw name at position between from_xy and to_xy
     ezgl::point2d mid_xy = {(from_xy.x + to_xy.x) / 2, (from_xy.y + to_xy.y) / 2};
     g->draw_text(mid_xy, street_name);
 
