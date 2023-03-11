@@ -160,8 +160,6 @@ void draw_main_canvas(ezgl::renderer *g)
 
     // All segments whose street name will be displayed
     std::vector<SegShortInfo> seg_names_to_display;
-    // Steps between street segments within a street that can display names
-    int step = 3;
 
     // Defining 3x4 regions on the screen based on visible world
     std::vector<ezgl::rectangle> visible_regions;
@@ -227,24 +225,26 @@ void draw_main_canvas(ezgl::renderer *g)
 
     // Draw features
     int numOfFeatureDisplay = featureNum;
+    std::cout<<featureNum;
     if (curr_world_width >= ZOOM_LIMIT_0)
     {
-        numOfFeatureDisplay = featureNum * 20 / 100;
+        numOfFeatureDisplay = featureNum * 0.1 / 100;
     } else if (ZOOM_LIMIT_1 <= curr_world_width && curr_world_width < ZOOM_LIMIT_0)
     {
-        numOfFeatureDisplay = featureNum * 40 / 100;
+        numOfFeatureDisplay = featureNum * 1 / 100;
     } else if (ZOOM_LIMIT_2 <= curr_world_width && curr_world_width < ZOOM_LIMIT_1)
     {
-        numOfFeatureDisplay = featureNum * 60 / 100;
+        numOfFeatureDisplay = featureNum * 5 / 100;
     } else if (ZOOM_LIMIT_3 <= curr_world_width && curr_world_width < ZOOM_LIMIT_2)
     {
-        numOfFeatureDisplay = featureNum * 80 / 100;
+        numOfFeatureDisplay = featureNum * 10 / 100;
     }
     for (int j = 0; j < numOfFeatureDisplay; j++)
     {
         FeatureDetailedInfo tempFeatureInfo = Features_AllInfo[j];
         draw_feature_area(g, tempFeatureInfo);
     }
+    
     // Loop through streets
     for (StreetIdx street_id = 0; street_id < streetNum; street_id++)
     {
@@ -300,7 +300,7 @@ void draw_main_canvas(ezgl::renderer *g)
                     {
                         draw_street_segment_meters(g, seg_id, from_xy, to_xy, highway_type);
                         // Get street names and position of segment chosen to display name
-                        if (street_name != "<unknown>" && (i % step == 0) &&
+                        if (street_name != "<unknown>" && (i != 0) &&
                         (highway_type == "motorway" || highway_type == "primary" || 
                         highway_type == "secondary" || highway_type == "tertiary" ||
                         highway_type == "residential"))
@@ -316,7 +316,7 @@ void draw_main_canvas(ezgl::renderer *g)
                 {
                     draw_street_segment_meters(g, seg_id, from_xy, to_xy, highway_type);
                     // Get street names and position of segment chosen to display name
-                    if (street_name != "<unknown>" && (i % step == 0) &&
+                    if (street_name != "<unknown>" && (i != 0) &&
                         (highway_type == "motorway" || highway_type == "primary" || 
                         highway_type == "secondary" || highway_type == "tertiary" ||
                         highway_type == "residential"))
@@ -791,52 +791,80 @@ void draw_feature_area(ezgl::renderer *g, FeatureDetailedInfo tempFeatureInfo)
     std::vector<ezgl::point2d> tempPoints = tempFeatureInfo.featurePoints;
     if (tempType == PARK)
     {
-        if (tempPoints.size() > 1){
+        if (tempPoints.size() > 1)
+        {
             g->set_color(206, 234, 214);
             g->fill_poly(tempPoints);
         }
     } else if (tempType == BEACH)
     {
-        if (tempPoints.size() > 1){
+        if (tempPoints.size() > 1)
+        {
             g->set_color(255, 235, 205);
             g->fill_poly(tempPoints);
         }
     } else if (tempType == LAKE)
     {
-        if (tempPoints.size() > 1){
+        if (tempPoints.size() > 1)
+        {
             g->set_color(153, 204, 255);
             g->fill_poly(tempPoints);
         }
     } else if (tempType == ISLAND)
     {
-        if (tempPoints.size() > 1){
+        if (tempPoints.size() > 1)
+        {
             g->set_color(168, 218, 181);
             g->fill_poly(tempPoints);
         }
     } else if (tempType == BUILDING)
     {
-        if (tempPoints.size() > 1){
+        if (tempPoints.size() > 1)
+        {
             g->set_color(230, 230, 230);
             g->fill_poly(tempPoints);
         }
     } else if (tempType == GREENSPACE)
     {
-        if (tempPoints.size() > 1){
+        if (tempPoints.size() > 1)
+        {
             g->set_color(206, 234, 214);
             g->fill_poly(tempPoints);
         }
     } else if (tempType == GOLFCOURSE)
     {
-        if (tempPoints.size() > 1){
+        if (tempPoints.size() > 1)
+        {
             g->set_color(168, 218, 181);
             g->fill_poly(tempPoints);
         }
     } else if (tempType == GLACIER)
     {
-        if (tempPoints.size() > 1){
+        if (tempPoints.size() > 1)
+        {
             g->set_color(114, 157, 200);
             g->fill_poly(tempPoints);
         }
-    } 
+    } else if (tempType == RIVER)
+    {
+        auto tempPointIdx = tempPoints.begin();
+        g->set_color(153, 204, 255);
+        g->set_line_width(5);
+        for (int count = 0; count < (tempPoints.size() - 1); count++)
+        {
+            g->draw_line(*tempPointIdx, *(tempPointIdx + 1));
+            tempPointIdx++;
+        }
+    } else if (tempType == STREAM)
+    {
+        auto tempPointIdx = tempPoints.begin();
+        g->set_color(153, 204, 255);
+        g->set_line_width(2);
+        for (int count = 0; count < (tempPoints.size() - 1); count++)
+        {
+            g->draw_line(*tempPointIdx, *(tempPointIdx + 1));
+            tempPointIdx++;
+        }
+    }
     return;
 }

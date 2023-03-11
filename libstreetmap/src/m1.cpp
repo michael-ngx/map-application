@@ -419,10 +419,10 @@ void m1_init(){
     intersectionNum = getNumIntersections();
     featureNum = getNumFeatures();
     // Init database
+    init_features();
     init_intersections();
     init_segments();
-    init_streets();
-    init_features();
+    init_streets();    
     init_osm();
     init_osm_highways();
 }
@@ -479,20 +479,8 @@ void init_segments(){
 void init_intersections(){
     Intersection_IntersectionInfo.resize(intersectionNum);
 
-    // Find max and min lat, lon of intersection in city
-    max_lat = getIntersectionPosition(0).latitude();
-    max_lon = getIntersectionPosition(0).longitude();
-    min_lat = max_lat;
-    min_lon = max_lon;
-
-    for (IntersectionIdx id = 0; id < intersectionNum; id++){
-        // Find max and min lat, lon of city
-        LatLon position_latlon = getIntersectionPosition(id);
-        max_lat = std::max(max_lat, position_latlon.latitude());
-        max_lon = std::max(max_lon, position_latlon.longitude());
-        min_lat = std::min(min_lat, position_latlon.latitude());
-        min_lon = std::min(min_lon, position_latlon.longitude());
-        
+    for (IntersectionIdx id = 0; id < intersectionNum; id++)
+    {        
         // Initialize vector for Intersection (IntersectionIdx - Vector of Segments)
         std::vector<StreetSegmentIdx> allSegments;
         for(int segment = 0; segment < getNumIntersectionStreetSegment(id); segment++) {
@@ -500,32 +488,11 @@ void init_intersections(){
             allSegments.push_back(ss_id);
         }
         Intersection_AllStreetSegments.push_back(allSegments);
-    }
 
-    // Pre-process xy position for all intersections (xy_from_latlon conversion function needs max_lat and min_lat)
-    lat_avg = (max_lat + min_lat) / 2;
-    latlon_bound.max = LatLon(max_lat, max_lon);
-    latlon_bound.min = LatLon(min_lat, min_lon);
-
-    for (IntersectionIdx id = 0; id < intersectionNum; id++){
+        // Pre-process xy position for all intersections
         Intersection_IntersectionInfo[id].name = getIntersectionName(id);
         Intersection_IntersectionInfo[id].position_xy = xy_from_latlon(getIntersectionPosition(id));
     }
-}
-
-// Converts LatLon to xy
-ezgl::point2d xy_from_latlon(LatLon latlon)
-{
-    double x = kEarthRadiusInMeters * latlon.longitude() * kDegreeToRadian * cos(lat_avg * kDegreeToRadian);
-    double y = kEarthRadiusInMeters * latlon.latitude() * kDegreeToRadian;
-    return ezgl::point2d(x, y);
-}
-
-// Converts xy to LatLon(
-LatLon latlon_from_xy(double x, double y){
-    double lon = x / (kEarthRadiusInMeters * kDegreeToRadian* cos(lat_avg * kDegreeToRadian));
-    double lat = y / (kEarthRadiusInMeters * kDegreeToRadian);
-    return LatLon(lat, lon);
 }
 
 // *******************************************************************
@@ -579,36 +546,68 @@ void init_streets(){
 // Features
 // *******************************************************************
 void init_features(){
-    //Load pre-processed data into Features_AllPoints
-    for (int featureIdx = 0; featureIdx < featureNum; featureIdx++){
+    // Find max and min lat, lon of feature points in city
+    // Initialize for comparision
+    max_lat = getFeaturePoint(0, 0).latitude();
+    max_lon = getFeaturePoint(0, 0).longitude();
+    min_lat = max_lat;
+    min_lon = max_lon;
+    
+    for (int featureIdx = 0; featureIdx < featureNum; featureIdx++)
+    {
         FeatureDetailedInfo tempFeatureInfo;
         tempFeatureInfo.featureType = getFeatureType(featureIdx);
         tempFeatureInfo.featureOSMID = getFeatureOSMID(featureIdx);
-        double tempMinX = 0, tempMinY = 0, tempMaxX = 0, tempMaxY = 0;
-        for (int pointIdx = 0; pointIdx < getNumFeaturePoints(featureIdx); pointIdx++){
-            ezgl::point2d tempPoint = xy_from_latlon(getFeaturePoint(featureIdx, pointIdx));
-            tempFeatureInfo.featurePoints.push_back(tempPoint);
-            if (pointIdx == 0){
-                tempMinX = tempPoint.x;
-                tempMinY = tempPoint.y;
-                tempMaxX = tempPoint.x;
-                tempMaxY = tempPoint.y;
-            } else{
-                tempMinX = std::min(tempMinX, tempPoint.x);
-                tempMinY = std::min(tempMinY, tempPoint.y);
-                tempMaxX = std::max(tempMaxX, tempPoint.x);
-                tempMaxY = std::max(tempMaxY, tempPoint.y);
-            }
+
+        // To get max min lat lon of current featureIdx
+        double temp_min_lat, temp_min_lon, temp_max_lat, temp_max_lon;
+        temp_max_lat = getFeaturePoint(featureIdx, 0).latitude();
+        temp_max_lon = getFeaturePoint(featureIdx, 0).longitude();
+        temp_min_lat = temp_max_lat;
+        temp_min_lon = temp_max_lon;
+        for (int pointIdx = 0; pointIdx < getNumFeaturePoints(featureIdx); pointIdx++)
+        {
+            LatLon temp_latlon = getFeaturePoint(featureIdx, pointIdx);
+            temp_max_lat = std::max(temp_max_lat, temp_latlon.latitude());
+            temp_max_lon = std::max(temp_max_lon, temp_latlon.longitude());
+            temp_min_lat = std::min(temp_min_lat, temp_latlon.latitude());
+            temp_min_lon = std::min(temp_min_lon, temp_latlon.longitude());
         }
-        tempFeatureInfo.featureRectangle = ezgl::rectangle(ezgl::point2d(tempMinX, tempMinY), 
-                                                           ezgl::point2d(tempMaxX, tempMaxY));
-        tempFeatureInfo.featureArea = findFeatureArea(featureIdx);
+        tempFeatureInfo.temp_max_lat = temp_max_lat;
+        tempFeatureInfo.temp_max_lon = temp_max_lon;
+        tempFeatureInfo.temp_min_lat = temp_min_lat;
+        tempFeatureInfo.temp_min_lon = temp_min_lon;
+
+        // Add Feature Info to Features_AllInfo
         Features_AllInfo.push_back(tempFeatureInfo);
-//        if (tempType == LAKE || tempType == ISLAND || tempType == BEACH){
-//            Features_AllInfo.push_back(tempFeatureInfo);
-//        } else {
-//            Features_AllInfo.push_front(tempFeatureInfo);
-//        }
+
+        // Check if feature has max min lat lon of current world
+        max_lat = std::max(temp_max_lat, max_lat);
+        max_lon = std::max(temp_max_lon, max_lon);
+        min_lat = std::min(temp_min_lat, min_lat);
+        min_lon = std::min(temp_min_lon, min_lon);
+    }
+
+    // Already have max min lat lon of the whole world
+    // xy_from_latlon conversion function needs max_lat and min_lat
+    lat_avg = (max_lat + min_lat) / 2;
+    latlon_bound.max = LatLon(max_lat, max_lon);
+    latlon_bound.min = LatLon(min_lat, min_lon);
+
+    //Load pre-processed data into Features_AllPoints
+    for (int featureIdx = 0; featureIdx < featureNum; featureIdx++)
+    {
+        Features_AllInfo[featureIdx].featureRectangle = 
+                    ezgl::rectangle(xy_from_latlon(LatLon(Features_AllInfo[featureIdx].temp_min_lat,
+                                                        Features_AllInfo[featureIdx].temp_min_lon)), 
+                                    xy_from_latlon(LatLon(Features_AllInfo[featureIdx].temp_max_lat,
+                                                        Features_AllInfo[featureIdx].temp_max_lon)));
+        for (int pointIdx = 0; pointIdx < getNumFeaturePoints(featureIdx); pointIdx++)
+        {
+            ezgl::point2d tempPoint = xy_from_latlon(getFeaturePoint(featureIdx, pointIdx));
+            Features_AllInfo[featureIdx].featurePoints.push_back(tempPoint);
+        }
+        Features_AllInfo[featureIdx].featureArea = findFeatureArea(featureIdx);
     }
     std::sort(Features_AllInfo.begin(), Features_AllInfo.end(), compareFeatureArea);
 }
@@ -616,6 +615,21 @@ void init_features(){
 //Helper function for sorting feature areas
 bool compareFeatureArea (FeatureDetailedInfo F1, FeatureDetailedInfo F2){
     return (F1.featureArea > F2.featureArea);
+}
+
+// Converts LatLon to xy
+ezgl::point2d xy_from_latlon(LatLon latlon)
+{
+    double x = kEarthRadiusInMeters * latlon.longitude() * kDegreeToRadian * cos(lat_avg * kDegreeToRadian);
+    double y = kEarthRadiusInMeters * latlon.latitude() * kDegreeToRadian;
+    return ezgl::point2d(x, y);
+}
+
+// Converts xy to LatLon(
+LatLon latlon_from_xy(double x, double y){
+    double lon = x / (kEarthRadiusInMeters * kDegreeToRadian* cos(lat_avg * kDegreeToRadian));
+    double lat = y / (kEarthRadiusInMeters * kDegreeToRadian);
+    return LatLon(lat, lon);
 }
 
 // *******************************************************************
