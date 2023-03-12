@@ -33,7 +33,7 @@
  * GLOBAL VARIABLES
  ********************************************************************************************************************************/
 std::string CURRENT_CITY = " ";
-std::string CURRENT_FILTER = " ";
+std::string CURRENT_FILTER = "All";
 bool night_mode = false;
 bool filtered = false;
 
@@ -526,7 +526,7 @@ void initial_setup(ezgl::application *application, bool /*new_window*/)
         "Select", 
         row++,
         poi_filter_cbk,
-        {" ", "restaurant", "school", "hospital"}
+        {"All", "restaurant", "school", "hospital", "bar", "fast_food", "ice_cream", "cafe", "university", "post_office", "fuel", "bank", "bbq"}
     );
 }
 
@@ -596,12 +596,12 @@ void poi_filter_cbk(GtkComboBoxText* self, ezgl::application* application)
     auto text = gtk_combo_box_text_get_active_text(self);
     std::string text_string = text;
     std::vector<std::string> typeList;
-    if(!text || text_string == " ")
+    if(!text || text_string == "All")
     {  // Returning if the combo box is currently empty/Turning off filter
         filtered = false;
         application->refresh_drawing();
         return;
-    } else if (text_string != CURRENT_FILTER)
+    } else if (text_string != "All")
     {
         filtered = true;
         CURRENT_FILTER = text_string;
@@ -1023,6 +1023,7 @@ void drawPOIs(ezgl::renderer* g, int regionIdx)
     if (tempPOIName.size() > 50) return;                          //skip if the POI name is too long  
     ezgl::point2d tempDrawPoint = poi_display[regionIdx][middlePOIIdx].POIPoint;
     std::string tempType = poi_display[regionIdx][middlePOIIdx].POIType;
+    // Skip if something is filtered out
     if (filtered && tempType != CURRENT_FILTER) return;
     //drawing the icon
     g->set_text_rotation(0); 
@@ -1060,7 +1061,7 @@ void drawPOIs(ezgl::renderer* g, int regionIdx)
     } else if (tempType == "police")
     {
         icon = "\U0001F46E";
-    } else if (tempType == "school")
+    } else if (tempType == "school" || tempType == "university")
     {
         icon = "\U0001F393";
     } else if (tempType == "toilets")
