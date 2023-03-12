@@ -80,8 +80,10 @@ extern std::unordered_map<StreetIdx, std::vector<StreetSegmentIdx>> Streets_AllS
 extern std::unordered_map<StreetIdx, std::vector<IntersectionIdx>> Streets_AllIntersections;
 // Keys: Street id, Value: length of the street
 extern std::unordered_map<StreetIdx, double> streetAllLength;
-// Keys: Street names, Value: street index
-extern std::multimap<std::string, StreetIdx> StreetName_StreetIdx;
+// Keys: Street names (lower case, no space), Value: street index
+extern std::multimap<std::string, StreetIdx> StreetName_lower_StreetIdx;
+// Keys: Street names (full), Value: street index
+extern std::multimap<std::string, StreetIdx> StreetName_full_StreetIdx;
 
 // *******************************************************************
 // Features

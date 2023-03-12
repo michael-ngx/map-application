@@ -87,8 +87,11 @@ std::unordered_map<StreetIdx, std::vector<StreetSegmentIdx>> Streets_AllSegments
 std::unordered_map<StreetIdx, std::vector<IntersectionIdx>> Streets_AllIntersections;
 // Keys: Street id, Value: length of the street
 std::unordered_map<StreetIdx, double> streetAllLength;
-// Keys: Street names, Value: street index
-std::multimap<std::string, StreetIdx> StreetName_StreetIdx;
+// Keys: Street names (lower case, no space), Value: street index
+std::multimap<std::string, StreetIdx> StreetName_lower_StreetIdx;
+// Keys: Street names (full), Value: street index
+std::multimap<std::string, StreetIdx> StreetName_full_StreetIdx;
+
 
 // *******************************************************************
 // Features
@@ -295,7 +298,7 @@ std::vector<StreetIdx> findStreetIdsFromPartialStreetName(std::string street_pre
     }
 
     // Find street by street prefix
-    std::multimap<std::string, StreetIdx>::iterator node = StreetName_StreetIdx.lower_bound(prefix); // Iterator to first candidate
+    std::multimap<std::string, StreetIdx>::iterator node = StreetName_lower_StreetIdx.lower_bound(prefix); // Iterator to first candidate
 
     // Increase iterator through ordered map will always reach larger strings by string comparision
     while (node->first.compare(0, prefix.size(), prefix) == 0){
@@ -409,7 +412,8 @@ void closeMap() {
     Streets_AllSegments.clear();
     Streets_AllIntersections.clear();
     streetAllLength.clear();
-    StreetName_StreetIdx.clear();
+    StreetName_lower_StreetIdx.clear();
+    StreetName_full_StreetIdx.clear();
     Features_AllInfo.clear();
     POI_AllInfo.clear();
     OSMID_Nodes_AllTagPairs.clear();
@@ -546,7 +550,8 @@ void init_streets(){
             if (c == ' ') continue;
             streetName.push_back(char(tolower(c))); // Save names as lowercase, no space
         }
-        StreetName_StreetIdx.insert(std::make_pair(streetName, pair.first)); // Add (name, streetidx) pair
+        StreetName_lower_StreetIdx.insert(std::make_pair(streetName, pair.first)); // Add (street name (lower), streetIdx) pair
+        StreetName_full_StreetIdx.insert(std::make_pair(str, pair.first));         // Add (street name (full), streetIdx) pair
 
         // 2D Vector for Streets (StreetIdx - Vector of All Intersections)
         Streets_AllIntersections[pair.first] = findIntersectionsOfStreet(pair.first);

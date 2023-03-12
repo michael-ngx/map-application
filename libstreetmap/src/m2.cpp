@@ -59,11 +59,9 @@ struct POIShortInfo
     ezgl::point2d POIPoint;
 };
 
-//Getting a pointer to our GtkEntry named "StreetEntry1" and "StreetEntry2"
-GObject *entry_object_1;
-GObject *entry_object_2;
-GtkEntry* gtk_entry_1;
-GtkEntry* gtk_entry_2;
+// Getting a pointer to our GtkEntry named "StreetEntry1" and "StreetEntry2"
+GtkListStore *list_store;
+GtkTreeIter iter;
 
 /*******************************************************************************************************************************
  * FUNCTION DECLARATIONS
@@ -96,9 +94,8 @@ void act_on_key_press(ezgl::application *application, GdkEventKey *event, char *
  *************************************************************/
 void city_change_cbk(GtkComboBoxText* self, ezgl::application* application);
 void input_streets_cbk(GtkWidget */*widget*/, ezgl::application* application);
-void dialog_cbk(GtkDialog* self, gint response_id, ezgl::application* application);
-void night_mode_cbk(GtkSwitch*, gboolean state, ezgl::application* application);
-void search_button_cbk(GtkWidget *, ezgl::application *application);
+void night_mode_cbk(GtkSwitch* /*self*/, gboolean state, ezgl::application* application);
+void search_button_cbk(GtkWidget */*widget*/, ezgl::application *application);
 
 /************************************************************
  * HELPER FUNCTIONS 
@@ -130,7 +127,7 @@ void draw_highlighted_intersections(ezgl::renderer* g, ezgl::point2d inter_xy);
 // Get new map path, for drop-down list callback
 std::string get_new_map_path(std::string text_string);
 // Response to search button callback
-void search_response(std::string& input_1, std::string& input_2, ezgl::application *application);
+void search_response(std::string input_1, std::string input_2, ezgl::application *application);
 
 /*******************************************************************************************************************************
  * DRAW MAP
@@ -398,7 +395,6 @@ void draw_main_canvas(ezgl::renderer *g)
     }
     
     //Draw POI
-    
     if (curr_world_width < ZOOM_LIMIT_3)
     {
         poi_display.resize(NUM_REGIONS);
@@ -475,6 +471,15 @@ void initial_setup(ezgl::application *application, bool /*new_window*/)
         application // passing an application pointer to callback function
     );
 
+    // Connect to GtkListStore and load all street names into it
+    list_store = GTK_LIST_STORE(application->get_object("StreetNameList"));
+    for (auto it = StreetName_full_StreetIdx.begin(); it != StreetName_full_StreetIdx.end(); it++)
+    {
+        if (it->first == "<unknown>") continue;
+        gtk_list_store_append(list_store, &iter);
+        gtk_list_store_set(list_store, &iter, 0, (it->first).c_str(), -1);
+    }
+
     // Runtime: Creating drop-down list for different cities, connected to city_change_cbk
     application->create_label(row++, "Switch city:");     
     application->create_combo_box_text(
@@ -525,6 +530,17 @@ void city_change_cbk(GtkComboBoxText* self, ezgl::application* application){
         // Closes current map and loads the new city
         closeMap();
         loadMap(new_map_path);
+
+         // Clear GtkListStore of old city
+         gtk_list_store_clear(list_store);
+         // Load GtkListStore for new city
+         for (auto it = StreetName_full_StreetIdx.begin(); it != StreetName_full_StreetIdx.end(); it++)
+         {
+            if (it->first == "<unknown>") continue;
+            gtk_list_store_append(list_store, &iter);
+            gtk_list_store_set(list_store, &iter, 0, (it->first).c_str(), -1);
+         }
+
         std::cout << "Loaded new map" << std::endl;
         ezgl::rectangle new_world(xy_from_latlon(latlon_bound.min),
                                     xy_from_latlon(latlon_bound.max));
@@ -555,43 +571,18 @@ void night_mode_cbk(GtkSwitch* /*self*/, gboolean state, ezgl::application* appl
 */
 void search_button_cbk(GtkWidget */*widget*/, ezgl::application *application)
 {
-    entry_object_1 = application->get_object("StreetEntry1");
-    entry_object_2 = application->get_object("StreetEntry2");
-    gtk_entry_1 = GTK_ENTRY(entry_object_1);
-    gtk_entry_2 = GTK_ENTRY(entry_object_2);
-    
+    GObject *entry_object_1 = application->get_object("StreetEntry1");
+    GObject *entry_object_2 = application->get_object("StreetEntry2");
+    GtkEntry* gtk_entry_1 = GTK_ENTRY(entry_object_1);
+    GtkEntry* gtk_entry_2 = GTK_ENTRY(entry_object_2);
     // Getting text from search entries
     const gchar* text_1 = gtk_entry_get_text(gtk_entry_1);
     const gchar* text_2 = gtk_entry_get_text(gtk_entry_2);
     std::string input_1(text_1);
     std::string input_2(text_2);
 
-    // Determine how UI resopnses based on street inputs
+    // Determine how UI responses based on street inputs
     search_response(input_1, input_2, application);
-}
-
-/**
- * Callback function for dialog window created by "Create Dialog Window" button. 
- * Updates application message to reflect user answer to dialog window. 
- */
-void dialog_cbk(GtkDialog* self, gint response_id, ezgl::application* application){
-  //Response_id is an integer/enumeration, so we can use a switch to read its value and act accordingly
-  switch(response_id){
-    case GTK_RESPONSE_ACCEPT:
-      application->update_message("USER ACCEPTED");
-      break;
-    case GTK_RESPONSE_REJECT:
-      application->update_message("USER REJECTED");
-      break;
-    case GTK_RESPONSE_DELETE_EVENT:
-      application->update_message("USER CLOSED WINDOW");
-      break;
-    default:
-      application->update_message("YOU SHOULD NOT SEE THIS");
-  }
-
-  //We always have to destroy the dialog window in the callback function or it will never close
-  gtk_widget_destroy(GTK_WIDGET(self));
 }
 
 /*******************************************************************************************************************************
@@ -906,7 +897,7 @@ void draw_feature_area(ezgl::renderer *g, FeatureDetailedInfo tempFeatureInfo)
     {
         if (tempPoints.size() > 1)
         {
-            g->set_color(114, 157, 200);
+            g->set_color(ezgl::WHITE);
             g->fill_poly(tempPoints);
         }
     } else if (tempType == RIVER)
@@ -1001,45 +992,49 @@ std::string get_new_map_path(std::string text_string)
 }
 
 // Response to search button callback
-void search_response(std::string& input_1, std::string& input_2, ezgl::application *application)
+void search_response(std::string input_1, std::string input_2, ezgl::application *application)
 {
     if (input_1.empty() || input_2.empty())
     {
-        application->update_message("Street name missing. Enter street names in both fields!");
+        application->update_message("Street name(s) missing. Enter street names in both fields!");
+        return;
+    } else if (input_1 == input_2)
+    {
+        application->update_message("Please enter 2 different street names");
         return;
     }
-    // Updating the status bar message saying search pressed
-    application->update_message("Searching...");
-    
-    std::string street_name_1 = "";
-    for (auto& c : input_1){
-        if (c == ' ') continue;
-        street_name_1.push_back(char(tolower(c))); // Find names as lowercase, no space
-    }
-    std::string street_name_2 = "";
-    for (auto& c : input_2){
-        if (c == ' ') continue;
-        street_name_2.push_back(char(tolower(c))); // Find names as lowercase, no space
-    }
 
-    // There may be multiple streets given an input street name. Display all intersections found for all streets
-    std::pair <std::multimap<std::string, int>::iterator, std::multimap<std::string, int>::iterator> it_1_range, it_2_range;
+    // Allow search from partial street name, if street name is unique.
+    // Vector size 0 -> Street name not found, no partials found
+    // Vector size >= 1 -> Use first element in partial name as name for searching
+    // If input name is correct, first element == input name
+    std::vector<StreetIdx> partial_streets_1 = findStreetIdsFromPartialStreetName(input_1);
+    std::vector<StreetIdx> partial_streets_2 = findStreetIdsFromPartialStreetName(input_2);
 
-    // Find street(s) 1
-    it_1_range = StreetName_StreetIdx.equal_range(street_name_1);
-    if (it_1_range.first->second == it_1_range.second->second)
+    // Vector size 0 -> Street name not found, even partials
+    if (partial_streets_1.size() == 0)
     {
         application->update_message("Street 1 not found!");
         return;
-    } 
-    
-    // Find street(s) 2
-    it_2_range = StreetName_StreetIdx.equal_range(street_name_2);
-    if (it_2_range.first->second == it_2_range.second->second)
+    } else if (partial_streets_2.size() == 0)
     {
         application->update_message("Street 2 not found!");
         return;
     }
+
+    // Vector size >= 1 -> Use first element in partial name (can match input!)
+    // Check name of first partial street
+    input_1 = getStreetName(partial_streets_1[0]);
+    input_2 = getStreetName(partial_streets_2[0]);
+
+    // Display all intersections found between 2 streets
+    // There may be multiple streets given a street name
+    std::pair <std::multimap<std::string, int>::iterator, std::multimap<std::string, int>::iterator> it_1_range, it_2_range;
+    
+    // Find street(s) 1
+    it_1_range = StreetName_full_StreetIdx.equal_range(input_1);
+    // Find street(s) 2
+    it_2_range = StreetName_full_StreetIdx.equal_range(input_2);
 
     // Finding and displaying intersections between 2 streets
     int count = 0;  // For checking if any intersections are found
@@ -1069,9 +1064,11 @@ void search_response(std::string& input_1, std::string& input_2, ezgl::applicati
 
     // Provide feedback if found/not found
     if (count)
-        application->update_message("Intersections found! Detailed info printed in terminal");
+        application->update_message("Intersection(s) found between " + input_1
+                                    + " and " + input_2 + ". Detailed info printed in terminal");
     else
-        application->update_message("No intersections between 2 streets found!");
+        application->update_message("No intersections found between " + input_1
+                                    + " and " + input_2);
 
     // Redraw the main canvas
     application->refresh_drawing();
