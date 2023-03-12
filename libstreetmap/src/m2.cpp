@@ -421,9 +421,16 @@ void draw_main_canvas(ezgl::renderer *g)
             int middlePOIIdx = regionSize / 2;
             std::string tempPOIName = poi_display[regionIdx][middlePOIIdx].POIName;
             if (tempPOIName.size() > 50) continue;                          //skip if the POI name is too long
+            ezgl::point2d tempDrawPoint = poi_display[regionIdx][middlePOIIdx].POIPoint;
+            g->set_color(0,0,0,50);
+            g->fill_arc(tempDrawPoint ,3 ,0 , 360);
             g->set_text_rotation(0);
-            g->set_color(118,215,150);
-            g->draw_text(poi_display[regionIdx][middlePOIIdx].POIPoint, tempPOIName);
+            if(!night_day)
+                g->set_color(51,102,0);
+            else
+                g->set_color(118,215,150);
+            
+            g->draw_text(tempDrawPoint, tempPOIName);
         }
     }
 
@@ -924,6 +931,26 @@ void draw_feature_area(ezgl::renderer *g, FeatureDetailedInfo tempFeatureInfo)
         {
             g->draw_line(*tempPointIdx, *(tempPointIdx + 1));
             tempPointIdx++;
+        }
+    } else if (tempType == UNKNOWN)
+    {
+        if (tempPoints.begin() == tempPoints.end())
+        {
+            if (tempPoints.size() > 1)
+            {
+                g->set_color(230, 230, 230);
+                g->fill_poly(tempPoints);
+            }
+        } else
+        {
+            auto tempPointIdx = tempPoints.begin();
+            g->set_color(153, 204, 255);
+            g->set_line_width(0);
+            for (int count = 0; count < (tempPoints.size() - 1); count++)
+            {
+                g->draw_line(*tempPointIdx, *(tempPointIdx + 1));
+                tempPointIdx++;
+            }
         }
     }
     return;
