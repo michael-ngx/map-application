@@ -33,7 +33,7 @@
  * GLOBAL VARIABLES
  ********************************************************************************************************************************/
 std::string CURRENT_CITY = " ";
-bool night_day = false;
+bool night_mode = false;
 // Zoom limits for curr_world_width, in meters
 const float ZOOM_LIMIT_0 = 50000;
 const float ZOOM_LIMIT_1 = 15000;
@@ -178,8 +178,8 @@ void draw_main_canvas(ezgl::renderer *g)
     std::vector<std::vector<int>> available_region = {{1, 1}, {1, 1}, {1, 1}, {1, 1}, 
                                                       {1, 1}, {1, 1}, {1, 1}, {1, 1},
                                                       {1, 1}, {1, 1}, {1, 1}, {1, 1}};
-    
-    if(night_day){
+    if(night_mode)
+    {
         ezgl::rectangle visible_world_new = g->get_visible_world();
         g->set_color(43, 56, 70);
         g->fill_rectangle(visible_world_new);
@@ -421,7 +421,7 @@ void draw_main_canvas(ezgl::renderer *g)
             g->set_color(0,0,0,50);
             g->fill_arc(tempDrawPoint ,3 ,0 , 360);
             g->set_text_rotation(0);
-            if(!night_day)
+            if(!night_mode)
                 g->set_color(51,102,0);
             else
                 g->set_color(118,215,150);
@@ -556,12 +556,12 @@ void city_change_cbk(GtkComboBoxText* self, ezgl::application* application){
 void night_mode_cbk(GtkSwitch* /*self*/, gboolean state, ezgl::application* application){
     if(state){
         application->update_message("Night mode turned on");
-        night_day = !night_day;
+        night_mode = !night_mode;
         application->refresh_drawing();
     }       
     else{
         application->update_message("Night mode turned off");
-        night_day = !night_day;
+        night_mode = !night_mode;
         application->refresh_drawing();
     }       
 }
@@ -599,12 +599,12 @@ void draw_street_segment_pixel(ezgl::renderer *g, StreetSegmentIdx seg_id,
 {
     // Set colors and line width according to street type
     if (street_type == "motorway" || street_type == "motorway_link")
-        if(!night_day)
+        if(!night_mode)
             g->set_color(255, 212, 124);
         else
             g->set_color(58, 128, 181);  
     else 
-        if(!night_day)
+        if(!night_mode)
             g->set_color(ezgl::WHITE);
         else
             g->set_color(96, 96, 96);
@@ -637,12 +637,12 @@ void draw_street_segment_meters(ezgl::renderer *g, StreetSegmentIdx seg_id,
 {
     // Set colors according to street type
     if (street_type == "motorway" || street_type == "motorway_link")
-        if(!night_day)
+        if(!night_mode)
             g->set_color(255, 212, 124);
         else
             g->set_color(58, 128, 181);       
     else 
-        if(!night_day)
+        if(!night_mode)
             g->set_color(ezgl::WHITE);
         else
             g->set_color(96, 96, 96);
@@ -793,7 +793,7 @@ void draw_name_or_arrow(ezgl::renderer *g, std::string street_name, bool arrow,
     ezgl::point2d mid_xy = {(from_xy.x + to_xy.x) / 2, (from_xy.y + to_xy.y) / 2};
     if (arrow)
     {      
-        if(!night_day){
+        if(!night_mode){
             g->set_color(0, 0, 0);
             g->set_font_size(15);
         }
@@ -804,7 +804,7 @@ void draw_name_or_arrow(ezgl::renderer *g, std::string street_name, bool arrow,
         g->draw_text(mid_xy, "->");
     } else 
     {
-        if(!night_day){
+        if(!night_mode){
             g->set_color(0, 0, 0);
             g->set_font_size(15);
         }
@@ -827,7 +827,7 @@ void draw_feature_area(ezgl::renderer *g, FeatureDetailedInfo tempFeatureInfo)
     {
         if (tempPoints.size() > 1)
         {         
-            if(!night_day)
+            if(!night_mode)
                 g->set_color(206, 234, 214);
             else
                 g->set_color(66, 75, 69);
@@ -844,18 +844,17 @@ void draw_feature_area(ezgl::renderer *g, FeatureDetailedInfo tempFeatureInfo)
     {
         if (tempPoints.size() > 1)
         {            
-            if(!night_day)
+            if(!night_mode)
                 g->set_color(153, 204, 255);
             else
                 g->set_color(0, 0, 0);
-            g->fill_poly(tempPoints);
             g->fill_poly(tempPoints);
         }
     } else if (tempType == ISLAND)
     {
         if (tempPoints.size() > 1)
         {           
-            if(!night_day)
+            if(!night_mode)
                 g->set_color(168, 218, 181);  
             else
                 g->set_color(89, 110, 89);
@@ -865,7 +864,7 @@ void draw_feature_area(ezgl::renderer *g, FeatureDetailedInfo tempFeatureInfo)
     {
         if (tempPoints.size() > 1)
         {
-            if(!night_day)
+            if(!night_mode)
                 g->set_color(230, 230, 230);
             else
                 g->set_color(63, 81, 98);
@@ -877,7 +876,7 @@ void draw_feature_area(ezgl::renderer *g, FeatureDetailedInfo tempFeatureInfo)
     {
         if (tempPoints.size() > 1)
         {
-            if(!night_day)
+            if(!night_mode)
                 g->set_color(206, 234, 214);
             else
                 g->set_color(79, 91, 83);
@@ -887,7 +886,7 @@ void draw_feature_area(ezgl::renderer *g, FeatureDetailedInfo tempFeatureInfo)
     {
         if (tempPoints.size() > 1)
         {   
-            if(!night_day)
+            if(!night_mode)
                 g->set_color(168, 218, 181);
             else
                 g->set_color(58, 74, 62);
@@ -903,7 +902,7 @@ void draw_feature_area(ezgl::renderer *g, FeatureDetailedInfo tempFeatureInfo)
     } else if (tempType == RIVER)
     {
         auto tempPointIdx = tempPoints.begin();
-        if(!night_day)
+        if(!night_mode)
             g->set_color(153, 204, 255);
         else
             g->set_color(75, 97, 119);
