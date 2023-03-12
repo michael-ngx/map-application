@@ -22,6 +22,7 @@
 #include "m2.h"
 #include "globals.h"
 #include "OSMDatabaseAPI.h"
+#include "string.h"
 #include <cmath>
 #include <chrono>
 #include <sstream>
@@ -541,7 +542,9 @@ void act_on_mouse_click(ezgl::application* application, GdkEventButton* event, d
     Intersection_IntersectionInfo[id].highlight = !Intersection_IntersectionInfo[id].highlight;
     if (Intersection_IntersectionInfo[id].highlight)
     {   // Update mesasge if newly highlight an intersection
-        application->update_message("Intersection selected: " + Intersection_IntersectionInfo[id].name);
+        const char* message = Intersection_IntersectionInfo[id].name.c_str();
+        
+        application->create_popup_message("Selected: ", message);
     }
     application->refresh_drawing();
 }
@@ -1131,11 +1134,15 @@ void search_response(std::string input_1, std::string input_2, ezgl::application
 {
     if (input_1.empty() || input_2.empty())
     {
-        application->update_message("Street name(s) missing. Enter street names in both fields!");
+        std::string to_be_converted = "Street name(s) missing. Enter street names in both fields!";
+        const char* message = to_be_converted.c_str();
+        application->create_popup_message("Warning!", message);
         return;
     } else if (input_1 == input_2)
     {
-        application->update_message("Please enter 2 different street names");
+        std::string to_be_converted = "Please enter 2 different street names";
+        const char* message = to_be_converted.c_str();
+        application->create_popup_message("Warning!", message);
         return;
     }
 
@@ -1149,11 +1156,15 @@ void search_response(std::string input_1, std::string input_2, ezgl::application
     // Vector size 0 -> Street name not found, even partials
     if (partial_streets_1.size() == 0)
     {
-        application->update_message("Street 1 not found!");
+        std::string to_be_converted = "Street 1 not found!";
+        const char* message = to_be_converted.c_str();
+        application->create_popup_message("Warning!", message);
         return;
     } else if (partial_streets_2.size() == 0)
     {
-        application->update_message("Street 2 not found!");
+        std::string to_be_converted = "Street 2 not found!";
+        const char* message = to_be_converted.c_str();
+        application->create_popup_message("Warning!", message);
         return;
     }
 
@@ -1186,11 +1197,19 @@ void search_response(std::string input_1, std::string input_2, ezgl::application
                 {
                     Intersection_IntersectionInfo[foundIntersections[i]].highlight = true;
                     std::cout << std::endl;
-                    std::cout << "Intersection: --------" << std::endl;
-                    std::cout << "Name: " << Intersection_IntersectionInfo[foundIntersections[i]].name << std::endl;
-                    std::cout << "X position: " << Intersection_IntersectionInfo[foundIntersections[i]].position_xy.x << std::endl
-                                <<
-                                 "Y position: " << Intersection_IntersectionInfo[foundIntersections[i]].position_xy.y << std::endl;
+//                    std::cout << "Intersection: --------" << std::endl;
+//                    std::cout << "Name: " << Intersection_IntersectionInfo[foundIntersections[i]].name << std::endl;
+                    std::string to_be_converted = "Name: " + 
+                                                  Intersection_IntersectionInfo[foundIntersections[i]].name +
+                                                  " (X position: " + 
+                                                  std::to_string(Intersection_IntersectionInfo[foundIntersections[i]].position_xy.x) +
+                                                  " Y position: " +
+                                                  std::to_string(Intersection_IntersectionInfo[foundIntersections[i]].position_xy.y) + ")";
+                    const char* message = to_be_converted.c_str();
+                    application->create_popup_message("Intersection found: ", message);
+//                    std::cout << "X position: " << Intersection_IntersectionInfo[foundIntersections[i]].position_xy.x << std::endl
+//                                <<
+//                                 "Y position: " << Intersection_IntersectionInfo[foundIntersections[i]].position_xy.y << std::endl;
                 }
                 count++;
             }
@@ -1198,13 +1217,13 @@ void search_response(std::string input_1, std::string input_2, ezgl::application
     }
 
     // Provide feedback if found/not found
-    if (count)
-        application->update_message("Intersection(s) found between " + input_1
-                                    + " and " + input_2 + ". Detailed info printed in terminal");
-    else
-        application->update_message("No intersections found between " + input_1
-                                    + " and " + input_2);
-
+    if (!count)
+    {
+        std::string to_be_converted = "No intersections found between " + input_1
+                                    + " and " + input_2;
+        const char* message = to_be_converted.c_str();
+        application->create_popup_message("Warning!", message);
+    }
     // Redraw the main canvas
     application->refresh_drawing();
 }
