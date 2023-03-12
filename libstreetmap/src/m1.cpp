@@ -459,11 +459,23 @@ void init_segments(){
         processedInfo.numCurvePoints = rawInfo.numCurvePoints;
         processedInfo.streetName = getStreetName(processedInfo.streetID);       // (get the name of the street that each segment belongs to - for m2)
         
+        // Find max and min x, y for defining rectangles of each segment
+        ezgl::point2d point_xy = xy_from_latlon(getIntersectionPosition(rawInfo.from));
+        double max_x = point_xy.x;
+        double max_y = point_xy.y;
+        double min_x = max_lat;
+        double min_y = max_lon;
+
         // Pre-calculate length of each street segments (including curve points)
+        // Determine rectangle bounds of each segment
         if (rawInfo.numCurvePoints == 0){
             LatLon point_1 = getIntersectionPosition(rawInfo.from);
             LatLon point_2 = getIntersectionPosition(rawInfo.to);
             processedInfo.length = findDistanceBetweenTwoPoints(point_1, point_2);
+
+            ezgl::point2d point_1_xy = xy_from_latlon(point_1);
+            ezgl::point2d point_2_xy = xy_from_latlon(point_2);
+            processedInfo.segmentRectangle = ezgl::rectangle(point_1_xy, point_2_xy);
         }
         else{
             LatLon point_1 = getIntersectionPosition(rawInfo.from);
@@ -473,11 +485,26 @@ void init_segments(){
                 LatLon point_2 = getStreetSegmentCurvePoint(segment, i);
                 double templength = findDistanceBetweenTwoPoints(point_1, point_2);
                 processedInfo.length += templength;
-                processedInfo.curvePoints_xy.push_back(xy_from_latlon(point_2));    // Save the xy of curve points (for m2)
+                ezgl::point2d point_2_xy = xy_from_latlon(point_2);
+                processedInfo.curvePoints_xy.push_back(point_2_xy);    // Save the xy of curve points (for m2)
                 point_1 = point_2;
+                // Compare to get max min xy of each segment
+                max_x = std::max(point_2_xy.x, max_x);
+                max_y = std::max(point_2_xy.y, max_y);
+                min_x = std::min(point_2_xy.x, min_x);
+                min_y = std::min(point_2_xy.y, min_y);
             }
             LatLon point_2 = getIntersectionPosition(rawInfo.to);                   // Destination (to) point
             processedInfo.length += findDistanceBetweenTwoPoints(point_1, point_2);
+            ezgl::point2d point_2_xy = xy_from_latlon(point_2);
+            max_x = std::max(point_2_xy.x, max_x);
+            max_y = std::max(point_2_xy.y, max_y);
+            min_x = std::min(point_2_xy.x, min_x);
+            min_y = std::min(point_2_xy.y, min_y);
+            
+            // Record the rectangle that bounds segment
+            processedInfo.segmentRectangle = ezgl::rectangle(ezgl::point2d(min_x, min_y),
+                                                             ezgl::point2d(max_x, max_y));
         }
 
         // Pre-calculate travel time of each street segments
