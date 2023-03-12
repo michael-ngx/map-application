@@ -33,7 +33,9 @@
  * GLOBAL VARIABLES
  ********************************************************************************************************************************/
 std::string CURRENT_CITY = " ";
+std::string CURRENT_FILTER = " ";
 bool night_mode = false;
+bool filtered = false;
 // Zoom limits for curr_world_width, in meters
 const float ZOOM_LIMIT_0 = 50000;
 const float ZOOM_LIMIT_1 = 15000;
@@ -101,7 +103,7 @@ void city_change_cbk(GtkComboBoxText* self, ezgl::application* application);
 void input_streets_cbk(GtkWidget */*widget*/, ezgl::application* application);
 void night_mode_cbk(GtkSwitch* /*self*/, gboolean state, ezgl::application* application);
 void search_button_cbk(GtkWidget */*widget*/, ezgl::application *application);
-
+void poi_filter_cbk(GtkComboBoxText* self, ezgl::application* application);
 /************************************************************
  * HELPER FUNCTIONS 
  ************************************************************/
@@ -406,6 +408,7 @@ void draw_main_canvas(ezgl::renderer *g)
         poi_display.clear();
         poi_display.resize(NUM_REGIONS);
         // Get POI names and position chosen to display
+
         for (int tempIdx = 0; tempIdx < POINum; tempIdx++)
         {
             POIDetailedInfo tempPOI = POI_AllInfo[tempIdx];
@@ -498,6 +501,14 @@ void initial_setup(ezgl::application *application, bool /*new_window*/)
         "London", "New Delhi", "New York", "Rio de Janeiro", "Saint Helena",
         "Singapore", "Sydney", "Tehran", "Tokyo"}
     );
+    
+    application->create_label(row++, "Sort by");
+    application->create_combo_box_text(
+        "Select", 
+        row++,
+        poi_filter_cbk,
+        {" ", "restaurant", "school", "hospital"}
+    );
 }
 
 // Storing state of mouse clicks
@@ -556,6 +567,31 @@ void city_change_cbk(GtkComboBoxText* self, ezgl::application* application){
         application->refresh_drawing();
 
         application->update_message("Switched city: " + CURRENT_CITY);
+    }
+}
+
+// Callback function for selecting filter type
+void poi_filter_cbk(GtkComboBoxText* self, ezgl::application* application)
+{
+    auto text = gtk_combo_box_text_get_active_text(self);
+    std::string text_string = text;
+    std::vector<std::string> typeList;
+    if(!text || text_string == " ")
+    {  //Returning if the combo box is currently empty (Always check to avoid errors)
+        return;
+    } else if (text_string != CURRENT_FILTER)
+    {
+        filtered = true;
+        CURRENT_FILTER = text_string;
+//        for(auto i : POI_AllInfo){
+//            typeList.push_back(i.POIType);
+//        }
+//        std::sort(typeList.begin(), typeList.end());
+//        typeList.erase(std::unique(typeList.begin(), typeList.end()), typeList.end());
+//        for(auto j : typeList)
+//            std::cout << j << std::endl;
+        
+        application->refresh_drawing();
     }
 }
 
@@ -962,10 +998,12 @@ void drawPOIs(ezgl::renderer* g, int regionIdx)
     if (!regionSize) return;                                      //skip if no POI is in the region
     int middlePOIIdx = regionSize / 2;
     std::string tempPOIName = poi_display[regionIdx][middlePOIIdx].POIName;
-    if (tempPOIName.size() > 50) return;                          //skip if the POI name is too long
+    if (tempPOIName.size() > 50) return;                          //skip if the POI name is too long  
     ezgl::point2d tempDrawPoint = poi_display[regionIdx][middlePOIIdx].POIPoint;
     std::string tempType = poi_display[regionIdx][middlePOIIdx].POIType;
-            
+    if(filtered)
+       if(tempType != CURRENT_FILTER)       
+           return;
     //drawing the icon
     g->set_text_rotation(0); 
     g->set_color(0,0,0,50);
