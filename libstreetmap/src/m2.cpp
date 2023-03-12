@@ -804,7 +804,7 @@ void draw_name_or_arrow(ezgl::renderer *g, std::string street_name, bool arrow,
     {      
         if(!night_day){
             g->set_color(0, 0, 0);
-            g->set_font_size(10);
+            g->set_font_size(15);
         }
         else{
             g->set_color(255, 255, 255);
@@ -815,7 +815,7 @@ void draw_name_or_arrow(ezgl::renderer *g, std::string street_name, bool arrow,
     {
         if(!night_day){
             g->set_color(0, 0, 0);
-            g->set_font_size(10);
+            g->set_font_size(15);
         }
         else{
             g->set_color(255, 255, 255);
