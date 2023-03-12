@@ -134,6 +134,10 @@ void draw_name_or_arrow(ezgl::renderer *g, std::string street_name, bool arrow,
 // Draw highlighted intersections
 void draw_highlighted_intersections(ezgl::renderer* g, ezgl::point2d inter_xy);
 
+// Returns true if 2 rectangles collides
+bool check_collides(ezgl::rectangle rec_1, ezgl::rectangle rec_2);
+// Returns true if r1 fully contains r2
+bool check_contains(ezgl::rectangle rec_1, ezgl::rectangle rec_2);
 // Get new map path, for drop-down list callback
 std::string get_new_map_path(std::string text_string);
 // Response to search button callback
@@ -191,7 +195,7 @@ void draw_main_canvas(ezgl::renderer *g)
         g->set_color(43, 56, 70);
         g->fill_rectangle(visible_world_new);
     }
-    
+
     if (curr_world_width < ZOOM_LIMIT_2)
     {
         double fourth_curr_world_width = curr_world_width*0.25;
@@ -267,8 +271,11 @@ void draw_main_canvas(ezgl::renderer *g)
     for (int j = 0; j < numOfFeatureDisplay; j++)
     {
         FeatureDetailedInfo tempFeatureInfo = Features_AllInfo[j];
-        // TODO: Skip if feature is outside of current visible world
-        // if () continue;
+        // Skip if feature is outside of current visible world (not colliding or containing)
+        if (!(check_collides(tempFeatureInfo.featureRectangle, visible_world)
+              || check_contains(tempFeatureInfo.featureRectangle, visible_world)
+              || check_contains(visible_world,tempFeatureInfo.featureRectangle))) 
+            continue;
         draw_feature_area(g, tempFeatureInfo);
     }
     
@@ -285,6 +292,13 @@ void draw_main_canvas(ezgl::renderer *g)
         for (int i = 0; i < total_segment_amount; i++)
         {
             StreetSegmentIdx seg_id = all_segments[i];
+
+            // Skip segment if segment rectangle is outside of current visible window
+            ezgl::rectangle segment_rect = Segment_SegmentDetailedInfo[seg_id].segmentRectangle;
+            if (!(check_collides(segment_rect, visible_world)
+                || check_contains(segment_rect, visible_world)
+                || check_contains(visible_world,segment_rect))) 
+                continue;
             // Get LatLon information of from and to intersections from each segments
             IntersectionIdx from_id = Segment_SegmentDetailedInfo[seg_id].from;
             ezgl::point2d from_xy = Intersection_IntersectionInfo[from_id].position_xy;
@@ -439,7 +453,6 @@ void draw_main_canvas(ezgl::renderer *g)
 //            g->draw_text(tempDrawPoint, tempPOIName);
         }
     }
-
 
     // Draw highlighted intersection(s)
     for (int i = 0; i < intersectionNum; i++)
@@ -1186,4 +1199,22 @@ void search_response(std::string input_1, std::string input_2, ezgl::application
 
     // Redraw the main canvas
     application->refresh_drawing();
+}
+
+/*******************************************************************************************************************************
+ * OTHER CALCULATION HELPER FUNCTIONS
+ ********************************************************************************************************************************/
+// Check if 2 rectangles collides with each other
+bool check_collides(ezgl::rectangle rec_1, ezgl::rectangle rec_2)
+{
+    bool x_overlap = (rec_1.left() <= rec_2.right()) && (rec_2.left() <= rec_1.right());
+    bool y_overlap = (rec_1.bottom() <= rec_2.top()) && (rec_2.bottom() <= rec_1.top());
+    return x_overlap && y_overlap;
+}
+// Check if r1 fully contains r2
+bool check_contains(ezgl::rectangle rec_1, ezgl::rectangle rec_2)
+{
+    bool x_contain = (rec_1.left() <= rec_2.left()) && (rec_2.right() <= rec_1.right());
+    bool y_contain = (rec_1.bottom() <= rec_2.bottom()) && (rec_2.top() <= rec_1.top());
+    return x_contain && y_contain;
 }

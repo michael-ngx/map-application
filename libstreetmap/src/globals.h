@@ -49,6 +49,7 @@ struct StreetSegmentDetailedInfo{
     std::string streetName;
     int numCurvePoints;      // number of curve points between the ends
     std::vector<ezgl::point2d> curvePoints_xy; // Vector of xy for all curvepoints
+    ezgl::rectangle segmentRectangle;       // Rectangle for checking display
 };
 // Index: Segment id, Value: Processed information of the segment
 extern std::vector<StreetSegmentDetailedInfo> Segment_SegmentDetailedInfo;
@@ -93,7 +94,7 @@ struct FeatureDetailedInfo{
     FeatureType featureType;                    // Type of the feature
     TypedOSMID  featureOSMID;                   // OSMID of the feature
     std::vector<ezgl::point2d> featurePoints;   // Coordinates of the feature in point2d
-    ezgl::rectangle featureRectangle;
+    ezgl::rectangle featureRectangle;           // Rectangle for checking display
     double featureArea;
 
     double temp_max_lat, temp_max_lon;          // For temporary storage only
