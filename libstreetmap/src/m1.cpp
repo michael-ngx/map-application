@@ -657,6 +657,7 @@ void init_POI(){
         tempPOIInfo.POIPoint = xy_from_latlon(getPOIPosition(tempIdx));
         tempPOIInfo.POIType = getPOIType(tempIdx);
         tempPOIInfo.POIName = getPOIName(tempIdx);
+//        std::cout << tempPOIInfo.POIType << std::endl;
         POI_AllInfo.push_back(tempPOIInfo);
     }
 }

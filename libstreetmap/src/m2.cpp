@@ -39,6 +39,7 @@ const float ZOOM_LIMIT_0 = 50000;
 const float ZOOM_LIMIT_1 = 15000;
 const float ZOOM_LIMIT_2 = 5000;
 const float ZOOM_LIMIT_3 = 2000;
+const float ZOOM_LIMIT_4 = 1500;
 // Current world width in meters
 ezgl::rectangle visible_world;
 // Number of screen regions for displaying street names and arrows
@@ -59,9 +60,13 @@ struct POIShortInfo
     ezgl::point2d POIPoint;
 };
 
+
 // Getting a pointer to our GtkEntry named "StreetEntry1" and "StreetEntry2"
 GtkListStore *list_store;
 GtkTreeIter iter;
+
+// All POI whose name will be displayed
+std::vector<std::vector<POIDetailedInfo>> poi_display;
 
 /*******************************************************************************************************************************
  * FUNCTION DECLARATIONS
@@ -102,6 +107,9 @@ void search_button_cbk(GtkWidget */*widget*/, ezgl::application *application);
  ************************************************************/
 // Draw features
 void draw_feature_area(ezgl::renderer *g, FeatureDetailedInfo tempFeatureInfo);
+
+//Draw Point of Interest name and icon
+void drawPOIs(ezgl::renderer* g, int regionIdx);
 
 // Draw street segments with pixels (for far zoom levels)
 void draw_street_segment_pixel(ezgl::renderer *g, StreetSegmentIdx seg_id, 
@@ -168,10 +176,7 @@ void draw_main_canvas(ezgl::renderer *g)
     double curr_world_width = visible_world.width();
     // std::cout << "world width (meters): " << curr_world_width << std::endl;
     // All segments whose street name or arrows will be displayed
-    std::vector<SegShortInfo> seg_names_and_arrows;
-    // All POI whose name will be displayed
-    std::vector<std::vector<POIDetailedInfo>> poi_display;
-    
+    std::vector<SegShortInfo> seg_names_and_arrows; 
     // Defining 3x4 regions on the screen based on visible world
     std::vector<ezgl::rectangle> visible_regions;
     // For each region, allow showing 1 name and 2 arrows
@@ -395,8 +400,10 @@ void draw_main_canvas(ezgl::renderer *g)
     }
     
     //Draw POI
-    if (curr_world_width < ZOOM_LIMIT_3)
+
+    if (curr_world_width < ZOOM_LIMIT_4)
     {
+        poi_display.clear();
         poi_display.resize(NUM_REGIONS);
         // Get POI names and position chosen to display
         for (int tempIdx = 0; tempIdx < POINum; tempIdx++)
@@ -412,21 +419,21 @@ void draw_main_canvas(ezgl::renderer *g)
         }
         for (int regionIdx = 0; regionIdx < NUM_REGIONS; regionIdx++)
         {
-            int regionSize = poi_display[regionIdx].size();
-            if (!regionSize) continue;                                      //skip if no POI is in the region
-            int middlePOIIdx = regionSize / 2;
-            std::string tempPOIName = poi_display[regionIdx][middlePOIIdx].POIName;
-            if (tempPOIName.size() > 50) continue;                          //skip if the POI name is too long
-            ezgl::point2d tempDrawPoint = poi_display[regionIdx][middlePOIIdx].POIPoint;
-            g->set_color(0,0,0,50);
-            g->fill_arc(tempDrawPoint ,3 ,0 , 360);
-            g->set_text_rotation(0);
-            if(!night_mode)
-                g->set_color(51,102,0);
-            else
-                g->set_color(118,215,150);
-            
-            g->draw_text(tempDrawPoint, tempPOIName);
+            drawPOIs(g, regionIdx);
+//            int regionSize = poi_display[regionIdx].size();
+//            if (!regionSize) continue;                                      //skip if no POI is in the region
+//            int middlePOIIdx = regionSize / 2;
+//            std::string tempPOIName = poi_display[regionIdx][middlePOIIdx].POIName;
+//            if (tempPOIName.size() > 50) continue;                          //skip if the POI name is too long
+//            ezgl::point2d tempDrawPoint = poi_display[regionIdx][middlePOIIdx].POIPoint;
+//            g->set_color(0,0,0,50);
+//            g->fill_arc(tempDrawPoint ,2 ,0 , 360);
+//            g->set_text_rotation(0);
+//            if(!night_day)
+//                g->set_color(51,102,0);
+//            else
+//                g->set_color(118,215,150);
+//            g->draw_text(tempDrawPoint, tempPOIName);
         }
     }
 
@@ -795,22 +802,22 @@ void draw_name_or_arrow(ezgl::renderer *g, std::string street_name, bool arrow,
     {      
         if(!night_mode){
             g->set_color(0, 0, 0);
-            g->set_font_size(15);
+            g->set_font_size(12);
         }
         else{
             g->set_color(255, 255, 255);
-            g->set_font_size(15);
+            g->set_font_size(12);
         }
         g->draw_text(mid_xy, "->");
     } else 
     {
         if(!night_mode){
             g->set_color(0, 0, 0);
-            g->set_font_size(15);
+            g->set_font_size(12);
         }
         else{
             g->set_color(255, 255, 255);
-            g->set_font_size(15);
+            g->set_font_size(12);
         }
         g->draw_text(mid_xy, street_name);
     }
@@ -946,6 +953,76 @@ void draw_feature_area(ezgl::renderer *g, FeatureDetailedInfo tempFeatureInfo)
     return;
 }
 
+/************************************************************
+// Draw POIs
+*************************************************************/
+void drawPOIs(ezgl::renderer* g, int regionIdx)
+{
+    int regionSize = poi_display[regionIdx].size();
+    if (!regionSize) return;                                      //skip if no POI is in the region
+    int middlePOIIdx = regionSize / 2;
+    std::string tempPOIName = poi_display[regionIdx][middlePOIIdx].POIName;
+    if (tempPOIName.size() > 50) return;                          //skip if the POI name is too long
+    ezgl::point2d tempDrawPoint = poi_display[regionIdx][middlePOIIdx].POIPoint;
+    std::string tempType = poi_display[regionIdx][middlePOIIdx].POIType;
+            
+    //drawing the icon
+    g->set_text_rotation(0); 
+    g->set_color(0,0,0,50);
+    g->format_font("Emoji", ezgl::font_slant::normal, ezgl::font_weight::normal, 20);
+    std::string icon = "\U00002B50";
+    if (tempType == "fast_food")
+    {
+        icon = "\U0001F354";
+    } else if (tempType == "bar")
+    {
+        icon = "\U0001F37A";
+    } else if (tempType == "restaurant")
+    {
+        icon = "\U0001F37D";
+    } else if (tempType == "cafe")
+    {
+        icon = "\U00002615";
+    } else if (tempType == "ice_cream")
+    {
+        icon = "\U0001F366";
+    } else if (tempType == "hospital" || tempType == "clinic" ||
+               tempType == "doctor" || tempType == "dentist")
+    {
+        icon = "\U0001FA7A";
+    } else if (tempType == "bbq")
+    {
+        icon = "\U0001F356";
+    } else if (tempType == "post_office")
+    {
+        icon = "\U00002709";
+    } else if (tempType == "bank")
+    {
+        icon = "\U0001F4B0";
+    } else if (tempType == "police")
+    {
+        icon = "\U0001F46E";
+    } else if (tempType == "school")
+    {
+        icon = "\U0001F393";
+    } else if (tempType == "toilets")
+    {
+        icon = "\U0001F6BD";
+    } else if (tempType == "fuel")
+    {
+        icon = "\U000026FD";
+    }
+    g->draw_text(tempDrawPoint, icon);
+    
+    //drawing the POI name
+    g->format_font("monospace", ezgl::font_slant::normal, ezgl::font_weight::normal, 12);
+    tempDrawPoint.y = tempDrawPoint.y + 6;                        //move text up
+    if(!night_mode)
+        g->set_color(51,102,0);
+    else
+        g->set_color(118,215,150);
+    g->draw_text(tempDrawPoint, tempPOIName);
+}
 /************************************************************
 // Draw Intersections
 *************************************************************/
