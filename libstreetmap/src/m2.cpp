@@ -36,14 +36,17 @@ std::string CURRENT_CITY = " ";
 std::string CURRENT_FILTER = " ";
 bool night_mode = false;
 bool filtered = false;
+
 // Zoom limits for curr_world_width, in meters
 const float ZOOM_LIMIT_0 = 50000;
 const float ZOOM_LIMIT_1 = 15000;
 const float ZOOM_LIMIT_2 = 5000;
 const float ZOOM_LIMIT_3 = 2000;
 const float ZOOM_LIMIT_4 = 1500;
+
 // Current world width in meters
 ezgl::rectangle visible_world;
+
 // Number of screen regions for displaying street names and arrows
 const int NUM_REGIONS = 12;
 
@@ -62,7 +65,6 @@ struct POIShortInfo
     ezgl::point2d POIPoint;
 };
 
-
 // Getting a pointer to our GtkEntry named "StreetEntry1" and "StreetEntry2"
 GtkListStore *list_store;
 GtkTreeIter iter;
@@ -70,16 +72,18 @@ GtkTreeIter iter;
 // All POI whose name will be displayed
 std::vector<std::vector<POIDetailedInfo>> poi_display;
 
+
+
 /*******************************************************************************************************************************
  * FUNCTION DECLARATIONS
  ********************************************************************************************************************************/
-
 /*************************************************************
  * Draw to the main canvas using the provided graphics object. 
  * Runs every time graphics are refreshed/image zooms or pans
  * The graphics object expects that x and y values will be in the main canvas' world coordinate system.
  *************************************************************/
 void draw_main_canvas(ezgl::renderer *g);
+
 /*************************************************************
  * Initial Setup is run whenever a window is opened. 
  *************************************************************/
@@ -104,15 +108,18 @@ void input_streets_cbk(GtkWidget */*widget*/, ezgl::application* application);
 void night_mode_cbk(GtkSwitch* /*self*/, gboolean state, ezgl::application* application);
 void search_button_cbk(GtkWidget */*widget*/, ezgl::application *application);
 void poi_filter_cbk(GtkComboBoxText* self, ezgl::application* application);
+
 /************************************************************
  * HELPER FUNCTIONS 
  ************************************************************/
+//Draw distance scale
+void draw_distance_scale(ezgl::renderer *g, ezgl::rectangle current_window);
+
 // Draw features
 void draw_feature_area(ezgl::renderer *g, FeatureDetailedInfo tempFeatureInfo);
 
 //Draw Point of Interest name and icon
 void drawPOIs(ezgl::renderer* g, int regionIdx);
-
 // Draw street segments with pixels (for far zoom levels)
 void draw_street_segment_pixel(ezgl::renderer *g, StreetSegmentIdx seg_id, 
                                 ezgl::point2d from_xy, ezgl::point2d to_xy, 
@@ -136,12 +143,17 @@ void draw_highlighted_intersections(ezgl::renderer* g, ezgl::point2d inter_xy);
 
 // Returns true if 2 rectangles collides
 bool check_collides(ezgl::rectangle rec_1, ezgl::rectangle rec_2);
+
 // Returns true if r1 fully contains r2
 bool check_contains(ezgl::rectangle rec_1, ezgl::rectangle rec_2);
+
 // Get new map path, for drop-down list callback
 std::string get_new_map_path(std::string text_string);
+
 // Response to search button callback
 void search_response(std::string input_1, std::string input_2, ezgl::application *application);
+
+
 
 /*******************************************************************************************************************************
  * DRAW MAP
@@ -154,13 +166,12 @@ void drawMap()
     // and your main() function in main/src/main.cpp.
     // The unit tests always call loadMap() before calling this function
     // and call closeMap() after this function returns.
-
+    
     // Draw map
     ezgl::application::settings settings;
     settings.main_ui_resource = "libstreetmap/resources/main.ui";
     settings.window_identifier = "MainWindow";
     settings.canvas_identifier = "MainCanvas";
-
     ezgl::application application(settings);
 
     ezgl::rectangle initial_world(xy_from_latlon(latlon_bound.min),
@@ -172,6 +183,8 @@ void drawMap()
                     nullptr, nullptr);
 }
 
+
+
 /*******************************************************************************************************************************
  * DRAW MAIN CANVAS
  ********************************************************************************************************************************/
@@ -180,7 +193,7 @@ void draw_main_canvas(ezgl::renderer *g)
     // Check for current zoom level through visible width (in meters) of world
     visible_world = g->get_visible_world();
     double curr_world_width = visible_world.width();
-    // std::cout << "world width (meters): " << curr_world_width << std::endl;
+//    std::cout << "world width (meters): " << curr_world_width << std::endl;
     // All segments whose street name or arrows will be displayed
     std::vector<SegShortInfo> seg_names_and_arrows; 
     // Defining 3x4 regions on the screen based on visible world
@@ -189,13 +202,16 @@ void draw_main_canvas(ezgl::renderer *g)
     std::vector<std::vector<int>> available_region = {{1, 1}, {1, 1}, {1, 1}, {1, 1}, 
                                                       {1, 1}, {1, 1}, {1, 1}, {1, 1},
                                                       {1, 1}, {1, 1}, {1, 1}, {1, 1}};
-    if(night_mode)
+    
+    //Draw the canvas for Night Mode
+    if (night_mode)
     {
         ezgl::rectangle visible_world_new = g->get_visible_world();
         g->set_color(43, 56, 70);
         g->fill_rectangle(visible_world_new);
     }
-
+    
+    //Populating the visible_region vector to divide the window into 12 segments
     if (curr_world_width < ZOOM_LIMIT_2)
     {
         double fourth_curr_world_width = curr_world_width*0.25;
@@ -416,7 +432,6 @@ void draw_main_canvas(ezgl::renderer *g)
     }
     
     //Draw POI
-
     if (curr_world_width < ZOOM_LIMIT_4)
     {
         poi_display.clear();
@@ -437,20 +452,6 @@ void draw_main_canvas(ezgl::renderer *g)
         for (int regionIdx = 0; regionIdx < NUM_REGIONS; regionIdx++)
         {
             drawPOIs(g, regionIdx);
-//            int regionSize = poi_display[regionIdx].size();
-//            if (!regionSize) continue;                                      //skip if no POI is in the region
-//            int middlePOIIdx = regionSize / 2;
-//            std::string tempPOIName = poi_display[regionIdx][middlePOIIdx].POIName;
-//            if (tempPOIName.size() > 50) continue;                          //skip if the POI name is too long
-//            ezgl::point2d tempDrawPoint = poi_display[regionIdx][middlePOIIdx].POIPoint;
-//            g->set_color(0,0,0,50);
-//            g->fill_arc(tempDrawPoint ,2 ,0 , 360);
-//            g->set_text_rotation(0);
-//            if(!night_day)
-//                g->set_color(51,102,0);
-//            else
-//                g->set_color(118,215,150);
-//            g->draw_text(tempDrawPoint, tempPOIName);
         }
     }
 
@@ -462,8 +463,13 @@ void draw_main_canvas(ezgl::renderer *g)
         if (Intersection_IntersectionInfo[i].highlight)
             draw_highlighted_intersections(g, Intersection_IntersectionInfo[i].position_xy);
     }
+    
+    //Draw the distance scale
+    draw_distance_scale (g, visible_world);
 }
- 
+
+
+
  /*******************************************************************************************************************************
  * EVENT CALLBACKS
  ********************************************************************************************************************************/
@@ -540,10 +546,11 @@ void act_on_mouse_click(ezgl::application* application, GdkEventButton* event, d
     application->refresh_drawing();
 }
 
+
+
 /*******************************************************************************************************************************
  * UI CALLBACKS
  ********************************************************************************************************************************/
-
 // Callback function for the city change drop down list.
 // Function trigerred when currently selected option changes. 
 void city_change_cbk(GtkComboBoxText* self, ezgl::application* application){
@@ -624,9 +631,7 @@ void night_mode_cbk(GtkSwitch* /*self*/, gboolean state, ezgl::application* appl
     }       
 }
 
-/**
-* Callback function for Search button
-*/
+// Callback function for Search button
 void search_button_cbk(GtkWidget */*widget*/, ezgl::application *application)
 {
     GObject *entry_object_1 = application->get_object("StreetEntry1");
@@ -642,6 +647,8 @@ void search_button_cbk(GtkWidget */*widget*/, ezgl::application *application)
     // Determine how UI responses based on street inputs
     search_response(input_1, input_2, application);
 }
+
+
 
 /*******************************************************************************************************************************
  * DRAWING HELPER FUNCTIONS
@@ -1074,10 +1081,10 @@ void drawPOIs(ezgl::renderer* g, int regionIdx)
         g->set_color(118,215,150);
     g->draw_text(tempDrawPoint, tempPOIName);
 }
+
 /************************************************************
 // Draw Intersections
 *************************************************************/
-
 // Display intersection if highlighted
 void draw_highlighted_intersections(ezgl::renderer* g, ezgl::point2d inter_xy)
 {
@@ -1199,6 +1206,54 @@ void search_response(std::string input_1, std::string input_2, ezgl::application
 
     // Redraw the main canvas
     application->refresh_drawing();
+}
+
+/*******************************************************************************************************************************
+// draw the distance scale
+ ********************************************************************************************************************************/
+void draw_distance_scale(ezgl::renderer *g, ezgl::rectangle current_window)
+{
+    //initialize scale variables
+    unsigned scaleNameIdx = 0;
+    double current_width = current_window.right() - current_window.left();
+    double current_height = current_window.top() - current_window.bottom();
+    const int scale_num[12] = {5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000};
+    const std::string scale_name[12] = {"5m", "10m", "20m", "50m", "100m", "200m", "500m", 
+                                        "1km", "2km", "5km", "10km", "20km"};
+    const std::vector<int> scaleNum (scale_num, scale_num + sizeof(scale_num) / sizeof(int));
+    const std::vector<std::string> scaleName (scale_name, 
+                                              scale_name + sizeof(scale_name) / sizeof(std::string));
+    //find the proper scale for the current window
+    auto scale = std::upper_bound (scaleNum.begin(), scaleNum.end(), int(current_width) / 20);
+    if (*scale > 20000) return;                         //protect the program from corner case
+    for (unsigned scaleIdx = 0; scaleIdx < scaleNum.size(); scaleIdx++)
+    {
+        if (scaleNum[scaleIdx] == *scale)
+        {
+            scaleNameIdx = scaleIdx;
+            break;
+        }
+    }
+    ezgl::point2d rightPoint;
+    ezgl::point2d leftPoint;
+    rightPoint.x = current_window.right() - current_width / 20;
+    rightPoint.y = current_window.bottom() + current_height / 20;
+    leftPoint.x = rightPoint.x - *scale;
+    leftPoint.y = rightPoint.y;
+    if (night_mode)
+    {
+        g->set_color(255,255,25);
+    } else
+    {
+        g->set_color(0,0,0);
+    }
+    g->set_line_width(5);
+    g->set_text_rotation(0);
+    g->draw_line(leftPoint, rightPoint);
+    std:: cout << scaleNameIdx << std:: endl;
+    g->draw_text({(leftPoint.x + rightPoint.x) / 2, 
+                   current_window.bottom() + current_height / 25}, 
+                   scaleName[scaleNameIdx]);
 }
 
 /*******************************************************************************************************************************
