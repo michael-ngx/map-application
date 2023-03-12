@@ -116,12 +116,28 @@ struct POIDetailedInfo{
 extern std::vector<POIDetailedInfo> POI_AllInfo;
 
 // *******************************************************************
-// OSMNode
+// OSM
 // *******************************************************************
 // Keys: OSMID, Value: vector of (tag, value) pairs
-extern std::unordered_map<OSMID, std::vector<std::pair<std::string, std::string>>> OSM_AllTagPairs;
+extern std::unordered_map<OSMID, std::vector<std::pair<std::string, std::string>>> OSMID_Nodes_AllTagPairs;
 // Keys: OSMID, Value: Type of highway of corresponding wayOSMID (only for segments)
 extern std::unordered_map<OSMID, std::string> OSMID_Highway_Type;
+// Stores subway relation information
+struct SubwayRoutes
+{
+    OSMID route_id;                     // Unique OSMID of current relation
+    ezgl::color colour;                 // Colour of subway route
+    // Members - ordered (same index and same size)
+    std::vector<std::string> roles;     // Roles of each member
+    std::vector<TypedOSMID> members;    // TypedOSMID of each members. Can check type (Way/Node/Relations)
+    std::vector<std::vector<ezgl::point2d>> track_points;    // Vector of vector of point2d for points along all raiway=subway
+    std::vector<ezgl::point2d> station_points;  // Vector of point2d for all stations
+};
+// Keys: index, Value: Subway relations of current world
+extern std::vector<SubwayRoutes> AllSubwayRoutes;
+
+extern std::unordered_map<OSMID, int> OSMID_NodeIndex;
+extern std::unordered_map<OSMID, int> OSMID_WayIndex;
 
 #endif /* GLOBALS_H */
 

@@ -27,7 +27,6 @@
 #include <cmath>
 #include <bits/stdc++.h>
 #include <cctype>
-#include <bits/stdc++.h>
 
 
 /*******************************************************************************************************************************
@@ -43,9 +42,11 @@ void init_intersections();
 void init_streets();
 void init_features();
 void init_POI();
-void init_osm();
-void init_osm_highways();
+void init_osm_nodes();
+void init_osm_ways();
 bool compareFeatureArea (FeatureDetailedInfo F1, FeatureDetailedInfo F2);
+void init_osm_relations_subways();
+ezgl::color get_rgb_color(std::string osm_color);
 
 // *******************************************************************
 // Latlon bounds of current city
@@ -112,6 +113,12 @@ std::vector<POIDetailedInfo> POI_AllInfo;
 std::unordered_map<OSMID, std::vector<std::pair<std::string, std::string>>> OSMID_Nodes_AllTagPairs;
 // Keys: OSMID, Value: Type of highway of corresponding wayOSMID (only for segments)
 std::unordered_map<OSMID, std::string> OSMID_Highway_Type;
+// Keys: index, Value: Subway relations of current world
+std::vector<SubwayRoutes> AllSubwayRoutes;
+
+// Return Node Index and Way Index from OSMID
+std::unordered_map<OSMID, int> OSMID_NodeIndex;
+std::unordered_map<OSMID, int> OSMID_WayIndex;
 
 /*******************************************************************************************************************************
  * STREET MAP LIBRARY
@@ -417,6 +424,10 @@ void closeMap() {
     Features_AllInfo.clear();
     POI_AllInfo.clear();
     OSMID_Nodes_AllTagPairs.clear();
+    OSMID_Highway_Type.clear();
+    AllSubwayRoutes.clear();
+    OSMID_NodeIndex.clear();
+    OSMID_WayIndex.clear();
 
     closeStreetDatabase();
     closeOSMDatabase();
@@ -438,16 +449,19 @@ void m1_init(){
     init_intersections();
     init_segments();
     init_streets();    
-    init_osm();
-    init_osm_highways();
+    init_osm_nodes();
+    init_osm_ways();
+    init_osm_relations_subways();
 }
 
 // *******************************************************************
 // Street Segments
 // *******************************************************************
-void init_segments(){
+void init_segments()
+{
     // Vector of StreetSegmentDetailedInfo (StreetSegmentIdx - StreetSegmentDetailedInfo)
-    for (int segment = 0; segment < segmentNum; segment++){                 // Corresponds to id of all street segments
+    for (int segment = 0; segment < segmentNum; segment++)                  // Corresponds to id of all street segments
+    {                 
         StreetSegmentInfo rawInfo = getStreetSegmentInfo(segment);          // Raw info object   
         StreetSegmentDetailedInfo processedInfo;                            // Processed info object
         
@@ -476,8 +490,7 @@ void init_segments(){
             ezgl::point2d point_1_xy = xy_from_latlon(point_1);
             ezgl::point2d point_2_xy = xy_from_latlon(point_2);
             processedInfo.segmentRectangle = ezgl::rectangle(point_1_xy, point_2_xy);
-        }
-        else{
+        } else{
             LatLon point_1 = getIntersectionPosition(rawInfo.from);
             processedInfo.length = 0.0; // Starting length
             // Iterate through all curve points
@@ -540,7 +553,8 @@ void init_intersections(){
 // *******************************************************************
 // Streets
 // *******************************************************************
-void init_streets(){
+void init_streets()
+{
     for(int j = 0; j < segmentNum; ++j){
         // Unordered Map for Streets (StreetIdx - Vector of All Segments)
         StreetSegmentDetailedInfo segmentInfo = Segment_SegmentDetailedInfo[j];
@@ -569,7 +583,8 @@ void init_streets(){
         }        
     }
 
-    for (auto& pair : Streets_AllSegments){
+    for (auto& pair : Streets_AllSegments)
+    {
         // Populate ordered multimap for Streets (StreetName - Street index)
         std::string str = getStreetName(pair.first);
         std::string streetName = "";
@@ -588,7 +603,8 @@ void init_streets(){
 // *******************************************************************
 // Features
 // *******************************************************************
-void init_features(){
+void init_features()
+{
     // Find max and min lat, lon of feature points in city
     // Initialize for comparision
     max_lat = getFeaturePoint(0, 0).latitude();
@@ -656,7 +672,8 @@ void init_features(){
 }
 
 //Helper function for sorting feature areas
-bool compareFeatureArea (FeatureDetailedInfo F1, FeatureDetailedInfo F2){
+bool compareFeatureArea (FeatureDetailedInfo F1, FeatureDetailedInfo F2)
+{
     return (F1.featureArea > F2.featureArea);
 }
 
@@ -669,7 +686,8 @@ ezgl::point2d xy_from_latlon(LatLon latlon)
 }
 
 // Converts xy to LatLon(
-LatLon latlon_from_xy(double x, double y){
+LatLon latlon_from_xy(double x, double y)
+{
     double lon = x / (kEarthRadiusInMeters * kDegreeToRadian* cos(lat_avg * kDegreeToRadian));
     double lat = y / (kEarthRadiusInMeters * kDegreeToRadian);
     return LatLon(lat, lon);
@@ -684,7 +702,6 @@ void init_POI(){
         tempPOIInfo.POIPoint = xy_from_latlon(getPOIPosition(tempIdx));
         tempPOIInfo.POIType = getPOIType(tempIdx);
         tempPOIInfo.POIName = getPOIName(tempIdx);
-//        std::cout << tempPOIInfo.POIType << std::endl;
         POI_AllInfo.push_back(tempPOIInfo);
     }
 }
@@ -693,12 +710,15 @@ void init_POI(){
 // *******************************************************************
 // OSMNode
 // *******************************************************************
-void init_osm(){
+void init_osm_nodes()
+{
     // Unordered Map for OSMDatabase (OSMID - vector of pair(tag, value)
     // Pre-load data for OSMNodes
     for (int index = 0; index < getNumberOfNodes(); ++index){
         const OSMNode* tempOSMNode = getNodeByIndex(index);
         OSMID tempOSMID = tempOSMNode->id();
+        // For getting OSMNode given OSMID
+        OSMID_NodeIndex.insert(std::make_pair(tempOSMID, index));
         for (int tagIdx = 0; tagIdx < getTagCount(tempOSMNode); ++tagIdx){
             if (OSMID_Nodes_AllTagPairs.find(tempOSMID) == OSMID_Nodes_AllTagPairs.end()){
                 std::vector<std::pair<std::string, std::string>> tempVector;
@@ -712,12 +732,15 @@ void init_osm(){
 }
 
 // Pre-load data for OSMWays - Only consider OSMIDs having a tag of highway, record highway type
-void init_osm_highways()
+void init_osm_ways()
 {
     for (int way = 0; way < getNumberOfWays(); ++way)
     {
         const OSMWay* tempOSMWay = getWayByIndex(way);
         OSMID tempOSMID = tempOSMWay->id();
+        // For getting OSMWay given OSMID
+        OSMID_WayIndex.insert(std::make_pair(tempOSMID, way));
+        // Check highway tag for street type
         for (int tagIdx = 0; tagIdx < getTagCount(tempOSMWay); ++tagIdx)
         {
             auto tag_pair = getTagPair(tempOSMWay, tagIdx);
@@ -729,3 +752,110 @@ void init_osm_highways()
     }
 }
 
+// Initialize necessary data for subway lines and stations
+void init_osm_relations_subways()
+{
+    // Loop thourgh all relations
+    for (int relation = 0; relation < getNumberOfRelations(); ++relation)
+    {
+        bool is_route = false;
+        bool is_subway = false;
+        const OSMRelation* tempOSMRelation = getRelationByIndex(relation);
+        // Check all tags to see if current relation is subway
+        for (int tagIdx = 0; tagIdx < getTagCount(tempOSMRelation); ++tagIdx)
+        {
+            auto tag_pair = getTagPair(tempOSMRelation, tagIdx);
+            if (tag_pair.first == "type" && tag_pair.second == "route")
+            {
+                is_route = true;
+            }
+            if (tag_pair.first == "route" && tag_pair.second == "subway")
+            {
+                is_subway = true;
+            }
+        }
+        // If the current relation is a subway relation - start extracting data
+        if (is_route && is_subway)
+        {   
+            SubwayRoutes subway;
+            subway.route_id = tempOSMRelation->id();
+            subway.roles = getRelationMemberRoles(tempOSMRelation);     // A vector of roles
+            subway.members = getRelationMembers(tempOSMRelation);       // A vector of members
+            subway.colour = ezgl::RED;                                  // Default color to red
+            // Get colour of current subway relation
+            for (int tagIdx = 0; tagIdx < getTagCount(tempOSMRelation); ++tagIdx)
+            {
+                auto tag_pair = getTagPair(tempOSMRelation, tagIdx);
+                if (tag_pair.first == "colour")
+                {
+                    subway.colour = get_rgb_color(tag_pair.second);
+                }
+            }
+            // Populate track points
+            for (int i = 0; i < subway.members.size(); i++)     // Assuming that subway.members.size() == subway.roles.size()
+            {
+                // Tracks railway=subway
+                if ((subway.roles[i] == "") && (subway.members[i].type() == TypedOSMID::Way))
+                {
+                    // Get the actual Way based on TypedOSMID (Way)
+                    const OSMWay *currWay = getWayByIndex(OSMID_WayIndex.at(subway.members[i]));
+                    // Get xy of all nodes forming ways of a subway
+                    std::vector<OSMID> way_nodes = getWayMembers(currWay);
+
+                    std::vector<ezgl::point2d> curr_way_track_points;
+                    for (auto id : way_nodes)
+                    {
+                        const OSMNode* tempOSMNode = getNodeByIndex(OSMID_NodeIndex.at(id));
+                        curr_way_track_points.push_back(xy_from_latlon(getNodeCoords(tempOSMNode)));
+                    }
+                    subway.track_points.push_back(curr_way_track_points);
+                } else if ((subway.roles[i] == "stop") && (subway.members[i].type() == TypedOSMID::Node))
+                {   // Subway stations
+                    const OSMNode* tempOSMNode = getNodeByIndex(OSMID_NodeIndex.at(subway.members[i]));
+                    subway.station_points.push_back(xy_from_latlon(getNodeCoords(tempOSMNode)));
+                }
+            }
+            AllSubwayRoutes.push_back(subway);
+        }
+    }
+}
+
+// Get ezgl::color from OSM color (string)
+ezgl::color get_rgb_color(std::string osm_color)
+{
+    if (osm_color[0] != '#')
+    {
+        if (osm_color == "black") return ezgl::BLACK;
+        else if (osm_color == "white") return ezgl::WHITE;
+        else if (osm_color == "gray" || osm_color == "grey" || osm_color == "silver") return ezgl::GREY_55;
+        else if (osm_color == "maroon" || osm_color == "red") return ezgl::RED;
+        else if (osm_color == "olive" || osm_color == "yellow") return ezgl::ORANGE;
+        else if (osm_color == "green" || osm_color == "lime") return ezgl::DARK_GREEN;
+        else if (osm_color == "teal" || osm_color == "aqua" || osm_color == "cyan") return ezgl::LIGHT_SKY_BLUE;
+        else if (osm_color == "navy" || osm_color == "blue") return ezgl::LIGHT_MEDIUM_BLUE;
+        else if (osm_color == "purple" || osm_color == "fuchsia" || osm_color == "magenta") return ezgl::MEDIUM_PURPLE;
+    } else 
+    {
+        // remove the '#'
+        osm_color.erase(0, 1);
+        // //
+        // std::string color_lower;
+        // for (auto& c : osm_color){
+        //     if (c == ' ') continue;
+        //     color_lower.push_back(char(tolower(c))); // Save names as lowercase, no space
+        // }
+        if (osm_color.length() == 3)
+        {
+            osm_color = osm_color.substr(0, 1) + osm_color.substr(0, 1) +
+                        osm_color.substr(1, 1) + osm_color.substr(1, 1) +
+                        osm_color.substr(2, 1) + osm_color.substr(2, 1);
+        }
+        // Convert HEX string to RGB vector of integers
+        int red, green, blue;
+        red = std::stoi(osm_color.substr(0, 2), nullptr, 16);
+        green = std::stoi(osm_color.substr(2, 2), nullptr, 16);
+        blue = std::stoi(osm_color.substr(4, 2), nullptr, 16);
+        return ezgl::color(red, green, blue);
+    }
+    return ezgl::DARK_KHAKI;
+}
