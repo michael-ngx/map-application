@@ -590,7 +590,9 @@ void poi_filter_cbk(GtkComboBoxText* self, ezgl::application* application)
     std::string text_string = text;
     std::vector<std::string> typeList;
     if(!text || text_string == " ")
-    {  //Returning if the combo box is currently empty (Always check to avoid errors)
+    {  // Returning if the combo box is currently empty/Turning off filter
+        filtered = false;
+        application->refresh_drawing();
         return;
     } else if (text_string != CURRENT_FILTER)
     {
@@ -1014,9 +1016,7 @@ void drawPOIs(ezgl::renderer* g, int regionIdx)
     if (tempPOIName.size() > 50) return;                          //skip if the POI name is too long  
     ezgl::point2d tempDrawPoint = poi_display[regionIdx][middlePOIIdx].POIPoint;
     std::string tempType = poi_display[regionIdx][middlePOIIdx].POIType;
-    if(filtered)
-       if(tempType != CURRENT_FILTER)       
-           return;
+    if (filtered && tempType != CURRENT_FILTER) return;
     //drawing the icon
     g->set_text_rotation(0); 
     g->set_color(0,0,0,50);
