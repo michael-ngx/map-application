@@ -24,20 +24,25 @@
 #include "OSMDatabaseAPI.h"
 #include "string.h"
 #include <cmath>
-#include <chrono>
-#include <sstream>
 #include <string>
 #include <algorithm>
 #include <vector>
 
 /*******************************************************************************************************************************
- * GLOBAL VARIABLES
+ * GLOBAL VARIABLES (M2)
  ********************************************************************************************************************************/
+// Check current city for city switching
 std::string CURRENT_CITY = " ";
+// Check current filter for applying filters
 std::string CURRENT_FILTER = "All";
+
+// Checks if night mode is on
 bool night_mode = false;
+// Checks if filter is on
 bool filtered = false;
+// Checks if the subway station mode if turned on (to show subway stations)
 bool subway_station_mode = false;
+// Checks if the subway line mode if turned on (to show subway lines)
 bool subway_line_mode = false;
 
 // Zoom limits for curr_world_width, in meters
@@ -46,6 +51,11 @@ const float ZOOM_LIMIT_1 = 15000;
 const float ZOOM_LIMIT_2 = 5000;
 const float ZOOM_LIMIT_3 = 2000;
 const float ZOOM_LIMIT_4 = 1500;
+
+const float FEATURE_ZOOM_0 = 0.001;
+const float FEATURE_ZOOM_1 = 0.01;
+const float FEATURE_ZOOM_2 = 0.05;
+const float FEATURE_ZOOM_3 = 0.1;
 
 // Current world width in meters
 ezgl::rectangle visible_world;
@@ -61,20 +71,19 @@ struct SegShortInfo
     ezgl::point2d to_xy;
     bool arrow;
 };
+
+// Short info for POI that will be displayed
 struct POIShortInfo
 {
     std::string POIName;
     ezgl::point2d POIPoint;
 };
+// All POI whose name will be displayed
+std::vector<std::vector<POIDetailedInfo>> poi_display;
 
 // Getting a pointer to our GtkEntry named "StreetEntry1" and "StreetEntry2"
 GtkListStore *list_store;
 GtkTreeIter iter;
-
-// All POI whose name will be displayed
-std::vector<std::vector<POIDetailedInfo>> poi_display;
-
-
 
 /*******************************************************************************************************************************
  * FUNCTION DECLARATIONS
@@ -84,85 +93,61 @@ std::vector<std::vector<POIDetailedInfo>> poi_display;
  * Runs every time graphics are refreshed/image zooms or pans
  * The graphics object expects that x and y values will be in the main canvas' world coordinate system.
  *************************************************************/
-void draw_main_canvas(ezgl::renderer *g);
+void draw_main_canvas (ezgl::renderer *g);
 
 /*************************************************************
  * Initial Setup is run whenever a window is opened. 
  *************************************************************/
-void initial_setup(ezgl::application *application, bool new_window);
+void initial_setup (ezgl::application *application, bool new_window);
 
 /*************************************************************
  * EVENT CALLBACK FUNCTIONS
  * 
  * These functions run whenever their corresponding event (key press, mouse move, or mouse click) occurs.
  *************************************************************/
-void act_on_mouse_click(ezgl::application* application, GdkEventButton* event, double x, double y);
-void act_on_mouse_move(ezgl::application *application, GdkEventButton *event, double x, double y);
-void act_on_key_press(ezgl::application *application, GdkEventKey *event, char *key_name);
+void act_on_mouse_click (ezgl::application *application, GdkEventButton */*event*/, double x, double y);
 
 /*************************************************************
  * UI CALLBACK FUNCTIONS
  * 
  * These are callback functions for the UI elements
  *************************************************************/
-void input_streets_cbk(GtkWidget */*widget*/, ezgl::application* application);
-void search_button_cbk(GtkWidget */*widget*/, ezgl::application *application);
-void night_mode_cbk(GtkSwitch* /*self*/, gboolean state, ezgl::application* application);
-void subway_station_cbk(GtkSwitch* /*self*/, gboolean state, ezgl::application* application);
-void subway_line_cbk(GtkSwitch* /*self*/, gboolean state, ezgl::application* application);
-void poi_filter_cbk(GtkComboBoxText* self, ezgl::application* application);
-void city_change_cbk(GtkComboBoxText* self, ezgl::application* application);
+void input_streets_cbk (GtkWidget */*widget*/, ezgl::application* application);
+void search_button_cbk (GtkWidget */*widget*/, ezgl::application *application);
+void night_mode_cbk (GtkSwitch* /*self*/, gboolean state, ezgl::application* application);
+void subway_station_cbk (GtkSwitch* /*self*/, gboolean state, ezgl::application* application);
+void subway_line_cbk (GtkSwitch* /*self*/, gboolean state, ezgl::application* application);
+void poi_filter_cbk (GtkComboBoxText* self, ezgl::application* application);
+void city_change_cbk (GtkComboBoxText* self, ezgl::application* application);
 
 /************************************************************
  * HELPER FUNCTIONS DECLARATIONS
  ************************************************************/
-//Draw distance scale
-void draw_distance_scale(ezgl::renderer *g, ezgl::rectangle current_window);
-
-// Draw features
-void draw_feature_area(ezgl::renderer *g, FeatureDetailedInfo tempFeatureInfo);
-
-//Draw Point of Interest name and icon
-void drawPOIs(ezgl::renderer* g, int regionIdx);
-// Draw street segments with pixels (for far zoom levels)
-void draw_street_segment_pixel(ezgl::renderer *g, StreetSegmentIdx seg_id, 
+void draw_feature_area (ezgl::renderer *g, FeatureDetailedInfo tempFeatureInfo);
+void draw_POIs (ezgl::renderer* g, int regionIdx);
+void draw_street_segment_pixel (ezgl::renderer *g, StreetSegmentIdx seg_id, 
                                 ezgl::point2d from_xy, ezgl::point2d to_xy, 
                                 std::string& street_type);
-int get_street_width_pixel(std::string& street_type);
-
-// Draw street segments with fill polygon (meters width, world coordinates)
-void draw_street_segment_meters(ezgl::renderer *g, StreetSegmentIdx seg_id, 
+int get_street_width_pixel (std::string& street_type);
+void draw_street_segment_meters (ezgl::renderer *g, StreetSegmentIdx seg_id, 
                                 ezgl::point2d from_xy, ezgl::point2d to_xy, 
                                 std::string& street_type);
-void draw_line_meters(ezgl::renderer *g, ezgl::point2d from_xy,
+void draw_line_meters (ezgl::renderer *g, ezgl::point2d from_xy,
                       ezgl::point2d to_xy, int& width_meters);
-int get_street_width_meters(std::string& street_type);
-
-// Draw street names on street segments
-void draw_name_or_arrow(ezgl::renderer *g, std::string street_name, bool arrow,
+int get_street_width_meters (std::string& street_type);
+void draw_name_or_arrow (ezgl::renderer *g, std::string street_name, bool arrow,
                         ezgl::point2d from_xy, ezgl::point2d to_xy);
-
-// Draw highlighted intersections (draw pins)
-void draw_pin(ezgl::renderer* g, ezgl::point2d inter_xy);
-
-// Returns true if 2 rectangles collides
-bool check_collides(ezgl::rectangle rec_1, ezgl::rectangle rec_2);
-
-// Returns true if r1 fully contains r2
-bool check_contains(ezgl::rectangle rec_1, ezgl::rectangle rec_2);
-
-// Get new map path, for drop-down list callback
-std::string get_new_map_path(std::string text_string);
-
-// Response to search button callback
-void search_response(std::string input_1, std::string input_2, ezgl::application *application);
-
-
+void draw_pin (ezgl::renderer* g, ezgl::point2d inter_xy);
+std::string get_new_map_path (std::string text_string);
+void search_response (std::string input_1, std::string input_2, ezgl::application *application);
+void draw_distance_scale (ezgl::renderer *g, ezgl::rectangle current_window);
+bool check_collides (ezgl::rectangle rec_1, ezgl::rectangle rec_2);
+bool check_contains (ezgl::rectangle rec_1, ezgl::rectangle rec_2);
 
 /*******************************************************************************************************************************
  * DRAW MAP
  ********************************************************************************************************************************/
-void drawMap()
+void drawMap ()
 {
     // Set up the ezgl graphics window and hand control to it, as shown in the
     // ezgl example program.
@@ -171,28 +156,44 @@ void drawMap()
     // The unit tests always call loadMap() before calling this function
     // and call closeMap() after this function returns.
     
-    // Draw map
+    // Create our EZGL application.
     ezgl::application::settings settings;
     settings.main_ui_resource = "libstreetmap/resources/main.ui";
     settings.window_identifier = "MainWindow";
     settings.canvas_identifier = "MainCanvas";
     ezgl::application application(settings);
 
+    // Set initial world rectangle
     ezgl::rectangle initial_world(xy_from_latlon(latlon_bound.min),
                                   xy_from_latlon(latlon_bound.max));
     
+    // Set some parameters for the main sub-window (MainCanvas), where 
+    // visualization graphics are draw. Set the callback function that will be 
+    // called when the main window needs redrawing, and define the (world) 
+    // coordinate system we want to draw in.
     application.add_canvas("MainCanvas", draw_main_canvas, initial_world, ezgl::color(240, 240, 240)); 
-    
-    application.run(initial_setup, act_on_mouse_click,
-                    nullptr, nullptr);
+
+    // Run the application until the user quits.
+    // This hands over all control to the GTK runtime---after this point
+    // you will only regain control based on callbacks you have setup.
+    // Three callbacks can be provided to handle mouse button presses,
+    // mouse movement and keyboard button presses in the graphics area,
+    // respectively. Also, an initial_setup function can be passed that will
+    // be called before the activation of the application and can be used
+    // to create additional buttons, initialize the status message, or
+    // connect added widgets to their callback functions.
+    // Those callbacks are optional, so we can pass nullptr if
+    // we don't need to take any action on those events
+    application.run(initial_setup,
+                    act_on_mouse_click,
+                    nullptr,
+                    nullptr);
 }
-
-
 
 /*******************************************************************************************************************************
  * DRAW MAIN CANVAS
  ********************************************************************************************************************************/
-void draw_main_canvas(ezgl::renderer *g)
+void draw_main_canvas (ezgl::renderer *g)
 {
     /******************************************************
     * Local variables of current canvas
@@ -210,19 +211,13 @@ void draw_main_canvas(ezgl::renderer *g)
                                                       {1, 1}, {1, 1}, {1, 1}, {1, 1},
                                                       {1, 1}, {1, 1}, {1, 1}, {1, 1}};
     
-    //Draw the canvas for Night Mode
-    if (night_mode)
-    {
-        ezgl::rectangle visible_world_new = g->get_visible_world();
-        g->set_color(43, 56, 70);
-        g->fill_rectangle(visible_world_new);
-    }
-    
-    //Populating the visible_region vector to divide the window into 12 segments
+    //Populating the visible_region vector to divide the window into 12 segments (3x4)
     if (curr_world_width < ZOOM_LIMIT_2)
     {
-        double fourth_curr_world_width = curr_world_width*0.25;
-        double third_curr_world_height = visible_world.height()*0.333333;
+        // 1/4 world width
+        double fourth_curr_world_width = curr_world_width * 0.25;
+        // 1/3 world width
+        double third_curr_world_height = visible_world.height() * 0.333333;
         ezgl::rectangle RECT_0_0({visible_world.left(), 
                                 visible_world.top() - third_curr_world_height}, 
                                 fourth_curr_world_width, third_curr_world_height);
@@ -275,6 +270,14 @@ void draw_main_canvas(ezgl::renderer *g)
         visible_regions.push_back(RECT_2_3);
     }
 
+    //Draw the canvas for Night Mode
+    if (night_mode)
+    {
+        ezgl::rectangle visible_world_new = g->get_visible_world();
+        g->set_color(43, 56, 70);
+        g->fill_rectangle(visible_world_new);
+    }
+
     /******************************************************
     * Draw features. Features are sorted by descending areas in Features_AllInfo
     ******************************************************/
@@ -283,16 +286,16 @@ void draw_main_canvas(ezgl::renderer *g)
     int numOfFeatureDisplay = featureNum;
     if (curr_world_width >= ZOOM_LIMIT_0)
     {
-        numOfFeatureDisplay = featureNum * 0.001;
+        numOfFeatureDisplay = featureNum * FEATURE_ZOOM_0;
     } else if (ZOOM_LIMIT_1 <= curr_world_width && curr_world_width < ZOOM_LIMIT_0)
     {
-        numOfFeatureDisplay = featureNum * 0.01;
+        numOfFeatureDisplay = featureNum * FEATURE_ZOOM_1;
     } else if (ZOOM_LIMIT_2 <= curr_world_width && curr_world_width < ZOOM_LIMIT_1)
     {
-        numOfFeatureDisplay = featureNum * 0.05;
+        numOfFeatureDisplay = featureNum * FEATURE_ZOOM_2;
     } else if (ZOOM_LIMIT_3 <= curr_world_width && curr_world_width < ZOOM_LIMIT_2)
     {
-        numOfFeatureDisplay = featureNum * 0.1;
+        numOfFeatureDisplay = featureNum * FEATURE_ZOOM_3;
     }
     // Displaying features
     for (int j = 0; j < numOfFeatureDisplay; j++)
@@ -302,7 +305,9 @@ void draw_main_canvas(ezgl::renderer *g)
         if (!(check_collides(tempFeatureInfo.featureRectangle, visible_world)
               || check_contains(tempFeatureInfo.featureRectangle, visible_world)
               || check_contains(visible_world,tempFeatureInfo.featureRectangle))) 
+        {
             continue;
+        }
         draw_feature_area(g, tempFeatureInfo);
     }
     
@@ -327,7 +332,9 @@ void draw_main_canvas(ezgl::renderer *g)
             if (!(check_collides(segment_rect, visible_world)
                 || check_contains(segment_rect, visible_world)
                 || check_contains(visible_world,segment_rect))) 
+            {
                 continue;
+            }
             // Get LatLon information of from and to intersections from each segments
             IntersectionIdx from_id = Segment_SegmentDetailedInfo[seg_id].from;
             ezgl::point2d from_xy = Intersection_IntersectionInfo[from_id].position_xy;
@@ -352,7 +359,6 @@ void draw_main_canvas(ezgl::renderer *g)
                 {   
                     draw_street_segment_pixel(g, seg_id, from_xy, to_xy, highway_type);
                 }
-                        
             } else if (ZOOM_LIMIT_2 <= curr_world_width && curr_world_width < ZOOM_LIMIT_1)
             {
                 if (highway_type == "motorway" || highway_type == "motorway_link" || highway_type == "trunk"
@@ -373,14 +379,20 @@ void draw_main_canvas(ezgl::renderer *g)
                         if (street_name != "<unknown>" && (highway_type == "motorway" || 
                         highway_type == "primary" || highway_type == "secondary") && (i != 0))
                         {
-                            if (Segment_SegmentDetailedInfo[seg_id].length < 100) continue;        // Skip segments that are too short
+                            if (Segment_SegmentDetailedInfo[seg_id].length < 100) 
+                            {
+                                continue;        // Skip segments that are too short
+                            }
                             SegShortInfo short_info;
                             short_info.street_name = street_name;
                             short_info.from_xy = from_xy;
                             short_info.to_xy = to_xy;
                             // Separate between name-displaying segments and arrow-displaying segments
                             bool arrow = false;
-                            if (Segment_SegmentDetailedInfo[seg_id].oneWay && (i % 2 == 0)) arrow = true;
+                            if (Segment_SegmentDetailedInfo[seg_id].oneWay && (i % 2 == 0)) 
+                            {
+                                arrow = true;
+                            }
                             short_info.arrow = arrow;
                             seg_names_and_arrows.push_back(short_info);
                         }
@@ -393,20 +405,25 @@ void draw_main_canvas(ezgl::renderer *g)
                         highway_type == "primary" || highway_type == "secondary" || 
                         highway_type == "tertiary" || highway_type == "residential") && (i != 0))
                     {
-                        if (Segment_SegmentDetailedInfo[seg_id].length < 20) continue;            // Skip segments that are too short
+                        if (Segment_SegmentDetailedInfo[seg_id].length < 20)
+                        {
+                            continue;            // Skip segments that are too short
+                        }
                         SegShortInfo short_info;
                         short_info.street_name = street_name;
                         short_info.from_xy = from_xy;
                         short_info.to_xy = to_xy;
                         // Separate between name-displaying segments and arrow-displaying segments
                         bool arrow = false;
-                        if (Segment_SegmentDetailedInfo[seg_id].oneWay && (i % 2 == 0)) arrow = true;
+                        if (Segment_SegmentDetailedInfo[seg_id].oneWay && (i % 2 == 0)) 
+                        {
+                            arrow = true;
+                        }
                         short_info.arrow = arrow;
                         seg_names_and_arrows.push_back(short_info);
                     }
                 }
-            }
-            
+            } 
         }
     }
 
@@ -501,14 +518,13 @@ void draw_main_canvas(ezgl::renderer *g)
     }
     
     /******************************************************
-    * Draw POIs
+    * Draw POIs and Icons
     ******************************************************/
     if (curr_world_width < ZOOM_LIMIT_4)
     {
         poi_display.clear();
         poi_display.resize(NUM_REGIONS);
         // Get POI names and position chosen to display
-
         for (int tempIdx = 0; tempIdx < POINum; tempIdx++)
         {
             POIDetailedInfo tempPOI = POI_AllInfo[tempIdx];
@@ -520,9 +536,10 @@ void draw_main_canvas(ezgl::renderer *g)
                 }
             }
         }
+        //Display the selected POIs and Icons
         for (int regionIdx = 0; regionIdx < NUM_REGIONS; regionIdx++)
         {
-            drawPOIs(g, regionIdx);
+            draw_POIs(g, regionIdx);
         }
     }
 
@@ -532,9 +549,14 @@ void draw_main_canvas(ezgl::renderer *g)
     for (int i = 0; i < intersectionNum; i++)
     {
         // Skips segments that are outside of current world
-        if (!visible_world.contains(Intersection_IntersectionInfo[i].position_xy)) continue;
+        if (!visible_world.contains(Intersection_IntersectionInfo[i].position_xy))
+        {
+            continue;
+        }
         if (Intersection_IntersectionInfo[i].highlight)
+        {
             draw_pin(g, Intersection_IntersectionInfo[i].position_xy);
+        }    
     }
     
     //Draw the distance scale
@@ -545,7 +567,7 @@ void draw_main_canvas(ezgl::renderer *g)
  * EVENT CALLBACKS
  ********************************************************************************************************************************/
 // Function called before the activation of the application
-void initial_setup(ezgl::application *application, bool /*new_window*/)
+void initial_setup (ezgl::application *application, bool /*new_window*/)
 {
     // Update the status bar message
     application->update_message("Welcome!");
@@ -606,8 +628,8 @@ void initial_setup(ezgl::application *application, bool /*new_window*/)
         "Select", 
         row++,
         poi_filter_cbk,
-        {"All", "restaurant", "school", "hospital", "bar", "fast_food",
-        "ice_cream", "cafe", "university", "post_office", "fuel", "bank", "bbq"}
+        {"All", "Restaurant", "School", "Hospital", "Bar", "Fast food",
+        "Ice_cream", "Cafe", "University", "Post_office", "Fuel", "Bank", "BBQ"}
     );
 
     // Runtime: Creating drop-down list for different cities, connected to city_change_cbk
@@ -624,10 +646,8 @@ void initial_setup(ezgl::application *application, bool /*new_window*/)
 }
 
 // Storing state of mouse clicks
-void act_on_mouse_click(ezgl::application* application, GdkEventButton* event, double x, double y)
+void act_on_mouse_click (ezgl::application* application, GdkEventButton* /*event*/, double x, double y)
 {
-    (void) event;
-
     LatLon pos = LatLon(latlon_from_xy(x, y));
     // Highlight / Unhighlight closest intersections to mouseclick
     int id = findClosestIntersection(pos);
@@ -648,11 +668,12 @@ void act_on_mouse_click(ezgl::application* application, GdkEventButton* event, d
  ********************************************************************************************************************************/
 // Callback function for the city change drop down list.
 // Function trigerred when currently selected option changes. 
-void city_change_cbk(GtkComboBoxText* self, ezgl::application* application){
+void city_change_cbk (GtkComboBoxText* self, ezgl::application* application){
     //Getting current text content
     auto text = gtk_combo_box_text_get_active_text(self);
     std::string text_string = text;
     free(text);
+    
     if(!text || text_string == " ")
     {  //Returning if the combo box is currently empty (Always check to avoid errors)
         return;
@@ -687,12 +708,13 @@ void city_change_cbk(GtkComboBoxText* self, ezgl::application* application){
 }
 
 // Callback function for selecting filter type
-void poi_filter_cbk(GtkComboBoxText* self, ezgl::application* application)
+void poi_filter_cbk (GtkComboBoxText* self, ezgl::application* application)
 {
+    // Get current text from list
     auto text = gtk_combo_box_text_get_active_text(self);
     std::string text_string = text;
     free(text);
-    std::vector<std::string> typeList;
+    
     if(!text || text_string == "All")
     {  // Returning if the combo box is currently empty/Turning off filter
         filtered = false;
@@ -707,7 +729,7 @@ void poi_filter_cbk(GtkComboBoxText* self, ezgl::application* application)
 }
 
 // Callback function for switching ON/OFF night mode
-void night_mode_cbk(GtkSwitch* /*self*/, gboolean state, ezgl::application* application){
+void night_mode_cbk (GtkSwitch* /*self*/, gboolean state, ezgl::application* application){
     if(state)
     {
         application->update_message("Night mode turned on");
@@ -722,7 +744,7 @@ void night_mode_cbk(GtkSwitch* /*self*/, gboolean state, ezgl::application* appl
 }
 
 // Callback function for switching ON/OFF subway station and subway line mode
-void subway_station_cbk(GtkSwitch* /*self*/, gboolean state, ezgl::application* application)
+void subway_station_cbk (GtkSwitch* /*self*/, gboolean state, ezgl::application* application)
 {
     if(state)
     {
@@ -734,10 +756,10 @@ void subway_station_cbk(GtkSwitch* /*self*/, gboolean state, ezgl::application* 
         application->update_message("Hid Subway Stations");
         subway_station_mode = false;
         application->refresh_drawing();
-    }   
+    }
 }
 
-void subway_line_cbk(GtkSwitch* /*self*/, gboolean state, ezgl::application* application)
+void subway_line_cbk (GtkSwitch* /*self*/, gboolean state, ezgl::application* application)
 {
     if(state)
     {
@@ -753,7 +775,7 @@ void subway_line_cbk(GtkSwitch* /*self*/, gboolean state, ezgl::application* app
 }
 
 // Callback function for Search button
-void search_button_cbk(GtkWidget */*widget*/, ezgl::application *application)
+void search_button_cbk (GtkWidget */*widget*/, ezgl::application *application)
 {
     GObject *entry_object_1 = application->get_object("StreetEntry1");
     GObject *entry_object_2 = application->get_object("StreetEntry2");
@@ -779,22 +801,30 @@ void search_button_cbk(GtkWidget */*widget*/, ezgl::application *application)
 // Draw street segments
 *************************************************************/
 // Draw street segments with pixels (for far zoom levels)
-void draw_street_segment_pixel(ezgl::renderer *g, StreetSegmentIdx seg_id, 
+void draw_street_segment_pixel (ezgl::renderer *g, StreetSegmentIdx seg_id, 
                           ezgl::point2d from_xy, ezgl::point2d to_xy, 
                           std::string& street_type)
 {
     // Set colors and line width according to street type
     if (street_type == "motorway" || street_type == "motorway_link")
-        if(!night_mode)
+    {
+        if (!night_mode)
+        {
             g->set_color(255, 212, 124);
-        else
-            g->set_color(58, 128, 181);  
-    else 
-        if(!night_mode)
+        } else
+        {
+            g->set_color(58, 128, 181);
+        }
+    } else 
+    {
+        if (!night_mode)
+        {
             g->set_color(ezgl::WHITE);
-        else
+        } else
+        {
             g->set_color(96, 96, 96);
-    
+        }
+    }
     // Set line width based on current zoom level and street type    
     int line_width = get_street_width_pixel(street_type); 
     g->set_line_width(line_width);
@@ -817,22 +847,30 @@ void draw_street_segment_pixel(ezgl::renderer *g, StreetSegmentIdx seg_id,
 }
 
 // Draw street segments with meters (for close zoom levels)
-void draw_street_segment_meters(ezgl::renderer *g, StreetSegmentIdx seg_id, 
+void draw_street_segment_meters (ezgl::renderer *g, StreetSegmentIdx seg_id, 
                                 ezgl::point2d from_xy, ezgl::point2d to_xy, 
                                 std::string& street_type)
 {
     // Set colors according to street type
     if (street_type == "motorway" || street_type == "motorway_link")
-        if(!night_mode)
+    {
+        if (!night_mode)
+        {
             g->set_color(255, 212, 124);
-        else
-            g->set_color(58, 128, 181);       
-    else 
-        if(!night_mode)
+        } else
+        {
+            g->set_color(58, 128, 181);    
+        }
+    } else
+    {
+        if (!night_mode)
+        {
             g->set_color(ezgl::WHITE);
-        else
+        } else
+        {
             g->set_color(96, 96, 96);
-
+        }
+    }
     // Set street width (in meters) based on current zoom level and street type 
     int width_meters = get_street_width_meters(street_type);
 
@@ -852,7 +890,7 @@ void draw_street_segment_meters(ezgl::renderer *g, StreetSegmentIdx seg_id,
 }
 
 // Draw lines in world coordinates with fill_polygon
-void draw_line_meters(ezgl::renderer *g, ezgl::point2d from_xy,
+void draw_line_meters (ezgl::renderer *g, ezgl::point2d from_xy,
                        ezgl::point2d to_xy, int& width_meters)
 {
     // Circles around intersections (or curvepoints)
@@ -865,7 +903,7 @@ void draw_line_meters(ezgl::renderer *g, ezgl::point2d from_xy,
         return;
     } else 
     {   
-        double orthog_slope = -((to_xy.x - from_xy.x)/(to_xy.y - from_xy.y));
+        double orthog_slope = - ((to_xy.x - from_xy.x) / (to_xy.y - from_xy.y));
         // delta_x and delta_y > 0
         double delta_x = abs(width_meters / sqrt(1 + pow(orthog_slope, 2)));
         double delta_y = abs(orthog_slope * delta_x);
@@ -905,43 +943,88 @@ void draw_line_meters(ezgl::renderer *g, ezgl::point2d from_xy,
 }
 
 // Manually fix street width with pixels according to zoom levels (far zoom levels)
-int get_street_width_pixel(std::string& street_type)
+int get_street_width_pixel (std::string& street_type)
 {
     double curr_world_width = visible_world.width();
     if (curr_world_width > ZOOM_LIMIT_0)
     {
-        if (street_type == "motorway") return 4;
-        else return 2;
+        if (street_type == "motorway") 
+        {
+            return 4;
+        } else
+        {
+            return 2;
+        }
     } else if (ZOOM_LIMIT_1 < curr_world_width && curr_world_width < ZOOM_LIMIT_0)
     {
-        if (street_type == "motorway") return 5;
-        else if (street_type == "primary") return 3;
-        else if (street_type == "trunk") return 0;
-        else if (street_type == "secondary") return 0;
+        if (street_type == "motorway")
+        {
+            return 5;
+        } else if (street_type == "primary")
+        {
+            return 3;
+        } else if (street_type == "trunk")
+        {
+            return 0;
+        } else if (street_type == "secondary") 
+        {
+            return 0;
+        }
     } else if (ZOOM_LIMIT_2 < curr_world_width && curr_world_width < ZOOM_LIMIT_1)
     {
-        if (street_type == "motorway") return 5;
-        if (street_type == "motorway_link") return 5;
-        else if (street_type == "primary") return 5;
-        else if (street_type == "trunk") return 3;
-        else if (street_type == "secondary") return 2;
-        else if (street_type == "tertiary") return 2;
+        if (street_type == "motorway") 
+        {
+            return 5;
+        } else if (street_type == "motorway_link") 
+        {
+            return 5;
+        } else if (street_type == "primary")
+        {
+            return 5;
+        } else if (street_type == "trunk") 
+        {
+            return 3;
+        } else if (street_type == "secondary") 
+        {
+            return 2;
+        } else if (street_type == "tertiary") 
+        {
+            return 2;
+        }
     }
     return 0;
 }
 
 // Manually fix street width with meters according to zoom levels (close zoom levels)
-int get_street_width_meters(std::string& street_type)
+int get_street_width_meters (std::string& street_type)
 {
-    if (street_type == "motorway") return 5;
-    else if (street_type == "motorway_link") return 5;
-    else if (street_type == "primary") return 5;
-    else if (street_type == "trunk") return 4;
-    else if (street_type == "secondary") return 4;
-    else if (street_type == "tertiary") return 3;
-    else if (street_type == "unclassified") return 3;
-    else if (street_type == "residential") return 3;
-    else return 1;
+    if (street_type == "motorway") 
+    {
+        return 5;
+    } else if (street_type == "motorway_link") 
+    {
+        return 5;
+    } else if (street_type == "primary") 
+    {
+        return 5;
+    } else if (street_type == "trunk") 
+    {
+        return 4;
+    } else if (street_type == "secondary")
+    {
+        return 4;
+    } else if (street_type == "tertiary") 
+    {
+        return 3;
+    } else if (street_type == "unclassified")
+    {
+        return 3;
+    } else if (street_type == "residential") 
+    {
+        return 3;
+    } else {
+        return 1;
+    }
     return 0;
 }
 
@@ -949,29 +1032,40 @@ int get_street_width_meters(std::string& street_type)
 // Draw street names
 *************************************************************/
 // Draws text on street segments
-void draw_name_or_arrow(ezgl::renderer *g, std::string street_name, bool arrow,
+void draw_name_or_arrow (ezgl::renderer *g, std::string street_name, bool arrow,
                         ezgl::point2d from_xy, ezgl::point2d to_xy)
 {
     // Calculate text rotation based on segment slope                   // TODO: Curved segments!
     double angle_degree;
     if (from_xy.x == to_xy.x)
     {
-        if (from_xy.y > to_xy.y && arrow) angle_degree = 270;
-        else if (from_xy.y == to_xy.y && arrow) return;
-        else angle_degree = 90;
-    }
-    else
+        if (from_xy.y > to_xy.y && arrow)
+        {
+            angle_degree = 270;
+        } else if (from_xy.y == to_xy.y && arrow)
+        {
+            return;
+        } else 
+        {
+            angle_degree = 90;
+        }
+    } else
     {
-        double slope = (to_xy.y - from_xy.y)/(to_xy.x - from_xy.x);
+        double slope = (to_xy.y - from_xy.y) / (to_xy.x - from_xy.x);
         if (slope >= 0)
         {
-            angle_degree = atan2(abs(to_xy.y - from_xy.y), abs(to_xy.x - from_xy.x))/kDegreeToRadian;   // 1,0 to 0,1
-            if (arrow && from_xy.y > to_xy.y) angle_degree = angle_degree + 180;    // 0,1 to 1,0
-        }
-        else
+            angle_degree = atan2(abs(to_xy.y - from_xy.y), abs(to_xy.x - from_xy.x)) / kDegreeToRadian;   // 1,0 to 0,1
+            if (arrow && from_xy.y > to_xy.y) 
+            {
+                angle_degree = angle_degree + 180;    // 0,1 to 1,0
+            }
+        } else
         {
-            angle_degree = 360 - atan2(abs(to_xy.y - from_xy.y), abs(to_xy.x - from_xy.x))/kDegreeToRadian; // 1,1 to 0,0
-            if (arrow && from_xy.y < to_xy.y) angle_degree = angle_degree - 180;    // 0,0 to 1,1
+            angle_degree = 360 - atan2(abs(to_xy.y - from_xy.y), abs(to_xy.x - from_xy.x)) / kDegreeToRadian; // 1,1 to 0,0
+            if (arrow && from_xy.y < to_xy.y)
+            {
+                angle_degree = angle_degree - 180;    // 0,0 to 1,1
+            }
         }
     }
     g->set_text_rotation(angle_degree);
@@ -1005,10 +1099,12 @@ void draw_name_or_arrow(ezgl::renderer *g, std::string street_name, bool arrow,
 /************************************************************
 // Draw Features
 *************************************************************/
-void draw_feature_area(ezgl::renderer *g, FeatureDetailedInfo tempFeatureInfo)
+void draw_feature_area (ezgl::renderer *g, FeatureDetailedInfo tempFeatureInfo)
 {
+    //Store feature information in temp variables for checking
     FeatureType tempType = tempFeatureInfo.featureType;
     std::vector<ezgl::point2d> tempPoints = tempFeatureInfo.featurePoints;
+    //Draw different types of features with different colors
     if (tempType == PARK)
     {
         if (tempPoints.size() > 1)
@@ -1135,20 +1231,40 @@ void draw_feature_area(ezgl::renderer *g, FeatureDetailedInfo tempFeatureInfo)
 /************************************************************
 // Draw POIs
 *************************************************************/
-void drawPOIs(ezgl::renderer* g, int regionIdx)
+void draw_POIs (ezgl::renderer* g, int regionIdx)
 {
     int regionSize = poi_display[regionIdx].size();
-    if (!regionSize) return;                                      //skip if no POI is in the region
+    if (!regionSize)
+    {
+        return;                                     // Skip if no POI is in the region
+    }
     int middlePOIIdx = regionSize / 2;
     std::string tempPOIName = poi_display[regionIdx][middlePOIIdx].POIName;
-    if (tempPOIName.size() > 50) return;                          //skip if the POI name is too long  
+    if (tempPOIName.size() > 50)
+    {
+        return;                                     // Skip if the POI name is too long 
+    }
+
+    // Store POI information in temp variables
     ezgl::point2d tempDrawPoint = poi_display[regionIdx][middlePOIIdx].POIPoint;
     std::string tempType = poi_display[regionIdx][middlePOIIdx].POIType;
+
+    // Treat CURRENT_FILTER as lowercase -> current_filter
+    std::string current_filter;
+    for (auto& c : CURRENT_FILTER){
+        if (c == ' ') continue;
+        current_filter.push_back(char(tolower(c))); // Save names as lowercase, no space
+    }
+
     // Skip if something is filtered out
-    if (filtered && tempType != CURRENT_FILTER) return;
-    //drawing the icon
+    if (filtered && tempType != current_filter)
+    {
+        return;
+    }
+
+    // Drawing the icon
     g->set_text_rotation(0); 
-    g->set_color(0,0,0,50);
+    g->set_color(0, 0, 0, 50);
     g->format_font("Emoji", ezgl::font_slant::normal, ezgl::font_weight::normal, 20);
     std::string icon = "\U00002B50";
     if (tempType == "fast_food")
@@ -1194,14 +1310,17 @@ void drawPOIs(ezgl::renderer* g, int regionIdx)
     }
     g->draw_text(tempDrawPoint, icon);
     
-    //drawing the POI name
+    // Drawing the POI name
     g->format_font("monospace", ezgl::font_slant::normal, ezgl::font_weight::normal, 12);
-    tempDrawPoint.y = tempDrawPoint.y + 6;                        //move text up
-    if(!night_mode)
+    tempDrawPoint.y = tempDrawPoint.y + 6;          // Move the POI text up  from Icons
+    if (!night_mode)
+    {
         g->set_color(51,102,0);
-    else
+    } else
+    {
         g->set_color(118,215,150);
-    g->draw_text(tempDrawPoint, tempPOIName);
+    }
+    g->draw_text(tempDrawPoint, tempPOIName);       // Draw the POI name
 }
 
 /************************************************************
@@ -1209,7 +1328,7 @@ void drawPOIs(ezgl::renderer* g, int regionIdx)
 *************************************************************/
 
 // Display pins (intersection if highlighted)
-void draw_pin(ezgl::renderer* g, ezgl::point2d inter_xy)
+void draw_pin (ezgl::renderer* g, ezgl::point2d inter_xy)
 {
     ezgl::surface *png_surface = g->load_png("libstreetmap/resources/red_pin.png");
     g->draw_surface(png_surface, inter_xy);
@@ -1223,33 +1342,72 @@ void draw_pin(ezgl::renderer* g, ezgl::point2d inter_xy)
 /************************************************************
 // Get map path for reloading from string of city name
 *************************************************************/
-std::string get_new_map_path(std::string text_string)
+std::string get_new_map_path (std::string text_string)
 {
     std::string new_map_path;
-    if (text_string == "Toronto") new_map_path = "/cad2/ece297s/public/maps/toronto_canada.streets.bin";
-    else if (text_string == "Beijing") new_map_path = "/cad2/ece297s/public/maps/beijing_china.streets.bin";
-    else if (text_string == "Cairo") new_map_path = "/cad2/ece297s/public/maps/cairo_egypt.streets.bin";
-    else if (text_string == "Cape Town") new_map_path = "/cad2/ece297s/public/maps/cape-town_south-africa.streets.bin";
-    else if (text_string == "Golden Horseshoe") new_map_path = "/cad2/ece297s/public/maps/golden-horseshoe_canada.streets.bin";
-    else if (text_string == "Hamilton") new_map_path = "/cad2/ece297s/public/maps/hamilton_canada.streets.bin";
-    else if (text_string == "Hong Kong") new_map_path = "/cad2/ece297s/public/maps/hong-kong_china.streets.bin";
-    else if (text_string == "Iceland") new_map_path = "/cad2/ece297s/public/maps/iceland.streets.bin";
-    else if (text_string == "Interlaken") new_map_path = "/cad2/ece297s/public/maps/interlaken_switzerland.streets.bin";
-    else if (text_string == "Kyiv") new_map_path = "/cad2/ece297s/public/maps/kyiv_ukraine.streets.bin";
-    else if (text_string == "London") new_map_path = "/cad2/ece297s/public/maps/london_england.streets.bin";
-    else if (text_string == "New Delhi") new_map_path = "/cad2/ece297s/public/maps/new-delhi_india.streets.bin";
-    else if (text_string == "New York") new_map_path = "/cad2/ece297s/public/maps/new-york_usa.streets.bin";
-    else if (text_string == "Rio de Janeiro") new_map_path = "/cad2/ece297s/public/maps/rio-de-janeiro_brazil.streets.bin";
-    else if (text_string == "Saint Helena") new_map_path = "/cad2/ece297s/public/maps/saint-helena.streets.bin";
-    else if (text_string == "Singapore") new_map_path = "/cad2/ece297s/public/maps/singapore.streets.bin";
-    else if (text_string == "Sydney") new_map_path = "/cad2/ece297s/public/maps/sydney_australia.streets.bin";
-    else if (text_string == "Tehran") new_map_path = "/cad2/ece297s/public/maps/tehran_iran.streets.bin";
-    else if (text_string == "Tokyo") new_map_path = "/cad2/ece297s/public/maps/tokyo_japan.streets.bin";
+    if (text_string == "Toronto")
+    {
+        new_map_path = "/cad2/ece297s/public/maps/toronto_canada.streets.bin";
+    } else if (text_string == "Beijing")
+    {
+        new_map_path = "/cad2/ece297s/public/maps/beijing_china.streets.bin";
+    } else if (text_string == "Cairo") 
+    {
+        new_map_path = "/cad2/ece297s/public/maps/cairo_egypt.streets.bin";
+    } else if (text_string == "Cape Town")
+    {
+        new_map_path = "/cad2/ece297s/public/maps/cape-town_south-africa.streets.bin";
+    } else if (text_string == "Golden Horseshoe")
+    {
+        new_map_path = "/cad2/ece297s/public/maps/golden-horseshoe_canada.streets.bin";
+    } else if (text_string == "Hamilton")
+    {
+        new_map_path = "/cad2/ece297s/public/maps/hamilton_canada.streets.bin";
+    } else if (text_string == "Hong Kong")
+    {
+        new_map_path = "/cad2/ece297s/public/maps/hong-kong_china.streets.bin";
+    } else if (text_string == "Iceland")
+    {
+        new_map_path = "/cad2/ece297s/public/maps/iceland.streets.bin";
+    } else if (text_string == "Interlaken")
+    {
+        new_map_path = "/cad2/ece297s/public/maps/interlaken_switzerland.streets.bin";
+    } else if (text_string == "Kyiv") 
+    {
+        new_map_path = "/cad2/ece297s/public/maps/kyiv_ukraine.streets.bin";
+    } else if (text_string == "London")
+    {
+        new_map_path = "/cad2/ece297s/public/maps/london_england.streets.bin";
+    } else if (text_string == "New Delhi") 
+    {
+        new_map_path = "/cad2/ece297s/public/maps/new-delhi_india.streets.bin";
+    } else if (text_string == "New York")
+    {
+        new_map_path = "/cad2/ece297s/public/maps/new-york_usa.streets.bin";
+    } else if (text_string == "Rio de Janeiro") 
+    {
+        new_map_path = "/cad2/ece297s/public/maps/rio-de-janeiro_brazil.streets.bin";
+    } else if (text_string == "Saint Helena") 
+    {
+        new_map_path = "/cad2/ece297s/public/maps/saint-helena.streets.bin";
+    } else if (text_string == "Singapore") 
+    {
+        new_map_path = "/cad2/ece297s/public/maps/singapore.streets.bin";
+    } else if (text_string == "Sydney") 
+    {
+        new_map_path = "/cad2/ece297s/public/maps/sydney_australia.streets.bin";
+    } else if (text_string == "Tehran") 
+    {
+        new_map_path = "/cad2/ece297s/public/maps/tehran_iran.streets.bin";
+    } else if (text_string == "Tokyo")
+    {
+        new_map_path = "/cad2/ece297s/public/maps/tokyo_japan.streets.bin";
+    }
     return new_map_path;
 }
 
 // Response to search button callback
-void search_response(std::string input_1, std::string input_2, ezgl::application *application)
+void search_response (std::string input_1, std::string input_2, ezgl::application *application)
 {
     if (input_1.empty() || input_2.empty())
     {
@@ -1308,8 +1466,10 @@ void search_response(std::string input_1, std::string input_2, ezgl::application
         for (std::multimap<std::string, int>::iterator it_2 = it_2_range.first; it_2 != it_2_range.second; ++it_2)
         {
             std::vector<IntersectionIdx> foundIntersections = findIntersectionsOfTwoStreets(it_1->second, it_2->second);
-            if(foundIntersections.size() == 0) continue;
-            else
+            if (foundIntersections.size() == 0)
+            {
+                continue;
+            } else
             {
                 // Draw all intersections between 2 streets
                 for (int i = 0; i < foundIntersections.size(); i++)
@@ -1320,7 +1480,7 @@ void search_response(std::string input_1, std::string input_2, ezgl::application
                                                   Intersection_IntersectionInfo[foundIntersections[i]].name +
                                                   " (X position: " + 
                                                   std::to_string(Intersection_IntersectionInfo[foundIntersections[i]].position_xy.x) +
-                                                  " Y position: " +
+                                                  "; Y position: " +
                                                   std::to_string(Intersection_IntersectionInfo[foundIntersections[i]].position_xy.y) + ")";
                     const char* message = to_be_converted.c_str();
                     application->create_popup_message("Intersection found: ", message);
@@ -1345,7 +1505,7 @@ void search_response(std::string input_1, std::string input_2, ezgl::application
 /*******************************************************************************************************************************
 // Draw the distance scale
  ********************************************************************************************************************************/
-void draw_distance_scale(ezgl::renderer *g, ezgl::rectangle current_window)
+void draw_distance_scale (ezgl::renderer *g, ezgl::rectangle current_window)
 {
     //initialize scale variables
     unsigned scaleNameIdx = 0;
@@ -1359,7 +1519,10 @@ void draw_distance_scale(ezgl::renderer *g, ezgl::rectangle current_window)
                                               scale_name + sizeof(scale_name) / sizeof(std::string));
     //find the proper scale for the current window
     auto scale = std::upper_bound (scaleNum.begin(), scaleNum.end(), int(current_width) / 20);
-    if (*scale > 20000) return;                         //protect the program from corner case
+    if (*scale > 20000)
+    {
+        return;                         //protect the program from corner case
+    }
     for (unsigned scaleIdx = 0; scaleIdx < scaleNum.size(); scaleIdx++)
     {
         if (scaleNum[scaleIdx] == *scale)
@@ -1393,14 +1556,14 @@ void draw_distance_scale(ezgl::renderer *g, ezgl::rectangle current_window)
  * OTHER HELPER FUNCTIONS
  ********************************************************************************************************************************/
 // Check if 2 rectangles collides with each other
-bool check_collides(ezgl::rectangle rec_1, ezgl::rectangle rec_2)
+bool check_collides (ezgl::rectangle rec_1, ezgl::rectangle rec_2)
 {
     bool x_overlap = (rec_1.left() <= rec_2.right()) && (rec_2.left() <= rec_1.right());
     bool y_overlap = (rec_1.bottom() <= rec_2.top()) && (rec_2.bottom() <= rec_1.top());
     return x_overlap && y_overlap;
 }
 // Check if r1 fully contains r2
-bool check_contains(ezgl::rectangle rec_1, ezgl::rectangle rec_2)
+bool check_contains (ezgl::rectangle rec_1, ezgl::rectangle rec_2)
 {
     bool x_contain = (rec_1.left() <= rec_2.left()) && (rec_2.right() <= rec_1.right());
     bool y_contain = (rec_1.bottom() <= rec_2.bottom()) && (rec_2.top() <= rec_1.top());

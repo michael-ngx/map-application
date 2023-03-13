@@ -838,12 +838,6 @@ ezgl::color get_rgb_color(std::string osm_color)
     {
         // remove the '#'
         osm_color.erase(0, 1);
-        // //
-        // std::string color_lower;
-        // for (auto& c : osm_color){
-        //     if (c == ' ') continue;
-        //     color_lower.push_back(char(tolower(c))); // Save names as lowercase, no space
-        // }
         if (osm_color.length() == 3)
         {
             osm_color = osm_color.substr(0, 1) + osm_color.substr(0, 1) +
