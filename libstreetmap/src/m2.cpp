@@ -542,8 +542,6 @@ void draw_main_canvas(ezgl::renderer *g)
     draw_distance_scale (g, visible_world);
 }
 
-
-
  /*******************************************************************************************************************************
  * EVENT CALLBACKS
  ********************************************************************************************************************************/
@@ -603,6 +601,16 @@ void initial_setup(ezgl::application *application, bool /*new_window*/)
         application // passing an application pointer to callback function
     );  
 
+    // Runtime: Creating drop=down list for filters
+    application->create_label(row++, "Sort by");
+    application->create_combo_box_text(
+        "Select", 
+        row++,
+        poi_filter_cbk,
+        {"All", "restaurant", "school", "hospital", "bar", "fast_food",
+        "ice_cream", "cafe", "university", "post_office", "fuel", "bank", "bbq"}
+    );
+
     // Runtime: Creating drop-down list for different cities, connected to city_change_cbk
     application->create_label(row++, "Switch city:");     
     application->create_combo_box_text(
@@ -613,15 +621,6 @@ void initial_setup(ezgl::application *application, bool /*new_window*/)
         "Hamilton", "Hong Kong", "Iceland", "Interlaken", "Kyiv",
         "London", "New Delhi", "New York", "Rio de Janeiro", "Saint Helena",
         "Singapore", "Sydney", "Tehran", "Tokyo"}
-    );
-    // Runtime: Creating drop=down list for filters
-    application->create_label(row++, "Sort by");
-    application->create_combo_box_text(
-        "Select", 
-        row++,
-        poi_filter_cbk,
-        {"All", "restaurant", "school", "hospital", "bar", "fast_food",
-        "ice_cream", "cafe", "university", "post_office", "fuel", "bank", "bbq"}
     );
 }
 
@@ -1384,55 +1383,6 @@ void draw_distance_scale(ezgl::renderer *g, ezgl::rectangle current_window)
     g->set_line_width(5);
     g->set_text_rotation(0);
     g->draw_line(leftPoint, rightPoint);
-    std:: cout << scaleNameIdx << std:: endl;
-    g->draw_text({(leftPoint.x + rightPoint.x) / 2, 
-                   current_window.bottom() + current_height / 25}, 
-                   scaleName[scaleNameIdx]);
-}
-
-/*******************************************************************************************************************************
-// draw the distance scale
- ********************************************************************************************************************************/
-void draw_distance_scale(ezgl::renderer *g, ezgl::rectangle current_window)
-{
-    //initialize scale variables
-    unsigned scaleNameIdx = 0;
-    double current_width = current_window.right() - current_window.left();
-    double current_height = current_window.top() - current_window.bottom();
-    const int scale_num[12] = {5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000};
-    const std::string scale_name[12] = {"5m", "10m", "20m", "50m", "100m", "200m", "500m", 
-                                        "1km", "2km", "5km", "10km", "20km"};
-    const std::vector<int> scaleNum (scale_num, scale_num + sizeof(scale_num) / sizeof(int));
-    const std::vector<std::string> scaleName (scale_name, 
-                                              scale_name + sizeof(scale_name) / sizeof(std::string));
-    //find the proper scale for the current window
-    auto scale = std::upper_bound (scaleNum.begin(), scaleNum.end(), int(current_width) / 20);
-    if (*scale > 20000) return;                         //protect the program from corner case
-    for (unsigned scaleIdx = 0; scaleIdx < scaleNum.size(); scaleIdx++)
-    {
-        if (scaleNum[scaleIdx] == *scale)
-        {
-            scaleNameIdx = scaleIdx;
-            break;
-        }
-    }
-    ezgl::point2d rightPoint;
-    ezgl::point2d leftPoint;
-    rightPoint.x = current_window.right() - current_width / 20;
-    rightPoint.y = current_window.bottom() + current_height / 20;
-    leftPoint.x = rightPoint.x - *scale;
-    leftPoint.y = rightPoint.y;
-    if (night_mode)
-    {
-        g->set_color(255,255,25);
-    } else
-    {
-        g->set_color(0,0,0);
-    }
-    g->set_line_width(5);
-    g->set_text_rotation(0);
-    g->draw_line(leftPoint, rightPoint);
-    std:: cout << scaleNameIdx << std:: endl;
     g->draw_text({(leftPoint.x + rightPoint.x) / 2, 
                    current_window.bottom() + current_height / 25}, 
                    scaleName[scaleNameIdx]);
