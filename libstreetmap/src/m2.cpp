@@ -628,8 +628,8 @@ void initial_setup (ezgl::application *application, bool /*new_window*/)
         "Select", 
         row++,
         poi_filter_cbk,
-        {"All", "Restaurant", "School", "Hospital", "Bar", "Fast food",
-        "Ice_cream", "Cafe", "University", "Post_office", "Fuel", "Bank", "BBQ"}
+        {"All", "Restaurant", "School", "Hospital", "Bar", "Fast Food",
+        "Ice Cream", "Cafe", "University", "Post Office", "Fuel", "Bank", "BBQ"}
     );
 
     // Runtime: Creating drop-down list for different cities, connected to city_change_cbk
@@ -1110,9 +1110,12 @@ void draw_feature_area (ezgl::renderer *g, FeatureDetailedInfo tempFeatureInfo)
         if (tempPoints.size() > 1)
         {         
             if(!night_mode)
+            {
                 g->set_color(206, 234, 214);
-            else
+            } else
+            {
                 g->set_color(66, 75, 69);
+            }
             g->fill_poly(tempPoints);
         }
     } else if (tempType == BEACH)
@@ -1126,10 +1129,12 @@ void draw_feature_area (ezgl::renderer *g, FeatureDetailedInfo tempFeatureInfo)
     {
         if (tempPoints.size() > 1)
         {            
-            if(!night_mode)
+            if(!night_mode){
                 g->set_color(153, 204, 255);
-            else
+            } else
+            {
                 g->set_color(0, 0, 0);
+            }
             g->fill_poly(tempPoints);
         }
     } else if (tempType == ISLAND)
@@ -1137,9 +1142,12 @@ void draw_feature_area (ezgl::renderer *g, FeatureDetailedInfo tempFeatureInfo)
         if (tempPoints.size() > 1)
         {           
             if(!night_mode)
+            {
                 g->set_color(168, 218, 181);  
-            else
+            } else
+            {
                 g->set_color(89, 110, 89);
+            }
             g->fill_poly(tempPoints);
         }
     } else if (tempType == BUILDING)
@@ -1147,11 +1155,12 @@ void draw_feature_area (ezgl::renderer *g, FeatureDetailedInfo tempFeatureInfo)
         if (tempPoints.size() > 1)
         {
             if(!night_mode)
+            {
                 g->set_color(230, 230, 230);
-            else
+            } else
+            {
                 g->set_color(63, 81, 98);
-            g->fill_poly(tempPoints);
-            
+            }
             g->fill_poly(tempPoints);
         }
     } else if (tempType == GREENSPACE)
@@ -1159,9 +1168,12 @@ void draw_feature_area (ezgl::renderer *g, FeatureDetailedInfo tempFeatureInfo)
         if (tempPoints.size() > 1)
         {
             if(!night_mode)
+            {
                 g->set_color(206, 234, 214);
-            else
+            } else
+            {
                 g->set_color(79, 91, 83);
+            }
             g->fill_poly(tempPoints);
         }
     } else if (tempType == GOLFCOURSE)
@@ -1169,9 +1181,12 @@ void draw_feature_area (ezgl::renderer *g, FeatureDetailedInfo tempFeatureInfo)
         if (tempPoints.size() > 1)
         {   
             if(!night_mode)
+            {
                 g->set_color(168, 218, 181);
-            else
-                g->set_color(58, 74, 62);
+            } else
+            {
+                g->set_color(58, 74, 62);  
+            }
             g->fill_poly(tempPoints);
         }
     } else if (tempType == GLACIER)
@@ -1184,10 +1199,13 @@ void draw_feature_area (ezgl::renderer *g, FeatureDetailedInfo tempFeatureInfo)
     } else if (tempType == RIVER)
     {
         auto tempPointIdx = tempPoints.begin();
-        if(!night_mode)
+        if (!night_mode)
+        {
             g->set_color(153, 204, 255);
-        else
+        } else
+        {
             g->set_color(75, 97, 119);
+        }
         g->set_line_width(10);
         for (int count = 0; count < (tempPoints.size() - 1); count++)
         {
@@ -1249,10 +1267,14 @@ void draw_POIs (ezgl::renderer* g, int regionIdx)
     ezgl::point2d tempDrawPoint = poi_display[regionIdx][middlePOIIdx].POIPoint;
     std::string tempType = poi_display[regionIdx][middlePOIIdx].POIType;
 
-    // Treat CURRENT_FILTER as lowercase -> current_filter
+    // Treat CURRENT_FILTER as lowercase with space as underscore -> current_filter
     std::string current_filter;
     for (auto& c : CURRENT_FILTER){
-        if (c == ' ') continue;
+        if (c == ' ')
+        {
+            current_filter.push_back('_');
+            continue;
+        }
         current_filter.push_back(char(tolower(c))); // Save names as lowercase, no space
     }
 
