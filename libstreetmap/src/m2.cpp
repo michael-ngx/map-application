@@ -438,6 +438,7 @@ void draw_main_canvas (ezgl::renderer *g)
         }
     }
 
+    // Draw motorway and motorway-link above other streets
     for (int i = 0; i < highway_segments.size(); i++)
     {
         SegShortInfo segInfo = highway_segments[i];
