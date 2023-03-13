@@ -493,7 +493,7 @@ void draw_main_canvas (ezgl::renderer *g)
                     {
                         for (int region = 0; region < NUM_REGIONS; region++)
                         {
-                        draw_pin(g, AllSubwayRoutes[route].station_points[i]);
+                            draw_pin(g, AllSubwayRoutes[route].station_points[i]);
                         }
                     }
                 }
