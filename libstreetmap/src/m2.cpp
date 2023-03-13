@@ -456,29 +456,23 @@ void draw_main_canvas (ezgl::renderer *g)
                         }
                     }
                 }
-                // // Display subway stations - Checking regions causing seg fault
-                // if (subway_station_mode)
-                // {
-                //     if (AllSubwayRoutes[route].station_points.size() == 0)
-                //     {
-                //         continue;
-                //     }
-                //     // If all regions are unavailable, break for-loop early
-                //     int count = NUM_REGIONS;
-                //     for (int i = 0; i < AllSubwayRoutes[route].station_points.size() && count; i++)
-                //     {
-                //         for (int region = 0; region < NUM_REGIONS; region++)
-                //         {
-                //             if (visible_regions[region].contains(AllSubwayRoutes[route].station_points[i]))
-                //             {
-                //                 draw_pin(g, AllSubwayRoutes[route].station_points[i]);
-                //                 // asdasd[region] = 0;
-                //                 // count--;
-                //                 // break;
-                //             }
-                //         }
-                //     }
-                // }
+                 // Display subway stations
+                 if (subway_station_mode)
+                 {
+                     if (AllSubwayRoutes[route].station_points.size() == 0)
+                     {
+                         continue;
+                     }
+                     // If all regions are unavailable, break for-loop early
+                     int count = NUM_REGIONS;
+                     for (int i = 0; i < AllSubwayRoutes[route].station_points.size() && count; i++)
+                     {
+                         for (int region = 0; region < NUM_REGIONS; region++)
+                         {
+                            draw_pin(g, AllSubwayRoutes[route].station_points[i]);
+                         }
+                     }
+                 }
             }
         }
     }
