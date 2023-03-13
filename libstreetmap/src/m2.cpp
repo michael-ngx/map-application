@@ -61,7 +61,6 @@ struct SegShortInfo
     ezgl::point2d to_xy;
     bool arrow;
 };
-
 struct POIShortInfo
 {
     std::string POIName;
@@ -653,6 +652,7 @@ void city_change_cbk(GtkComboBoxText* self, ezgl::application* application){
     //Getting current text content
     auto text = gtk_combo_box_text_get_active_text(self);
     std::string text_string = text;
+    free(text);
     if(!text || text_string == " ")
     {  //Returning if the combo box is currently empty (Always check to avoid errors)
         return;
@@ -691,6 +691,7 @@ void poi_filter_cbk(GtkComboBoxText* self, ezgl::application* application)
 {
     auto text = gtk_combo_box_text_get_active_text(self);
     std::string text_string = text;
+    free(text);
     std::vector<std::string> typeList;
     if(!text || text_string == "All")
     {  // Returning if the combo box is currently empty/Turning off filter
