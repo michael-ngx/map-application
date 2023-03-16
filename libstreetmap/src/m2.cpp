@@ -60,6 +60,9 @@ const float FEATURE_ZOOM_3 = 0.1;
 // Current world width in meters
 ezgl::rectangle visible_world;
 
+// Number of screen regions for displaying street names and arrows
+const int NUM_REGIONS = 12;
+
 // Short info for segments whose street name will be displayed
 struct SegShortInfo
 {
@@ -114,8 +117,8 @@ void act_on_mouse_click (ezgl::application *application, GdkEventButton */*event
 void input_streets_cbk (GtkWidget */*widget*/, ezgl::application* application);
 void search_button_cbk (GtkWidget */*widget*/, ezgl::application *application);
 void night_mode_cbk (GtkSwitch* /*self*/, gboolean state, ezgl::application* application);
-void subway_station_cbk (GtkSwitch* /*self*/, gboolean state, ezgl::application* application);
-void subway_line_cbk (GtkSwitch* /*self*/, gboolean state, ezgl::application* application);
+void subway_station_cbk (GtkSwitch* self, gboolean state, ezgl::application* application);
+void subway_line_cbk (GtkSwitch* self, gboolean state, ezgl::application* application);
 void poi_filter_cbk (GtkComboBoxText* self, ezgl::application* application);
 void city_change_cbk (GtkComboBoxText* self, ezgl::application* application);
 
@@ -207,45 +210,13 @@ void draw_main_canvas (ezgl::renderer *g)
     // Defining 3x4 or 2x3 regions on the screen based on visible world
     std::vector<ezgl::rectangle> visible_regions;
     // For each region, allow showing 1 name, 1 arrow, and 1 subway station
-    std::vector<std::vector<int>> available_region_3x4 = {{1, 1, 1}, {1, 1, 1}, {1, 1, 1}, {1, 1, 1}, 
-                                                          {1, 1, 1}, {1, 1, 1}, {1, 1, 1}, {1, 1, 1},
-                                                          {1, 1, 1}, {1, 1, 1}, {1, 1, 1}, {1, 1, 1}};
-    std::vector<int> available_region_2x3 = {1, 1, 1,
-                                             1, 1, 1};
+    std::vector<std::vector<int>> available_region = {{1, 1, 1}, {1, 1, 1}, {1, 1, 1}, {1, 1, 1}, 
+                                                      {1, 1, 1}, {1, 1, 1}, {1, 1, 1}, {1, 1, 1},
+                                                      {1, 1, 1}, {1, 1, 1}, {1, 1, 1}, {1, 1, 1}};
     
     // Populating the visible_region vector to divide the window into:
     // 6 segments (2x3) at far zoom level, or 12 segments (3x4) at low zoom level
-    if (subway_station_mode && curr_world_width >= ZOOM_LIMIT_2)
-    {
-        // 1/3 world width
-        double third_curr_world_width = curr_world_width * 0.333333;
-        // 1/2 world width
-        double half_curr_world_height = visible_world.height() * 0.5;
-        ezgl::rectangle RECT_0_0({visible_world.left(), 
-                                visible_world.top() - half_curr_world_height}, 
-                                third_curr_world_width, half_curr_world_height);
-        ezgl::rectangle RECT_0_1({visible_world.left() + third_curr_world_width, 
-                                visible_world.top() - half_curr_world_height}, 
-                                third_curr_world_width, half_curr_world_height);
-        ezgl::rectangle RECT_0_2({visible_world.left() + third_curr_world_width * 2, 
-                                visible_world.top() - half_curr_world_height}, 
-                                third_curr_world_width, half_curr_world_height);
-        ezgl::rectangle RECT_1_0({visible_world.left(), 
-                                visible_world.bottom()}, 
-                                third_curr_world_width, half_curr_world_height);
-        ezgl::rectangle RECT_1_1({visible_world.left() + third_curr_world_width, 
-                                visible_world.bottom()}, 
-                                third_curr_world_width, half_curr_world_height);
-        ezgl::rectangle RECT_1_2({visible_world.right() - third_curr_world_width, 
-                                visible_world.bottom()}, 
-                                third_curr_world_width, half_curr_world_height);
-        visible_regions.push_back(RECT_0_0);
-        visible_regions.push_back(RECT_0_1);
-        visible_regions.push_back(RECT_0_2);
-        visible_regions.push_back(RECT_1_0);
-        visible_regions.push_back(RECT_1_1);
-        visible_regions.push_back(RECT_1_2);
-    } else if (curr_world_width < ZOOM_LIMIT_2)
+    if (curr_world_width < ZOOM_LIMIT_2 || subway_station_mode)
     {
         // 1/4 world width
         double fourth_curr_world_width = curr_world_width * 0.25;
@@ -481,69 +452,55 @@ void draw_main_canvas (ezgl::renderer *g)
     // Display subway lines
     if (subway_line_mode || subway_station_mode)
     {
-        if (AllSubwayRoutes.size() == 0)
+        g->set_line_width(4);
+        int count = NUM_REGIONS;
+        for (int route = 0; route < AllSubwayRoutes.size(); route++)
         {
-            std::cout << "City has no subways!" << std::endl;
-        } else
-        {
-            g->set_line_width(4);
-            int count = visible_regions.size();
-            for (int route = 0; route < AllSubwayRoutes.size(); route++)
+            // Display subway route
+            if (subway_line_mode)
             {
-                // Display subway route
-                if (subway_line_mode)
+                if (AllSubwayRoutes[route].track_points.size() == 0)
                 {
-                    if (AllSubwayRoutes[route].track_points.size() <= 0) continue;
-                    // Set subway line to processed color
-                    g->set_color((AllSubwayRoutes[route].colour));
-                    for (int way = 0; way < (AllSubwayRoutes[route].track_points.size()); way++)
+                    continue;
+                }
+                // Set subway line to processed color
+                g->set_color((AllSubwayRoutes[route].colour));
+                for (int way = 0; way < (AllSubwayRoutes[route].track_points.size()); way++)
+                {
+                    for (int node = 0; node < AllSubwayRoutes[route].track_points[way].size() - 1; node++)
                     {
-                        for (int node = 0; node < AllSubwayRoutes[route].track_points[way].size() - 1; node++)
-                        {
-                            g->draw_line(AllSubwayRoutes[route].track_points[way][node], 
-                                        AllSubwayRoutes[route].track_points[way][node + 1]);
-                        }
+                        g->draw_line(AllSubwayRoutes[route].track_points[way][node], 
+                                    AllSubwayRoutes[route].track_points[way][node + 1]);
                     }
                 }
-                // Display subway stations
-                if (subway_station_mode)        // TODO: Avoid redundant stations
+            }
+            // Display subway stations
+            if (subway_station_mode)        // TODO: Avoid redundant stations
+            {
+                if (AllSubwayRoutes[route].station_points.size() == 0)
                 {
-                    if (AllSubwayRoutes[route].station_points.size() == 0)
+                    continue;
+                }
+                for (int i = 0; i < AllSubwayRoutes[route].station_points.size() && count; i++)
+                {
+                    // Skips if subway is not in visible world
+                    if (visible_world.contains(AllSubwayRoutes[route].station_points[i]))
                     {
-                        continue;
-                    }
-                    for (int i = 0; i < AllSubwayRoutes[route].station_points.size() && count; i++)
-                    {
-                        // Skips if subway is not in visible world
-                        if (visible_world.contains(AllSubwayRoutes[route].station_points[i]))
+                        // Draw all if at very low zoom level
+                        if (curr_world_width < ZOOM_LIMIT_4)
                         {
-                            // Draw all if at very low zoom level
-                            if (curr_world_width < ZOOM_LIMIT_4)
+                            draw_pin(g, AllSubwayRoutes[route].station_points[i]);
+                        } else
+                        {
+                            for (int j = 0; j < NUM_REGIONS; j++)
                             {
-                                draw_pin(g, AllSubwayRoutes[route].station_points[i]);
-                            } else
-                            {
-                                for (int j = 0; j < visible_regions.size(); j++)
+                                // Draw 12 stations for high zoom levels
+                                if (available_region[j][2] && visible_regions[j].contains(AllSubwayRoutes[route].station_points[i]))
                                 {
-                                    if (visible_regions.size() == 12)
-                                    {   // Draw 12 stations at low zoom level
-                                        if (available_region_3x4[j][2] && visible_regions[j].contains(AllSubwayRoutes[route].station_points[i]))
-                                        {
-                                            available_region_3x4[j][2]--;
-                                            draw_pin(g, AllSubwayRoutes[route].station_points[i]);
-                                            count--;
-                                            break;
-                                        }
-                                    } else 
-                                    {   // Draw 6 stations at high zoom level
-                                        if (available_region_2x3[j] && visible_regions[j].contains(AllSubwayRoutes[route].station_points[i]))
-                                        {
-                                            available_region_2x3[j]--;
-                                            draw_pin(g, AllSubwayRoutes[route].station_points[i]);
-                                            count--;
-                                            break;
-                                        }
-                                    }
+                                    available_region[j][2]--;
+                                    draw_pin(g, AllSubwayRoutes[route].station_points[i]);
+                                    count--;
+                                    break;
                                 }
                             }
                         }
@@ -560,28 +517,28 @@ void draw_main_canvas (ezgl::renderer *g)
     if (curr_world_width < ZOOM_LIMIT_2)
     {
         // If all regions are unavailable, break for-loop early
-        int count_names = visible_regions.size();
-        int count_arrows = visible_regions.size();
+        int count_names = NUM_REGIONS;
+        int count_arrows = NUM_REGIONS;
         for (int i = 0; i < seg_names_and_arrows.size() && count_names && count_arrows; i++)
         {
             SegShortInfo seg_info = seg_names_and_arrows[i];
-            for (int region = 0; region < visible_regions.size(); region++)
+            for (int region = 0; region < NUM_REGIONS; region++)
             {
                 if (visible_regions[region].contains(seg_info.from_xy) && 
                     visible_regions[region].contains(seg_info.to_xy))
                 {
-                    if (available_region_3x4[region][1] && seg_info.arrow)
+                    if (available_region[region][1] && seg_info.arrow)
                     {   // Display arrow
                         draw_name_or_arrow(g, seg_info.street_name, seg_info.arrow, 
                                             seg_info.from_xy, seg_info.to_xy);
-                        available_region_3x4[region][1] = 0;
+                        available_region[region][1] = 0;
                         count_arrows--;
                         break;
-                    } else if (available_region_3x4[region][0] && !seg_info.arrow)
+                    } else if (available_region[region][0] && !seg_info.arrow)
                     {   // Display street name
                         draw_name_or_arrow(g, seg_info.street_name, seg_info.arrow, 
                                             seg_info.from_xy, seg_info.to_xy);
-                        available_region_3x4[region][0] = 0;
+                        available_region[region][0] = 0;
                         count_names--;
                         break;
                     }
@@ -596,12 +553,12 @@ void draw_main_canvas (ezgl::renderer *g)
     if (curr_world_width < ZOOM_LIMIT_4)
     {
         poi_display.clear();
-        poi_display.resize(visible_regions.size());
+        poi_display.resize(NUM_REGIONS);
         // Get POI names and position chosen to display
         for (int tempIdx = 0; tempIdx < POINum; tempIdx++)
         {
             POIDetailedInfo tempPOI = POI_AllInfo[tempIdx];
-            for (int regionIdx = 0; regionIdx < visible_regions.size(); regionIdx++)
+            for (int regionIdx = 0; regionIdx < NUM_REGIONS; regionIdx++)
             {
                 if (visible_regions[regionIdx].contains(tempPOI.POIPoint))
                 {
@@ -610,7 +567,7 @@ void draw_main_canvas (ezgl::renderer *g)
             }
         }
         //Display the selected POIs and Icons
-        for (int regionIdx = 0; regionIdx < visible_regions.size(); regionIdx++)
+        for (int regionIdx = 0; regionIdx < NUM_REGIONS; regionIdx++)
         {
             draw_POIs(g, regionIdx);
         }
@@ -749,7 +706,7 @@ void city_change_cbk (GtkComboBoxText* self, ezgl::application* application){
     std::string text_string = text;
     free(text);
     
-    if(!text || text_string == " ")
+    if (!text || text_string == " ")
     {  //Returning if the combo box is currently empty (Always check to avoid errors)
         return;
     } else if (text_string != CURRENT_CITY)
@@ -761,15 +718,28 @@ void city_change_cbk (GtkComboBoxText* self, ezgl::application* application){
         closeMap();
         loadMap(new_map_path);
 
-         // Clear GtkListStore of old city
-         gtk_list_store_clear(list_store);
-         // Load GtkListStore for new city
-         for (auto it = StreetName_full_StreetIdx.begin(); it != StreetName_full_StreetIdx.end(); it++)
-         {
-            if (it->first == "<unknown>") continue;
-            gtk_list_store_append(list_store, &iter);
-            gtk_list_store_set(list_store, &iter, 0, (it->first).c_str(), -1);
-         }
+        // Clear subway switches if new city doesn't have subways
+        GObject* SubwayStationSwitch = application->get_object("SubwayStationSwitch");
+        GtkSwitch* Switch_1 = GTK_SWITCH(SubwayStationSwitch);
+        GObject* SubwayLineSwitch = application->get_object("SubwayLineSwitch");
+        GtkSwitch* Switch_2 = GTK_SWITCH(SubwayLineSwitch);
+        if (AllSubwayRoutes.size() == 0)
+        {
+            gtk_switch_set_active(Switch_1, false);
+            gtk_switch_set_state(Switch_1, false);
+            gtk_switch_set_active(Switch_2, false);
+            gtk_switch_set_state(Switch_2, false);
+        }
+
+        // Clear GtkListStore of old city
+        gtk_list_store_clear(list_store);
+        // Load GtkListStore for new city
+        for (auto it = StreetName_full_StreetIdx.begin(); it != StreetName_full_StreetIdx.end(); it++)
+        {
+        if (it->first == "<unknown>") continue;
+        gtk_list_store_append(list_store, &iter);
+        gtk_list_store_set(list_store, &iter, 0, (it->first).c_str(), -1);
+        }
 
         std::cout << "Loaded new map" << std::endl;
         ezgl::rectangle new_world(xy_from_latlon(latlon_bound.min),
@@ -819,13 +789,22 @@ void night_mode_cbk (GtkSwitch* /*self*/, gboolean state, ezgl::application* app
 }
 
 // Callback function for switching ON/OFF subway station and subway line mode
-void subway_station_cbk (GtkSwitch* /*self*/, gboolean state, ezgl::application* application)
+void subway_station_cbk (GtkSwitch* self, gboolean state, ezgl::application* application)
 {
     if(state)
     {
-        application->update_message("Displaying Subway Stations");
-        subway_station_mode = true;
-        application->refresh_drawing();
+        if (AllSubwayRoutes.size() == 0)
+        {
+            application->create_popup_message("Error","City has no subway!");
+            gtk_switch_set_active(self, false);
+            gtk_switch_set_state(self, false);
+            return;
+        } else
+        {
+            application->update_message("Displaying Subway Stations");
+            subway_station_mode = true;
+            application->refresh_drawing();
+        }
     } else
     {
         application->update_message("Hid Subway Stations");
@@ -834,13 +813,22 @@ void subway_station_cbk (GtkSwitch* /*self*/, gboolean state, ezgl::application*
     }
 }
 
-void subway_line_cbk (GtkSwitch* /*self*/, gboolean state, ezgl::application* application)
+void subway_line_cbk (GtkSwitch* self, gboolean state, ezgl::application* application)
 {
     if(state)
     {
-        application->update_message("Displaying Subway Lines");
-        subway_line_mode = true;
-        application->refresh_drawing();
+        if (AllSubwayRoutes.size() == 0)
+        {
+            application->create_popup_message("Error","City has no subway!");
+            gtk_switch_set_active(self, false);
+            gtk_switch_set_state(self, false);
+            return;
+        } else
+        {
+            application->update_message("Displaying Subway Lines");
+            subway_line_mode = true;
+            application->refresh_drawing();
+        }
     } else
     {
         application->update_message("Hid Subway Lines");
@@ -1111,6 +1099,7 @@ void draw_name_or_arrow (ezgl::renderer *g, std::string street_name, bool arrow,
                         ezgl::point2d from_xy, ezgl::point2d to_xy)
 {
     // Calculate text rotation based on segment slope                   // TODO: Curved segments!
+                                                                        // TODO: Set boundaries for street names based on street length/street width
     double angle_degree;
     if (from_xy.x == to_xy.x)
     {
