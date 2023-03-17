@@ -31,8 +31,6 @@
 /*******************************************************************************************************************************
  * GLOBAL VARIABLES (M2)
  ********************************************************************************************************************************/
-// Check current city for city switching
-std::string CURRENT_CITY = " ";
 // Check current filter for applying filters
 std::string CURRENT_FILTER = "All";
 
@@ -741,14 +739,18 @@ void city_change_cbk (GtkComboBoxText* self, ezgl::application* application){
     auto text = gtk_combo_box_text_get_active_text(self);
     std::string text_string = text;
     free(text);
+
+    // Get new math path based on input
+    std::string new_map_path = get_new_map_path(text_string);
     
-    if (!text || text_string == " ")
-    {  //Returning if the combo box is currently empty (Always check to avoid errors)
+    if (text_string.empty() || text_string == " " || new_map_path == "None")
+    {   // Returning if the combo box is currently empty
+        // Or if the input map is unexpected
+        // Or Always check to avoid errors
         return;
-    } else if (text_string != CURRENT_CITY)
+    } else if (new_map_path != CURRENT_MAP_PATH)
     {                   // TODO: Bug current city is reloaded if user select current city as first choice
-        CURRENT_CITY = text_string;
-        std::string new_map_path = get_new_map_path(text_string);
+        CURRENT_MAP_PATH = new_map_path;
 
         // Closes current map and loads the new city
         closeMap();
@@ -782,15 +784,16 @@ void city_change_cbk (GtkComboBoxText* self, ezgl::application* application){
             gtk_list_store_append(list_store_food, &iter_food);
             gtk_list_store_set(list_store_food, &iter_food, 0, (it->first).c_str(), -1);
         }
-
-        std::cout << "Loaded new map" << std::endl;
+        
+        // Reset the world based on new map
         ezgl::rectangle new_world(xy_from_latlon(latlon_bound.min),
                                     xy_from_latlon(latlon_bound.max));
        
         application->change_canvas_world_coordinates("MainCanvas", new_world);
         application->refresh_drawing();
 
-        application->update_message("Switched city: " + CURRENT_CITY);
+        // Announce to user
+        application->update_message("Loaded new map!");
     }
 }
 
@@ -1542,6 +1545,9 @@ std::string get_new_map_path (std::string text_string)
     } else if (text_string == "Tokyo")
     {
         new_map_path = "/cad2/ece297s/public/maps/tokyo_japan.streets.bin";
+    } else
+    {
+        new_map_path = "None";
     }
     return new_map_path;
 }

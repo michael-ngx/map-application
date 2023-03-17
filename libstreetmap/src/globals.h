@@ -15,6 +15,12 @@
 #include <vector>
 
 // *******************************************************************
+// Other cross-milestone access constants
+// *******************************************************************
+// Check current map path for city switching
+extern std::string CURRENT_MAP_PATH;
+
+// *******************************************************************
 // Latlon bounds
 // *******************************************************************
 extern LatLonBounds latlon_bound;
@@ -24,6 +30,7 @@ extern double lat_avg;
 
 ezgl::point2d xy_from_latlon(LatLon latlon);
 LatLon latlon_from_xy(double x, double y);
+
 // *******************************************************************
 // Numbers (counts)
 // *******************************************************************
