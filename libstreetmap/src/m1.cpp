@@ -105,8 +105,8 @@ std::vector<FeatureDetailedInfo> Features_AllInfo;
 // *******************************************************************
 //Index: POIIdx, Value: structure that stores all POI information
 std::vector<POIDetailedInfo> POI_AllInfo;
-// Index: POIIdx, Value: structure that stores all Food POI information
-std::vector<POIDetailedInfo> POI_AllFood;
+// Key: POI Name, Value: All Food POI locations
+std::unordered_map<std::string, ezgl::point2d> POI_AllFood;
 
 // *******************************************************************
 // OSMNode
@@ -425,6 +425,7 @@ void closeMap() {
     StreetName_full_StreetIdx.clear();
     Features_AllInfo.clear();
     POI_AllInfo.clear();
+    POI_AllFood.clear();
     OSMID_Nodes_AllTagPairs.clear();
     OSMID_Highway_Type.clear();
     AllSubwayRoutes.clear();
@@ -710,7 +711,7 @@ void init_POI(){
             || tempPOIInfo.POIType == "cater" || tempPOIInfo.POIType == "fast_food" || tempPOIInfo.POIType == "food_court" || tempPOIInfo.POIType == "ice_cream"
             || tempPOIInfo.POIType == "old_restaurant" || tempPOIInfo.POIType == "pub" || tempPOIInfo.POIType == "restaurant" || tempPOIInfo.POIType == "veterinary")
         {
-            POI_AllFood.push_back(tempPOIInfo);
+            POI_AllFood.insert(std::make_pair(tempPOIInfo.POIName, tempPOIInfo.POIPoint));
         }
     }
 }

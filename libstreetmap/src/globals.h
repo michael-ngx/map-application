@@ -114,8 +114,8 @@ struct POIDetailedInfo{
 };
 // Index: POIIdx, Value: structure that stores all POI information
 extern std::vector<POIDetailedInfo> POI_AllInfo;
-// Index: POIIdx, Value: structure that stores all Food POI information
-extern std::vector<POIDetailedInfo> POI_AllFood;
+// Key: POI Name, Value: All Food POI locations
+extern std::unordered_map<std::string, ezgl::point2d> POI_AllFood;
 
 // *******************************************************************
 // OSM

@@ -82,6 +82,8 @@ struct POIShortInfo
 };
 // All POI whose name will be displayed
 std::vector<std::vector<POIDetailedInfo>> poi_display;
+// All POI xy locations whose pin will be displayed
+std::vector<ezgl::point2d> poi_pin_display;
 
 // Getting a pointer to our GtkEntry named "StreetEntry1" and "StreetEntry2"
 GtkListStore *list_store;
@@ -145,6 +147,7 @@ void draw_name_or_arrow (ezgl::renderer *g, std::string street_name, bool arrow,
 void draw_pin (ezgl::renderer* g, ezgl::point2d inter_xy);
 std::string get_new_map_path (std::string text_string);
 void search_response (std::string input_1, std::string input_2, ezgl::application *application);
+void find_response (std::string input, ezgl::application *application);
 void draw_distance_scale (ezgl::renderer *g, ezgl::rectangle current_window);
 bool check_collides (ezgl::rectangle rec_1, ezgl::rectangle rec_2);
 bool check_contains (ezgl::rectangle rec_1, ezgl::rectangle rec_2);
@@ -549,6 +552,19 @@ void draw_main_canvas (ezgl::renderer *g)
             }
         }
     }
+
+    /******************************************************
+    * Draw pinned POI(s)
+    ******************************************************/
+    for (int i = 0; i < poi_pin_display.size(); i++)
+    {
+        // Skips segments that are outside of current world
+        if (!visible_world.contains(poi_pin_display[i]))
+        {
+            continue;
+        }
+        draw_pin(g, poi_pin_display[i]);
+    }
     
     /******************************************************
     * Draw POIs and Icons
@@ -648,10 +664,10 @@ void initial_setup (ezgl::application *application, bool /*new_window*/)
 
     // Connect to RestaurantNameList and load all food places names into it
     list_store_food = GTK_LIST_STORE(application->get_object("RestaurantNameList"));
-    for (auto POI : POI_AllFood)
+    for (auto it = POI_AllFood.begin(); it != POI_AllFood.end(); it++)
     {
         gtk_list_store_append(list_store_food, &iter_food);
-        gtk_list_store_set(list_store_food, &iter_food, 0, POI.POIName.c_str(), -1);
+        gtk_list_store_set(list_store_food, &iter_food, 0, (it->first).c_str(), -1);
     }
 
     // Creates a pointer to subway station switch
@@ -751,14 +767,20 @@ void city_change_cbk (GtkComboBoxText* self, ezgl::application* application){
             gtk_switch_set_state(Switch_2, false);
         }
 
-        // Clear GtkListStore of old city
+        // Clear GtkListStores of old city
         gtk_list_store_clear(list_store);
-        // Load GtkListStore for new city
+        gtk_list_store_clear(list_store_food);
+        // Load GtkListStores for new city
         for (auto it = StreetName_full_StreetIdx.begin(); it != StreetName_full_StreetIdx.end(); it++)
         {
-        if (it->first == "<unknown>") continue;
-        gtk_list_store_append(list_store, &iter);
-        gtk_list_store_set(list_store, &iter, 0, (it->first).c_str(), -1);
+            if (it->first == "<unknown>") continue;
+            gtk_list_store_append(list_store, &iter);
+            gtk_list_store_set(list_store, &iter, 0, (it->first).c_str(), -1);
+        }
+        for (auto it = POI_AllFood.begin(); it != POI_AllFood.end(); it++)
+        {
+            gtk_list_store_append(list_store_food, &iter_food);
+            gtk_list_store_set(list_store_food, &iter_food, 0, (it->first).c_str(), -1);
         }
 
         std::cout << "Loaded new map" << std::endl;
@@ -877,7 +899,14 @@ void search_button_cbk (GtkWidget */*widget*/, ezgl::application *application)
 // Callback function for Find button (Food places)
 void find_button_cbk (GtkWidget */*widget*/, ezgl::application *application)
 {
-    application->update_message("Found restaurants!");
+    GObject *entry_object = application->get_object("RestaurantSearch");
+    GtkEntry* gtk_entry = GTK_ENTRY(entry_object);
+    // Getting text from search entries
+    const gchar* text = gtk_entry_get_text(gtk_entry);
+    std::string input(text);
+
+    // Determine how UI responses based on restaurant inputs
+    find_response(input, application);
     return;
 }
 
@@ -1609,6 +1638,32 @@ void search_response (std::string input_1, std::string input_2, ezgl::applicatio
         const char* message = to_be_converted.c_str();
         application->create_popup_message("Warning!", message);
     }
+    // Redraw the main canvas
+    application->refresh_drawing();
+}
+
+// Response to find button callback
+void find_response (std::string input, ezgl::application *application)
+{
+    if (input.empty())
+    {
+        std::string to_be_converted = "Restaurant name missing. Enter restaurant name in the field!";
+        const char* message = to_be_converted.c_str();
+        application->create_popup_message("Warning!", message);
+        return;
+    }
+    // If input restaurant is not found
+    auto POIit = POI_AllFood.find(input);
+    if (POIit == POI_AllFood.end())
+    {
+        std::string to_be_converted = "Restaurant not found!";
+        const char* message = to_be_converted.c_str();
+        application->create_popup_message("Warning!", message);
+        return;
+    }
+    // Push back the location to be displayed
+    poi_pin_display.push_back(POIit->second);
+
     // Redraw the main canvas
     application->refresh_drawing();
 }
