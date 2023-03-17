@@ -80,8 +80,6 @@ struct POIShortInfo
 };
 // All POI whose name will be displayed
 std::vector<std::vector<POIDetailedInfo>> poi_display;
-// All POI xy locations whose pin will be displayed
-std::vector<ezgl::point2d> poi_pin_display;
 
 // Getting a pointer to our GtkEntry named "StreetEntry1" and "StreetEntry2"
 GtkListStore *list_store;
@@ -550,40 +548,36 @@ void draw_main_canvas (ezgl::renderer *g)
             }
         }
     }
-
-    /******************************************************
-    * Draw pinned POI(s)
-    ******************************************************/
-    for (int i = 0; i < poi_pin_display.size(); i++)
-    {
-        // Skips segments that are outside of current world
-        if (!visible_world.contains(poi_pin_display[i]))
-        {
-            continue;
-        }
-        draw_pin(g, poi_pin_display[i]);
-    }
     
     /******************************************************
     * Draw POIs and Icons
     ******************************************************/
-    if (curr_world_width < ZOOM_LIMIT_4)
+    poi_display.clear();
+    poi_display.resize(NUM_REGIONS);
+    // Get POI names and position chosen to display
+    for (int tempIdx = 0; tempIdx < POINum; tempIdx++)
     {
-        poi_display.clear();
-        poi_display.resize(NUM_REGIONS);
-        // Get POI names and position chosen to display
-        for (int tempIdx = 0; tempIdx < POINum; tempIdx++)
+        POIDetailedInfo tempPOI = POI_AllInfo[tempIdx];
+        if (curr_world_width < ZOOM_LIMIT_4)
         {
-            POIDetailedInfo tempPOI = POI_AllInfo[tempIdx];
             for (int regionIdx = 0; regionIdx < NUM_REGIONS; regionIdx++)
             {
                 if (visible_regions[regionIdx].contains(tempPOI.POIPoint))
                 {
                     poi_display[regionIdx].push_back(tempPOI);
+                    break;
                 }
             }
         }
-        //Display the selected POIs and Icons
+        // Draw pinned POI(s)
+        if (tempPOI.highlight)
+        {
+            draw_pin(g, tempPOI.POIPoint);
+        }
+    }
+    // Display the selected POIs and Icons
+    if (curr_world_width < ZOOM_LIMIT_4)
+    {
         for (int regionIdx = 0; regionIdx < NUM_REGIONS; regionIdx++)
         {
             draw_POIs(g, regionIdx);
@@ -714,19 +708,30 @@ void initial_setup (ezgl::application *application, bool /*new_window*/)
 // Storing state of mouse clicks
 void act_on_mouse_click (ezgl::application* application, GdkEventButton* /*event*/, double x, double y)
 {
-    LatLon pos = LatLon(latlon_from_xy(x, y));
-    // Highlight / Unhighlight closest intersections to mouseclick
-    int id = findClosestIntersection(pos);
-    Intersection_IntersectionInfo[id].highlight = !Intersection_IntersectionInfo[id].highlight;
-    if (Intersection_IntersectionInfo[id].highlight)
-    {   // Update mesasge if newly highlight an intersection
-        const char* message = Intersection_IntersectionInfo[id].name.c_str();
-        
-        application->create_popup_message("Selected: ", message);
+    // Check whether the mouse clicked closer to a POI or an intersection
+    IntersectionIdx inter_id = findClosestIntersection(ezgl::point2d(x, y));
+    POIIdx POI_id = findClosestPOI(ezgl::point2d(x, y));
+    
+    // User selected intersection
+    if (clicked_intersection_distance <= clicked_POI_distance)
+    {
+        // Highlight / Unhighlight closest intersections
+        Intersection_IntersectionInfo[inter_id].highlight = !Intersection_IntersectionInfo[inter_id].highlight;
+        if (Intersection_IntersectionInfo[inter_id].highlight)
+        {   // Update mesasge if newly highlight an intersection
+            application->update_message("Selected: " + Intersection_IntersectionInfo[inter_id].name);
+        }
+    } else  // User selected POI 
+    {   
+        // Add to vector of POIs to be displayed
+        POI_AllInfo[POI_id].highlight = !POI_AllInfo[POI_id].highlight;
+        if (POI_AllInfo[POI_id].highlight)
+        {   // Update mesasge if newly highlight a POI
+            application->update_message("Selected: " + POI_AllInfo[POI_id].POIName);
+        }
     }
     application->refresh_drawing();
 }
-
 
 
 /*******************************************************************************************************************************
@@ -749,7 +754,7 @@ void city_change_cbk (GtkComboBoxText* self, ezgl::application* application){
         // Or Always check to avoid errors
         return;
     } else if (new_map_path != CURRENT_MAP_PATH)
-    {                   // TODO: Bug current city is reloaded if user select current city as first choice
+    {
         CURRENT_MAP_PATH = new_map_path;
 
         // Closes current map and loads the new city
@@ -1668,7 +1673,7 @@ void find_response (std::string input, ezgl::application *application)
         return;
     }
     // Push back the location to be displayed
-    poi_pin_display.push_back(POIit->second);
+    POI_AllInfo[POIit->second.id].highlight = true;
 
     // Redraw the main canvas
     application->refresh_drawing();

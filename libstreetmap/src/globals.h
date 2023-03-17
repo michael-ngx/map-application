@@ -19,6 +19,18 @@
 // *******************************************************************
 // Check current map path for city switching
 extern std::string CURRENT_MAP_PATH;
+extern double clicked_intersection_distance;
+extern double clicked_POI_distance;
+
+// *******************************************************************
+// Overloaded functions from M1
+// *******************************************************************
+// Find distance between 2 points based on xy
+double findDistanceBetweenTwoPoints (ezgl::point2d point_1, ezgl::point2d point_2);
+// Function to find closest intersection based on xy, not LatLon
+IntersectionIdx findClosestIntersection(ezgl::point2d my_position);
+// Function to find closest POI of any type, based on xy, not LatLon
+POIIdx findClosestPOI(ezgl::point2d my_position);
 
 // *******************************************************************
 // Latlon bounds
@@ -113,16 +125,19 @@ extern std::vector<FeatureDetailedInfo> Features_AllInfo;
 // *******************************************************************
 // POI
 // *******************************************************************
-struct POIDetailedInfo{
+struct POIDetailedInfo
+{
+    POIIdx id;
     std::string POIType;
     std::string POIName;
     ezgl::point2d POIPoint;
     OSMID POIOSMID;
+    bool highlight = false;
 };
 // Index: POIIdx, Value: structure that stores all POI information
 extern std::vector<POIDetailedInfo> POI_AllInfo;
 // Key: POI Name, Value: All Food POI locations
-extern std::unordered_map<std::string, ezgl::point2d> POI_AllFood;
+extern std::unordered_map<std::string, POIDetailedInfo> POI_AllFood;
 
 // *******************************************************************
 // OSM

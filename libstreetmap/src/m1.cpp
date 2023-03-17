@@ -57,13 +57,15 @@ double min_lat, min_lon;
 double lat_avg;
 
 // *******************************************************************
-// Numbers (counts)
+// Numbers
 // *******************************************************************
 int intersectionNum;
 int segmentNum;
 int streetNum;
 int featureNum;
 int POINum;
+double clicked_intersection_distance;
+double clicked_POI_distance;
 
 // *******************************************************************
 // Street Segments
@@ -106,7 +108,7 @@ std::vector<FeatureDetailedInfo> Features_AllInfo;
 //Index: POIIdx, Value: structure that stores all POI information
 std::vector<POIDetailedInfo> POI_AllInfo;
 // Key: POI Name, Value: All Food POI locations
-std::unordered_map<std::string, ezgl::point2d> POI_AllFood;
+std::unordered_map<std::string, POIDetailedInfo> POI_AllFood;
 
 // *******************************************************************
 // OSMNode
@@ -169,6 +171,11 @@ double findDistanceBetweenTwoPoints(LatLon point_1, LatLon point_2){
     // Find distance between (x1, y1) and (x2, y2)
     double distance = sqrt(pow((y2-y1),2) + pow((x2-x1),2));
     return distance;
+}
+
+double findDistanceBetweenTwoPoints (ezgl::point2d point_1, ezgl::point2d point_2)
+{
+    return sqrt(pow((point_2.y - point_1.y), 2) + pow((point_2.x - point_1.x),2));
 }
 
 // Returns the length of the given street segment in meters
@@ -239,6 +246,25 @@ IntersectionIdx findClosestIntersection(LatLon my_position){
         }
     }
 
+    return closestIntersection;
+}
+
+IntersectionIdx findClosestIntersection(ezgl::point2d my_position)
+{
+    // Closest_distance found so far
+    double closest_distance = findDistanceBetweenTwoPoints(Intersection_IntersectionInfo[0].position_xy, my_position);
+    IntersectionIdx closestIntersection = 0;                            // First intersection
+
+    // Get distance from every intersection to IntersectionPosition
+    for(int i = 1; i < intersectionNum; i++){
+        double distance = findDistanceBetweenTwoPoints(Intersection_IntersectionInfo[i].position_xy, my_position);
+        if (distance < closest_distance)
+        {
+            closest_distance = distance;
+            closestIntersection = i;
+        }
+    }
+    clicked_intersection_distance = closest_distance;
     return closestIntersection;
 }
 
@@ -350,6 +376,25 @@ POIIdx findClosestPOI(LatLon my_position, std::string POItype){
         }
     }
     return closestPOI;
+}
+
+// Returns the nearest point of interest of any type, in xy
+POIIdx findClosestPOI(ezgl::point2d my_position)
+{
+    POIIdx closest_POI = 0;
+    double smallestDistance = findDistanceBetweenTwoPoints(my_position, POI_AllInfo[0].POIPoint); // Store the smallest distance (Starts at POIidx = 0)
+    
+    for(POIIdx id = 1; id < POINum; id++)
+    {
+        double tempDistance = findDistanceBetweenTwoPoints(my_position, POI_AllInfo[id].POIPoint);
+        if (tempDistance < smallestDistance)
+        {
+            smallestDistance = tempDistance;
+            closest_POI = id;
+        }
+    }
+    clicked_POI_distance = smallestDistance;
+    return closest_POI;
 }
 
 // Returns the area of the given closed feature in square meters
@@ -705,13 +750,14 @@ void init_POI(){
         tempPOIInfo.POIPoint = xy_from_latlon(getPOIPosition(tempIdx));
         tempPOIInfo.POIType = getPOIType(tempIdx);
         tempPOIInfo.POIName = getPOIName(tempIdx);
+        tempPOIInfo.id = tempIdx;
         POI_AllInfo.push_back(tempPOIInfo);
         
         if (tempPOIInfo.POIType == "bar" || tempPOIInfo.POIType == "beer" || tempPOIInfo.POIType == "cafe" || tempPOIInfo.POIType == "cafe;fast_food" 
             || tempPOIInfo.POIType == "cater" || tempPOIInfo.POIType == "fast_food" || tempPOIInfo.POIType == "food_court" || tempPOIInfo.POIType == "ice_cream"
             || tempPOIInfo.POIType == "old_restaurant" || tempPOIInfo.POIType == "pub" || tempPOIInfo.POIType == "restaurant" || tempPOIInfo.POIType == "veterinary")
         {
-            POI_AllFood.insert(std::make_pair(tempPOIInfo.POIName, tempPOIInfo.POIPoint));
+            POI_AllFood.insert(std::make_pair(tempPOIInfo.POIName, tempPOIInfo));
         }
     }
 }
