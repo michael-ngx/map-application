@@ -105,6 +105,8 @@ std::vector<FeatureDetailedInfo> Features_AllInfo;
 // *******************************************************************
 //Index: POIIdx, Value: structure that stores all POI information
 std::vector<POIDetailedInfo> POI_AllInfo;
+// Index: POIIdx, Value: structure that stores all Food POI information
+std::vector<POIDetailedInfo> POI_AllFood;
 
 // *******************************************************************
 // OSMNode
@@ -703,6 +705,13 @@ void init_POI(){
         tempPOIInfo.POIType = getPOIType(tempIdx);
         tempPOIInfo.POIName = getPOIName(tempIdx);
         POI_AllInfo.push_back(tempPOIInfo);
+        
+        if (tempPOIInfo.POIType == "bar" || tempPOIInfo.POIType == "beer" || tempPOIInfo.POIType == "cafe" || tempPOIInfo.POIType == "cafe;fast_food" 
+            || tempPOIInfo.POIType == "cater" || tempPOIInfo.POIType == "fast_food" || tempPOIInfo.POIType == "food_court" || tempPOIInfo.POIType == "ice_cream"
+            || tempPOIInfo.POIType == "old_restaurant" || tempPOIInfo.POIType == "pub" || tempPOIInfo.POIType == "restaurant" || tempPOIInfo.POIType == "veterinary")
+        {
+            POI_AllFood.push_back(tempPOIInfo);
+        }
     }
 }
 

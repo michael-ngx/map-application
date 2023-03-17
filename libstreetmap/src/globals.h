@@ -112,8 +112,10 @@ struct POIDetailedInfo{
     ezgl::point2d POIPoint;
     OSMID POIOSMID;
 };
-//Index: POIIdx, Value: structure that stores all POI information
+// Index: POIIdx, Value: structure that stores all POI information
 extern std::vector<POIDetailedInfo> POI_AllInfo;
+// Index: POIIdx, Value: structure that stores all Food POI information
+extern std::vector<POIDetailedInfo> POI_AllFood;
 
 // *******************************************************************
 // OSM

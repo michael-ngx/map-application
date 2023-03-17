@@ -2,6 +2,23 @@
 <!-- Generated with glade 3.38.2 -->
 <interface>
   <requires lib="gtk+" version="3.20"/>
+  <object class="GtkListStore" id="RestaurantNameList">
+    <columns>
+      <!-- column-name gchararray2 -->
+      <column type="gchararray"/>
+    </columns>
+  </object>
+  <object class="GtkEntryCompletion" id="entrycompletion3">
+    <property name="model">RestaurantNameList</property>
+    <property name="minimum-key-length">0</property>
+    <property name="text-column">0</property>
+    <child>
+      <object class="GtkCellRendererText"/>
+      <attributes>
+        <attribute name="text">0</attribute>
+      </attributes>
+    </child>
+  </object>
   <object class="GtkListStore" id="StreetNameList">
     <columns>
       <!-- column-name gchararray1 -->
@@ -33,7 +50,7 @@
   <object class="GtkWindow" id="MainWindow">
     <property name="visible">True</property>
     <property name="can-focus">False</property>
-    <property name="title">Where to eat?</property>
+    <property name="title">Bite Points</property>
     <property name="default-width">1600</property>
     <property name="default-height">1200</property>
     <child>
@@ -67,7 +84,7 @@
           </packing>
         </child>
         <child>
-          <!-- n-columns=3 n-rows=21 -->
+          <!-- n-columns=3 n-rows=25 -->
           <object class="GtkGrid" id="InnerGrid">
             <property name="visible">True</property>
             <property name="can-focus">False</property>
@@ -189,7 +206,7 @@
               </object>
               <packing>
                 <property name="left-attach">0</property>
-                <property name="top-attach">12</property>
+                <property name="top-attach">16</property>
                 <property name="width">3</property>
               </packing>
             </child>
@@ -250,7 +267,7 @@
               </object>
               <packing>
                 <property name="left-attach">0</property>
-                <property name="top-attach">13</property>
+                <property name="top-attach">17</property>
                 <property name="width">3</property>
               </packing>
             </child>
@@ -262,19 +279,19 @@
               </object>
               <packing>
                 <property name="left-attach">0</property>
-                <property name="top-attach">15</property>
+                <property name="top-attach">19</property>
                 <property name="width">3</property>
               </packing>
             </child>
             <child>
-              <object class="GtkSwitch" id="SubwayStations">
+              <object class="GtkSwitch" id="SubwayStationSwitch">
                 <property name="visible">True</property>
                 <property name="can-focus">True</property>
                 <property name="halign">center</property>
               </object>
               <packing>
                 <property name="left-attach">0</property>
-                <property name="top-attach">16</property>
+                <property name="top-attach">20</property>
                 <property name="width">3</property>
               </packing>
             </child>
@@ -296,30 +313,19 @@
               </object>
               <packing>
                 <property name="left-attach">0</property>
-                <property name="top-attach">11</property>
+                <property name="top-attach">18</property>
                 <property name="width">3</property>
               </packing>
             </child>
             <child>
-              <object class="GtkLabel">
-                <property name="visible">True</property>
-                <property name="can-focus">False</property>
-              </object>
-              <packing>
-                <property name="left-attach">0</property>
-                <property name="top-attach">14</property>
-                <property name="width">3</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkSwitch" id="SubwayLines">
+              <object class="GtkSwitch" id="SubwayLineSwitch">
                 <property name="visible">True</property>
                 <property name="can-focus">True</property>
                 <property name="halign">center</property>
               </object>
               <packing>
                 <property name="left-attach">0</property>
-                <property name="top-attach">19</property>
+                <property name="top-attach">23</property>
                 <property name="width">3</property>
               </packing>
             </child>
@@ -330,7 +336,7 @@
               </object>
               <packing>
                 <property name="left-attach">0</property>
-                <property name="top-attach">17</property>
+                <property name="top-attach">21</property>
                 <property name="width">3</property>
               </packing>
             </child>
@@ -342,9 +348,74 @@
               </object>
               <packing>
                 <property name="left-attach">0</property>
-                <property name="top-attach">18</property>
+                <property name="top-attach">22</property>
                 <property name="width">3</property>
               </packing>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="label" translatable="yes">Find Restaurants</property>
+              </object>
+              <packing>
+                <property name="left-attach">0</property>
+                <property name="top-attach">12</property>
+                <property name="width">3</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+              </object>
+              <packing>
+                <property name="left-attach">0</property>
+                <property name="top-attach">11</property>
+                <property name="width">3</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkEntry" id="RestaurantSearch">
+                <property name="visible">True</property>
+                <property name="can-focus">True</property>
+                <property name="completion">entrycompletion3</property>
+              </object>
+              <packing>
+                <property name="left-attach">0</property>
+                <property name="top-attach">13</property>
+                <property name="width">3</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkButton" id="FindButton">
+                <property name="label" translatable="yes">Find</property>
+                <property name="visible">True</property>
+                <property name="can-focus">True</property>
+                <property name="receives-default">True</property>
+              </object>
+              <packing>
+                <property name="left-attach">0</property>
+                <property name="top-attach">14</property>
+                <property name="width">3</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+              </object>
+              <packing>
+                <property name="left-attach">0</property>
+                <property name="top-attach">15</property>
+                <property name="width">3</property>
+              </packing>
+            </child>
+            <child>
+              <placeholder/>
+            </child>
+            <child>
+              <placeholder/>
             </child>
             <child>
               <placeholder/>

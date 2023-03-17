@@ -85,7 +85,9 @@ std::vector<std::vector<POIDetailedInfo>> poi_display;
 
 // Getting a pointer to our GtkEntry named "StreetEntry1" and "StreetEntry2"
 GtkListStore *list_store;
+GtkListStore *list_store_food;
 GtkTreeIter iter;
+GtkTreeIter iter_food;
 
 /*******************************************************************************************************************************
  * FUNCTION DECLARATIONS
@@ -116,6 +118,7 @@ void act_on_mouse_click (ezgl::application *application, GdkEventButton */*event
  *************************************************************/
 void input_streets_cbk (GtkWidget */*widget*/, ezgl::application* application);
 void search_button_cbk (GtkWidget */*widget*/, ezgl::application *application);
+void find_button_cbk (GtkWidget */*widget*/, ezgl::application *application);
 void night_mode_cbk (GtkSwitch* /*self*/, gboolean state, ezgl::application* application);
 void subway_station_cbk (GtkSwitch* self, gboolean state, ezgl::application* application);
 void subway_line_cbk (GtkSwitch* self, gboolean state, ezgl::application* application);
@@ -625,13 +628,30 @@ void initial_setup (ezgl::application *application, bool /*new_window*/)
         application // passing an application pointer to callback function
     );
 
-    // Connect to GtkListStore and load all street names into it
+    // Button to find restaurants based on name
+    GObject *find_button = application->get_object("FindButton");
+    g_signal_connect(
+        find_button, // pointer to the UI widget
+        "clicked", // Signal state of switch being changed
+        G_CALLBACK(find_button_cbk), // Callback function
+        application // passing an application pointer to callback function
+    );
+
+    // Connect to StreetNameList and load all street names into it
     list_store = GTK_LIST_STORE(application->get_object("StreetNameList"));
     for (auto it = StreetName_full_StreetIdx.begin(); it != StreetName_full_StreetIdx.end(); it++)
     {
         if (it->first == "<unknown>") continue;
         gtk_list_store_append(list_store, &iter);
         gtk_list_store_set(list_store, &iter, 0, (it->first).c_str(), -1);
+    }
+
+    // Connect to RestaurantNameList and load all food places names into it
+    list_store_food = GTK_LIST_STORE(application->get_object("RestaurantNameList"));
+    for (auto POI : POI_AllFood)
+    {
+        gtk_list_store_append(list_store_food, &iter_food);
+        gtk_list_store_set(list_store_food, &iter_food, 0, POI.POIName.c_str(), -1);
     }
 
     // Creates a pointer to subway station switch
@@ -854,7 +874,12 @@ void search_button_cbk (GtkWidget */*widget*/, ezgl::application *application)
     search_response(input_1, input_2, application);
 }
 
-
+// Callback function for Find button (Food places)
+void find_button_cbk (GtkWidget */*widget*/, ezgl::application *application)
+{
+    application->update_message("Found restaurants!");
+    return;
+}
 
 /*******************************************************************************************************************************
  * DRAWING HELPER FUNCTIONS
