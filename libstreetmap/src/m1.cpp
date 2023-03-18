@@ -90,9 +90,11 @@ std::unordered_map<StreetIdx, std::vector<StreetSegmentIdx>> Streets_AllSegments
 std::unordered_map<StreetIdx, std::vector<IntersectionIdx>> Streets_AllIntersections;
 // Keys: Street id, Value: length of the street
 std::unordered_map<StreetIdx, double> streetAllLength;
-// Keys: Street names (lower case, no space), Value: street index
+// Keys: Street names w/ id (lower case, no space), Value: street index
+// If street name == "<unknown>", street name has no suffix
 std::multimap<std::string, StreetIdx> StreetName_lower_StreetIdx;
-// Keys: Street names (full), Value: street index
+// Keys: Street names w/ id (full), Value: street index
+// If street name == "<unknown>", street name has no suffix
 std::multimap<std::string, StreetIdx> StreetName_full_StreetIdx;
 
 
@@ -108,7 +110,7 @@ std::vector<FeatureDetailedInfo> Features_AllInfo;
 //Index: POIIdx, Value: structure that stores all POI information
 std::vector<POIDetailedInfo> POI_AllInfo;
 // Key: POI Name, Value: All Food POI locations
-std::unordered_map<std::string, POIDetailedInfo> POI_AllFood;
+std::multimap<std::string, POIDetailedInfo> POI_AllFood;
 
 // *******************************************************************
 // OSMNode
@@ -322,8 +324,12 @@ std::vector<IntersectionIdx> findIntersectionsOfTwoStreets(StreetIdx street_id1,
 // Speed Requirement --> high
 std::vector<StreetIdx> findStreetIdsFromPartialStreetName(std::string street_prefix){
     std::vector<StreetIdx> result;
-    // Avoid crashing with empty input
-    if (street_prefix.empty()) return result;
+    // Avoid crashing with empty input.
+    // Do not allow user to search for <unknown>
+    if (street_prefix.empty() || street_prefix == "<unknown>")
+    {
+        return result;
+    }
 
     // Manipulate street_prefix to lowercase, ignore space
     std::string prefix = "";
@@ -638,10 +644,22 @@ void init_streets()
         std::string streetName = "";
         for (auto& c : str){
             if (c == ' ') continue;
-            streetName.push_back(char(tolower(c))); // Save names as lowercase, no space
+            streetName.push_back(char(tolower(c))); // Names as lowercase, no space
         }
-        StreetName_lower_StreetIdx.insert(std::make_pair(streetName, pair.first)); // Add (street name (lower), streetIdx) pair
-        StreetName_full_StreetIdx.insert(std::make_pair(str, pair.first));         // Add (street name (full), streetIdx) pair
+        // Suffix to add to street name (if <unknown>, add no suffix)
+        if (streetName == "<unknown>")
+        {
+            // Add (street name w/ id (lower), streetIdx) pair
+            StreetName_lower_StreetIdx.insert(std::make_pair(streetName, pair.first)); 
+            // Add (street name w/ id (full), streetIdx) pair
+            StreetName_full_StreetIdx.insert(std::make_pair(str, pair.first));         
+        } else
+        {
+            // Add (street name w/ id (lower), streetIdx) pair
+            StreetName_lower_StreetIdx.insert(std::make_pair(streetName + "-" + std::to_string(pair.first), pair.first)); 
+            // Add (street name w/ id (full), streetIdx) pair
+            StreetName_full_StreetIdx.insert(std::make_pair(str + " - " + std::to_string(pair.first), pair.first));         
+        }
 
         // 2D Vector for Streets (StreetIdx - Vector of All Intersections)
         Streets_AllIntersections[pair.first] = findIntersectionsOfStreet(pair.first);
@@ -753,11 +771,12 @@ void init_POI(){
         tempPOIInfo.id = tempIdx;
         POI_AllInfo.push_back(tempPOIInfo);
         
+        // If POI is a food place, add to POI_AllFood
         if (tempPOIInfo.POIType == "bar" || tempPOIInfo.POIType == "beer" || tempPOIInfo.POIType == "cafe" || tempPOIInfo.POIType == "cafe;fast_food" 
             || tempPOIInfo.POIType == "cater" || tempPOIInfo.POIType == "fast_food" || tempPOIInfo.POIType == "food_court" || tempPOIInfo.POIType == "ice_cream"
             || tempPOIInfo.POIType == "old_restaurant" || tempPOIInfo.POIType == "pub" || tempPOIInfo.POIType == "restaurant" || tempPOIInfo.POIType == "veterinary")
         {
-            POI_AllFood.insert(std::make_pair(tempPOIInfo.POIName, tempPOIInfo));
+            POI_AllFood.insert(std::make_pair(tempPOIInfo.POIName + " - " + std::to_string(tempIdx), tempPOIInfo));
         }
     }
 }

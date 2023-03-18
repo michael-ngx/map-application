@@ -100,9 +100,11 @@ extern std::unordered_map<StreetIdx, std::vector<StreetSegmentIdx>> Streets_AllS
 extern std::unordered_map<StreetIdx, std::vector<IntersectionIdx>> Streets_AllIntersections;
 // Keys: Street id, Value: length of the street
 extern std::unordered_map<StreetIdx, double> streetAllLength;
-// Keys: Street names (lower case, no space), Value: street index
+// Keys: Street names w/ id (lower case, no space), Value: street index
+// If street name == "<unknown>", street name has no suffix
 extern std::multimap<std::string, StreetIdx> StreetName_lower_StreetIdx;
-// Keys: Street names (full), Value: street index
+// Keys: Street names w/ id (full), Value: street index
+// If street name == "<unknown>", street name has no suffix
 extern std::multimap<std::string, StreetIdx> StreetName_full_StreetIdx;
 
 // *******************************************************************
@@ -137,7 +139,7 @@ struct POIDetailedInfo
 // Index: POIIdx, Value: structure that stores all POI information
 extern std::vector<POIDetailedInfo> POI_AllInfo;
 // Key: POI Name, Value: All Food POI locations
-extern std::unordered_map<std::string, POIDetailedInfo> POI_AllFood;
+extern std::multimap<std::string, POIDetailedInfo> POI_AllFood;
 
 // *******************************************************************
 // OSM

@@ -50,12 +50,16 @@ const float ZOOM_LIMIT_2 = 5000;
 const float ZOOM_LIMIT_3 = 2000;
 const float ZOOM_LIMIT_4 = 1500;
 
+// Percentage of accessing feature array based on zoom levels
 const float FEATURE_ZOOM_0 = 0.001;
 const float FEATURE_ZOOM_1 = 0.01;
 const float FEATURE_ZOOM_2 = 0.05;
 const float FEATURE_ZOOM_3 = 0.1;
 
-// Current world width in meters
+// Width of new world to be zoomed to after finding restaurants 
+const double FIND_ZOOM_WIDTH = 1000.0;
+
+// Rectangle of current visible world, in meters
 ezgl::rectangle visible_world;
 
 // Number of screen regions for displaying street names and arrows
@@ -649,7 +653,10 @@ void initial_setup (ezgl::application *application, bool /*new_window*/)
     list_store = GTK_LIST_STORE(application->get_object("StreetNameList"));
     for (auto it = StreetName_full_StreetIdx.begin(); it != StreetName_full_StreetIdx.end(); it++)
     {
-        if (it->first == "<unknown>") continue;
+        if (it->first == "<unknown>")
+        {
+            continue;
+        }
         gtk_list_store_append(list_store, &iter);
         gtk_list_store_set(list_store, &iter, 0, (it->first).c_str(), -1);
     }
@@ -780,7 +787,10 @@ void city_change_cbk (GtkComboBoxText* self, ezgl::application* application){
         // Load GtkListStores for new city
         for (auto it = StreetName_full_StreetIdx.begin(); it != StreetName_full_StreetIdx.end(); it++)
         {
-            if (it->first == "<unknown>") continue;
+            if (it->first == "<unknown>")
+            {
+                continue;
+            }
             gtk_list_store_append(list_store, &iter);
             gtk_list_store_set(list_store, &iter, 0, (it->first).c_str(), -1);
         }
@@ -915,7 +925,6 @@ void find_button_cbk (GtkWidget */*widget*/, ezgl::application *application)
 
     // Determine how UI responses based on restaurant inputs
     find_response(input, application);
-    return;
 }
 
 /*******************************************************************************************************************************
@@ -1581,7 +1590,7 @@ void search_response (std::string input_1, std::string input_2, ezgl::applicatio
     std::vector<StreetIdx> partial_streets_1 = findStreetIdsFromPartialStreetName(input_1);
     std::vector<StreetIdx> partial_streets_2 = findStreetIdsFromPartialStreetName(input_2);
 
-    // Vector size 0 -> Street name not found, even partials
+    // Vector size 0 -> Street name not found (or user input <unknown>), even partials
     if (partial_streets_1.size() == 0)
     {
         std::string to_be_converted = "Street 1 not found!";
@@ -1595,65 +1604,56 @@ void search_response (std::string input_1, std::string input_2, ezgl::applicatio
         application->create_popup_message("Warning!", message);
         return;
     }
-
     // Vector size >= 1 -> Use first element in partial name (can match input!)
-    // Check name of first partial street
-    input_1 = getStreetName(partial_streets_1[0]);
-    input_2 = getStreetName(partial_streets_2[0]);
-
     // Display all intersections found between 2 streets
-    // There may be multiple streets given a street name
-    std::pair <std::multimap<std::string, int>::iterator, std::multimap<std::string, int>::iterator> it_1_range, it_2_range;
-    
-    // Find street(s) 1
-    it_1_range = StreetName_full_StreetIdx.equal_range(input_1);
-    // Find street(s) 2
-    it_2_range = StreetName_full_StreetIdx.equal_range(input_2);
+    // There will not be multiple streets given a street name - each street name is appended with its street id
+    std::vector<IntersectionIdx> foundIntersections = findIntersectionsOfTwoStreets(partial_streets_1[0], partial_streets_2[0]);
 
-    // Finding and displaying intersections between 2 streets
-    int count = 0;  // For checking if any intersections are found
-    for (std::multimap<std::string, int>::iterator it_1 = it_1_range.first; it_1 != it_1_range.second; ++it_1)
-    {
-        for (std::multimap<std::string, int>::iterator it_2 = it_2_range.first; it_2 != it_2_range.second; ++it_2)
-        {
-            std::vector<IntersectionIdx> foundIntersections = findIntersectionsOfTwoStreets(it_1->second, it_2->second);
-            if (foundIntersections.size() == 0)
-            {
-                continue;
-            } else
-            {
-                // Draw all intersections between 2 streets
-                for (int i = 0; i < foundIntersections.size(); i++)
-                {
-                    Intersection_IntersectionInfo[foundIntersections[i]].highlight = true;
-                    std::cout << std::endl;
-                    std::string to_be_converted = "Name: " + 
-                                                  Intersection_IntersectionInfo[foundIntersections[i]].name +
-                                                  " (X position: " + 
-                                                  std::to_string(Intersection_IntersectionInfo[foundIntersections[i]].position_xy.x) +
-                                                  "; Y position: " +
-                                                  std::to_string(Intersection_IntersectionInfo[foundIntersections[i]].position_xy.y) + ")";
-                    const char* message = to_be_converted.c_str();
-                    application->create_popup_message("Intersection found: ", message);
-                }
-                count++;
-            }
-        }
-    }
-
-    // Provide feedback if found/not found
-    if (!count)
+    if (foundIntersections.size() == 0)
     {
         std::string to_be_converted = "No intersections found between " + input_1
                                     + " and " + input_2;
         const char* message = to_be_converted.c_str();
         application->create_popup_message("Warning!", message);
+        return;
+    } else
+    {
+        std::string to_be_converted = "";
+        // Draw all intersections between 2 streets
+        for (int i = 0; i < foundIntersections.size(); i++)
+        {
+            Intersection_IntersectionInfo[foundIntersections[i]].highlight = true;
+            to_be_converted += "Name: " + Intersection_IntersectionInfo[foundIntersections[i]].name + "\n" 
+                                + "Latitude: " + std::to_string(getIntersectionPosition(foundIntersections[i]).latitude()) + "\n"
+                                + "Longitude: " + std::to_string(getIntersectionPosition(foundIntersections[i]).longitude()) + "\n"
+                                + "------------------------\n";
+        }
+        const char* message = to_be_converted.c_str();
+        application->create_popup_message("Intersection(s) found: ", message);
     }
+
+    // Move the camera to focus the intersection
+    // Center of new location (centered at first intersection found)
+    ezgl::point2d center = Intersection_IntersectionInfo[foundIntersections[0]].position_xy;
+
+    // Get aspect ratio of current world (viewable region)
+    ezgl::renderer* g = application->get_renderer();
+    visible_world = g->get_visible_world();
+    double width = visible_world.width();
+    double height = visible_world.height();
+    double map_aspect_ratio = width / height;
+    // Set aspect ratio of new camera
+    double new_width = FIND_ZOOM_WIDTH;
+    double new_height = new_width / map_aspect_ratio;
+    ezgl::rectangle new_rect({center.x - new_width / 2, center.y - new_height / 2}, new_width, new_height);
+    g->set_visible_world(new_rect);
+
     // Redraw the main canvas
     application->refresh_drawing();
 }
 
 // Response to find button callback
+// If a restaurant has multiple locations, Find will point to the first one found
 void find_response (std::string input, ezgl::application *application)
 {
     if (input.empty())
@@ -1674,6 +1674,22 @@ void find_response (std::string input, ezgl::application *application)
     }
     // Push back the location to be displayed
     POI_AllInfo[POIit->second.id].highlight = true;
+
+    // Move the camera to focus the POI
+    // Center of new location
+    ezgl::point2d center = POI_AllInfo[POIit->second.id].POIPoint;
+    
+    // Get aspect ratio of current world (viewable region)
+    ezgl::renderer* g = application->get_renderer();
+    visible_world = g->get_visible_world();
+    double width = visible_world.width();
+    double height = visible_world.height();
+    double map_aspect_ratio = width / height;
+    // Set aspect ratio of new camera
+    double new_width = FIND_ZOOM_WIDTH;
+    double new_height = new_width / map_aspect_ratio;
+    ezgl::rectangle new_rect({center.x - new_width / 2, center.y - new_height / 2}, new_width, new_height);
+    g->set_visible_world(new_rect);
 
     // Redraw the main canvas
     application->refresh_drawing();
