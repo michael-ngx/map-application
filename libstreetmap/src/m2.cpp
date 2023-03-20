@@ -619,7 +619,7 @@ void initial_setup (ezgl::application *application, bool /*new_window*/)
     // Update the status bar message
     application->update_message("Welcome!");
     // We will increment row each time we insert a new element. Insert search city after find intersections
-    int row = 15;
+    int row = 11;
     
     // Creates a pointer to night mode switch
     GObject *NightModeSwitch = application->get_object("NightModeSwitch");

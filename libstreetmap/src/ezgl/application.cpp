@@ -266,30 +266,6 @@ void application::register_default_buttons_callbacks(ezgl::application *applicat
   // Connect press_zoom_fit function to the Zoom-fit button
   GObject *zoom_fit_button = application->get_object("ZoomFitButton");
   g_signal_connect(zoom_fit_button, "clicked", G_CALLBACK(press_zoom_fit), application);
-
-  // Connect press_zoom_in function to the Zoom-in button
-  GObject *zoom_in_button = application->get_object("ZoomInButton");
-  g_signal_connect(zoom_in_button, "clicked", G_CALLBACK(press_zoom_in), application);
-
-  // Connect press_zoom_out function to the Zoom-out button
-  GObject *zoom_out_button = application->get_object("ZoomOutButton");
-  g_signal_connect(zoom_out_button, "clicked", G_CALLBACK(press_zoom_out), application);
-
-  // Connect press_up function to the Up button
-  GObject *shift_up_button = application->get_object("UpButton");
-  g_signal_connect(shift_up_button, "clicked", G_CALLBACK(press_up), application);
-
-  // Connect press_down function to the Down button
-  GObject *shift_down_button = application->get_object("DownButton");
-  g_signal_connect(shift_down_button, "clicked", G_CALLBACK(press_down), application);
-
-  // Connect press_left function to the Left button
-  GObject *shift_left_button = application->get_object("LeftButton");
-  g_signal_connect(shift_left_button, "clicked", G_CALLBACK(press_left), application);
-
-  // Connect press_right function to the Right button
-  GObject *shift_right_button = application->get_object("RightButton");
-  g_signal_connect(shift_right_button, "clicked", G_CALLBACK(press_right), application);
 }
 
 void application::update_message(std::string const &message)
