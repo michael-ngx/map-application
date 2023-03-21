@@ -135,6 +135,7 @@
               <object class="GtkEntry" id="StreetEntry1">
                 <property name="visible">True</property>
                 <property name="can-focus">True</property>
+                <property name="placeholder-text" translatable="yes">Street 1...</property>
                 <property name="completion">entrycompletion1</property>
               </object>
               <packing>
@@ -147,6 +148,7 @@
               <object class="GtkEntry" id="StreetEntry2">
                 <property name="visible">True</property>
                 <property name="can-focus">True</property>
+                <property name="placeholder-text" translatable="yes">Street 2...</property>
                 <property name="completion">entrycompletion2</property>
               </object>
               <packing>
@@ -275,6 +277,7 @@
               <object class="GtkEntry" id="RestaurantSearch">
                 <property name="visible">True</property>
                 <property name="can-focus">True</property>
+                <property name="placeholder-text" translatable="yes">Search restaurants...</property>
                 <property name="completion">entrycompletion3</property>
               </object>
               <packing>
