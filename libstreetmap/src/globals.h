@@ -93,13 +93,16 @@ extern std::vector<IntersectionInfo> Intersection_IntersectionInfo;
 // *******************************************************************
 // Streets
 // *******************************************************************
+struct StreetInfo
+{
+    StreetIdx id;   // Street Idx
+    std::string name;   // Street name (Full, without suffix)
+    std::vector<StreetSegmentIdx> all_segments; // Vector of all street segment ids within that street
+    std::vector<IntersectionIdx> all_intersections; // Vector of all intersections within that street
+    double length;  // Length of street
+};
+extern std::unordered_map<StreetIdx, StreetInfo> Street_StreetInfo;
 
-// Keys: Street id, Value: vector of all segments corresponding to that Street
-extern std::unordered_map<StreetIdx, std::vector<StreetSegmentIdx>> Streets_AllSegments;
-// Keys: Street id, Value: vector of all intersections within that Street
-extern std::unordered_map<StreetIdx, std::vector<IntersectionIdx>> Streets_AllIntersections;
-// Keys: Street id, Value: length of the street
-extern std::unordered_map<StreetIdx, double> streetAllLength;
 // Keys: Street names w/ id (lower case, no space), Value: street index
 // If street name == "<unknown>", street name has no suffix
 extern std::multimap<std::string, StreetIdx> StreetName_lower_StreetIdx;

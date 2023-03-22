@@ -99,10 +99,6 @@
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
                 <property name="label" translatable="yes">Night mode</property>
-                <attributes>
-                  <attribute name="foreground" value="#777776767b7b"/>
-                  <attribute name="strikethrough-color" value="#777776767b7b"/>
-                </attributes>
               </object>
               <packing>
                 <property name="left-attach">0</property>
@@ -178,9 +174,6 @@
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
                 <property name="label" translatable="yes">Subway stations</property>
-                <attributes>
-                  <attribute name="foreground" value="#777776767b7b"/>
-                </attributes>
               </object>
               <packing>
                 <property name="left-attach">0</property>
@@ -250,9 +243,6 @@
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
                 <property name="label" translatable="yes">Subway Lines</property>
-                <attributes>
-                  <attribute name="foreground" value="#777776767b7b"/>
-                </attributes>
               </object>
               <packing>
                 <property name="left-attach">0</property>

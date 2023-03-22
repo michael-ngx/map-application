@@ -84,19 +84,14 @@ std::vector<IntersectionInfo> Intersection_IntersectionInfo;
 // *******************************************************************
 // Streets
 // *******************************************************************
-// Keys: Street id, Value: vector of all segments corresponding to that Street
-std::unordered_map<StreetIdx, std::vector<StreetSegmentIdx>> Streets_AllSegments;
-// Keys: Street id, Value: vector of all intersections within that Street
-std::unordered_map<StreetIdx, std::vector<IntersectionIdx>> Streets_AllIntersections;
-// Keys: Street id, Value: length of the street
-std::unordered_map<StreetIdx, double> streetAllLength;
+// Keys: Street idx, Value: Street Info struct
+std::unordered_map<StreetIdx, StreetInfo> Street_StreetInfo;
 // Keys: Street names w/ id (lower case, no space), Value: street index
 // If street name == "<unknown>", street name has no suffix
 std::multimap<std::string, StreetIdx> StreetName_lower_StreetIdx;
 // Keys: Street names w/ id (full), Value: street index
 // If street name == "<unknown>", street name has no suffix
 std::multimap<std::string, StreetIdx> StreetName_full_StreetIdx;
-
 
 // *******************************************************************
 // Features
@@ -280,23 +275,7 @@ std::vector<StreetSegmentIdx> findStreetSegmentsOfIntersection(IntersectionIdx i
 // There should be no duplicate intersections in the returned vector.
 // Speed Requirement --> high
 std::vector<IntersectionIdx> findIntersectionsOfStreet(StreetIdx street_id){
-    // Vector to be returned
-    std::vector<IntersectionIdx> IntersectionsOfStreet;
-    // Get vector of all street segments in the street
-    std::vector<StreetSegmentIdx> allSegments = Streets_AllSegments.find(street_id)->second;
-    
-    // Get all intersections for each "segment", then push_back to IntersectionOfStreet
-    for (auto segment : allSegments){
-        IntersectionsOfStreet.push_back(Segment_SegmentDetailedInfo[segment].from);
-        IntersectionsOfStreet.push_back(Segment_SegmentDetailedInfo[segment].to);
-    }
-    
-    // Sort + unique to remove all the duplicating intersections
-    sort(IntersectionsOfStreet.begin(), IntersectionsOfStreet.end());
-    IntersectionsOfStreet.erase(unique(IntersectionsOfStreet.begin(), IntersectionsOfStreet.end()), IntersectionsOfStreet.end());
-
-    return IntersectionsOfStreet;
-    
+    return Street_StreetInfo.at(street_id).all_intersections;
 }
 
 // Return all intersection ids at which the two given streets intersect
@@ -309,13 +288,16 @@ std::vector<IntersectionIdx> findIntersectionsOfStreet(StreetIdx street_id){
 std::vector<IntersectionIdx> findIntersectionsOfTwoStreets(StreetIdx street_id1, StreetIdx street_id2){
     std::vector<IntersectionIdx> intersectionTwoSt;
     // Get all intersections of 2 streets
-    std::vector<IntersectionIdx> street1Intersection = Streets_AllIntersections[street_id1];
-    std::vector<IntersectionIdx> street2Intersection = Streets_AllIntersections[street_id2];
+    // Intersections are already sorted (required for set_intersection function
+    std::vector<IntersectionIdx> street1Intersection = Street_StreetInfo.at(street_id1).all_intersections;
+    std::vector<IntersectionIdx> street2Intersection = Street_StreetInfo.at(street_id2).all_intersections;
+
     // Find union of 2 vectors
-    std::set_intersection(street1Intersection.begin(), street1Intersection.end(),
-                        street2Intersection.begin(), street2Intersection.end(),
+    // 2 vectors are already sorted in ascending order
+    std::set_intersection(Street_StreetInfo.at(street_id1).all_intersections.begin(), Street_StreetInfo.at(street_id1).all_intersections.end(),
+                        Street_StreetInfo.at(street_id2).all_intersections.begin(), Street_StreetInfo.at(street_id2).all_intersections.end(),
                         std::back_inserter(intersectionTwoSt));
-    
+
     return intersectionTwoSt;
 }
 
@@ -353,7 +335,7 @@ std::vector<StreetIdx> findStreetIdsFromPartialStreetName(std::string street_pre
 // Speed Requirement --> high 
 double findStreetLength(StreetIdx street_id){
     // Get street length from street id
-    return streetAllLength.at(street_id);
+    return Street_StreetInfo.at(street_id).length;
 }
 
 // Returns the nearest point of interest of the given type (e.g. "restaurant") 
@@ -469,9 +451,7 @@ void closeMap() {
     Segment_SegmentDetailedInfo.clear();
     Intersection_AllStreetSegments.clear();
     Intersection_IntersectionInfo.clear();
-    Streets_AllSegments.clear();
-    Streets_AllIntersections.clear();
-    streetAllLength.clear();
+    Street_StreetInfo.clear();
     StreetName_lower_StreetIdx.clear();
     StreetName_full_StreetIdx.clear();
     Features_AllInfo.clear();
@@ -609,38 +589,48 @@ void init_intersections(){
 // *******************************************************************
 void init_streets()
 {
-    for(int j = 0; j < segmentNum; ++j){
-        // Unordered Map for Streets (StreetIdx - Vector of All Segments)
-        StreetSegmentDetailedInfo segmentInfo = Segment_SegmentDetailedInfo[j];
-        if (Streets_AllSegments.find(segmentInfo.streetID) == Streets_AllSegments.end()){
-            std::vector<StreetSegmentIdx> segmentsVector;
-            segmentsVector.push_back(j);
-            Streets_AllSegments.insert(std::make_pair(segmentInfo.streetID, segmentsVector));
-        }
-        else {
-            Streets_AllSegments.at(segmentInfo.streetID).push_back(j);
-        }
-        
-        // Unordered Map for Streets (StreetIdx - length of street)
-        // If streetName == <unknown> (StreetIdx == 0) length of street is 0
-        if (segmentInfo.streetID == 0){
-            if (streetAllLength.find(0) == streetAllLength.end()){
-                streetAllLength.insert(std::make_pair(segmentInfo.streetID, 0.0));
+    for(int seg_id = 0; seg_id < segmentNum; seg_id++){
+        // Info of current segment
+        StreetSegmentDetailedInfo segmentInfo = Segment_SegmentDetailedInfo[seg_id];
+        StreetIdx street_id = segmentInfo.streetID;
+        // Populate Street_StreetInfo based on streetID
+        if (Street_StreetInfo.find(street_id) == Street_StreetInfo.end())
+        {
+            StreetInfo street_info;
+            street_info.id = street_id;
+            street_info.name = getStreetName(street_id);
+            street_info.length = 0.0;
+
+            street_info.all_segments.push_back(seg_id);
+            street_info.all_intersections.push_back(Segment_SegmentDetailedInfo[seg_id].from);
+            street_info.all_intersections.push_back(Segment_SegmentDetailedInfo[seg_id].to);
+            Street_StreetInfo.insert(std::make_pair(street_id, street_info));
+        } else 
+        {
+            // Push segment into street info
+            Street_StreetInfo.at(street_id).all_segments.push_back(seg_id);
+            
+            // Push intersections into street info
+            // Intersections will appear duplicates here. Intersections will be sorted and duplicates will be removed in next for loop
+            Street_StreetInfo.at(street_id).all_intersections.push_back(Segment_SegmentDetailedInfo[seg_id].from);
+            Street_StreetInfo.at(street_id).all_intersections.push_back(Segment_SegmentDetailedInfo[seg_id].to);
+            // Do not add length to <unknown> streets
+            if (street_id != 0)
+            {
+                Street_StreetInfo.at(street_id).length += Segment_SegmentDetailedInfo[seg_id].length;
             }
-        } else {
-            double tempLength = Segment_SegmentDetailedInfo[j].length;
-            if (streetAllLength.find(segmentInfo.streetID) == streetAllLength.end()){
-                streetAllLength.insert(std::make_pair(segmentInfo.streetID, tempLength));
-            } else {
-                streetAllLength.at(segmentInfo.streetID) += tempLength;
-            }
-        }        
+        }
     }
 
-    for (auto& pair : Streets_AllSegments)
+    for (auto& pair : Street_StreetInfo)
     {
+        // Sort + unique to remove all the duplicating intersections for each streets
+        // Sorting is required for finding union between 2 vectors (to find intersections between 2 streets) later
+        sort(pair.second.all_intersections.begin(), pair.second.all_intersections.end());
+        pair.second.all_intersections.erase(unique(pair.second.all_intersections.begin(), pair.second.all_intersections.end()), pair.second.all_intersections.end());
+        
         // Populate ordered multimap for Streets (StreetName - Street index)
-        std::string str = getStreetName(pair.first);
+        std::string str = pair.second.name;
         std::string streetName = "";
         for (auto& c : str){
             if (c == ' ') continue;
@@ -660,9 +650,6 @@ void init_streets()
             // Add (street name w/ id (full), streetIdx) pair
             StreetName_full_StreetIdx.insert(std::make_pair(str + " - " + std::to_string(pair.first), pair.first));         
         }
-
-        // 2D Vector for Streets (StreetIdx - Vector of All Intersections)
-        Streets_AllIntersections[pair.first] = findIntersectionsOfStreet(pair.first);
     }
 }
 

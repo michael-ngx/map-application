@@ -326,7 +326,7 @@ void draw_main_canvas (ezgl::renderer *g)
     for (StreetIdx street_id = 0; street_id < streetNum; street_id++)
     {
         // Get vector of all segments
-        std::vector<StreetSegmentIdx> all_segments = Streets_AllSegments.find(street_id)->second;
+        std::vector<StreetSegmentIdx> all_segments = Street_StreetInfo.find(street_id)->second.all_segments;
         int total_segment_amount = all_segments.size();
         
         // Street name of current street
