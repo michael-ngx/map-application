@@ -87,9 +87,7 @@ std::vector<std::vector<POIDetailedInfo>> poi_display;
 
 // Getting a pointer to our GtkEntry named "StreetEntry1" and "StreetEntry2"
 GtkListStore *list_store;
-GtkListStore *list_store_food;
 GtkTreeIter iter;
-GtkTreeIter iter_food;
 
 /*******************************************************************************************************************************
  * FUNCTION DECLARATIONS
@@ -105,6 +103,7 @@ void draw_main_canvas (ezgl::renderer *g);
  * Initial Setup is run whenever a window is opened. 
  *************************************************************/
 void initial_setup (ezgl::application *application, bool new_window);
+gboolean fuzzy_match_func(GtkEntryCompletion *completion, const gchar *key, GtkTreeIter *iterr, gpointer /*user_data*/);
 
 /*************************************************************
  * EVENT CALLBACK FUNCTIONS
@@ -649,26 +648,6 @@ void initial_setup (ezgl::application *application, bool /*new_window*/)
         application // passing an application pointer to callback function
     );
 
-    // Connect to StreetNameList and load all street names into it
-    list_store = GTK_LIST_STORE(application->get_object("StreetNameList"));
-    for (auto it = StreetName_full_StreetIdx.begin(); it != StreetName_full_StreetIdx.end(); it++)
-    {
-        if (it->first == "<unknown>")
-        {
-            continue;
-        }
-        gtk_list_store_append(list_store, &iter);
-        gtk_list_store_set(list_store, &iter, 0, (it->first).c_str(), -1);
-    }
-
-    // Connect to RestaurantNameList and load all food places names into it
-    list_store_food = GTK_LIST_STORE(application->get_object("RestaurantNameList"));
-    for (auto it = POI_AllFood.begin(); it != POI_AllFood.end(); it++)
-    {
-        gtk_list_store_append(list_store_food, &iter_food);
-        gtk_list_store_set(list_store_food, &iter_food, 0, (it->first).c_str(), -1);
-    }
-
     // Creates a pointer to subway station switch
     GObject *SubwayStationSwitch = application->get_object("SubwayStationSwitch");
     g_signal_connect(
@@ -710,6 +689,31 @@ void initial_setup (ezgl::application *application, bool /*new_window*/)
         "London", "New Delhi", "New York", "Rio de Janeiro", "Saint Helena",
         "Singapore", "Sydney", "Tehran", "Tokyo"}
     );
+
+    /***********************************************
+     * Sets up entry completion for search bar
+     ************************************************/
+    // Connect to FullSearchList and load all street names into it
+    list_store = GTK_LIST_STORE(application->get_object("FullSearchList"));
+    for (auto it = StreetName_full_StreetIdx.begin(); it != StreetName_full_StreetIdx.end(); it++)
+    {
+        if (it->first == "<unknown>")
+        {
+            continue;
+        }
+        gtk_list_store_append(list_store, &iter);
+        gtk_list_store_set(list_store, &iter, 0, (it->first).c_str(), -1);
+    }
+    for (auto it = POI_AllFood.begin(); it != POI_AllFood.end(); it++)
+    {
+        gtk_list_store_append(list_store, &iter);
+        gtk_list_store_set(list_store, &iter, 0, (it->first).c_str(), -1);
+    }
+
+    GtkEntryCompletion *completion = GTK_ENTRY_COMPLETION(application->get_object("FullEntryCompletion"));
+    gtk_entry_completion_set_match_func(completion, fuzzy_match_func, NULL, NULL);
+
+
 }
 
 // Storing state of mouse clicks
@@ -783,7 +787,6 @@ void city_change_cbk (GtkComboBoxText* self, ezgl::application* application){
 
         // Clear GtkListStores of old city
         gtk_list_store_clear(list_store);
-        gtk_list_store_clear(list_store_food);
         // Load GtkListStores for new city
         for (auto it = StreetName_full_StreetIdx.begin(); it != StreetName_full_StreetIdx.end(); it++)
         {
@@ -796,9 +799,12 @@ void city_change_cbk (GtkComboBoxText* self, ezgl::application* application){
         }
         for (auto it = POI_AllFood.begin(); it != POI_AllFood.end(); it++)
         {
-            gtk_list_store_append(list_store_food, &iter_food);
-            gtk_list_store_set(list_store_food, &iter_food, 0, (it->first).c_str(), -1);
+            gtk_list_store_append(list_store, &iter);
+            gtk_list_store_set(list_store, &iter, 0, (it->first).c_str(), -1);
         }
+
+        GtkEntryCompletion *completion = GTK_ENTRY_COMPLETION(application->get_object("FullEntryCompletion"));
+        gtk_entry_completion_set_match_func(completion, fuzzy_match_func, NULL, NULL);
         
         // Reset the world based on new map
         ezgl::rectangle new_world(xy_from_latlon(latlon_bound.min),
@@ -1761,4 +1767,27 @@ bool check_contains (ezgl::rectangle rec_1, ezgl::rectangle rec_2)
     bool x_contain = (rec_1.left() <= rec_2.left()) && (rec_2.right() <= rec_1.right());
     bool y_contain = (rec_1.bottom() <= rec_2.bottom()) && (rec_2.top() <= rec_1.top());
     return x_contain && y_contain;
+}
+
+gboolean fuzzy_match_func(GtkEntryCompletion *completion, const gchar *key, GtkTreeIter *iterr, gpointer /*user_data*/)
+{
+    GtkTreeModel *model;
+    gchar *entry_text;
+    gchar *entry_text_lower;
+    gchar *key_lower;
+    gboolean result;
+
+    model = gtk_entry_completion_get_model(completion);
+    gtk_tree_model_get(model, iterr, 0, &entry_text, -1);
+
+    entry_text_lower = g_utf8_casefold(entry_text, -1);
+    key_lower = g_utf8_casefold(key, -1);
+
+    result = (strstr(entry_text_lower, key_lower) != NULL);
+
+    g_free(entry_text);
+    g_free(entry_text_lower);
+    g_free(key_lower);
+
+    return result;
 }

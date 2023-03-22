@@ -2,18 +2,18 @@
 <!-- Generated with glade 3.38.2 -->
 <interface>
   <requires lib="gtk+" version="3.20"/>
-  <object class="GtkListStore" id="RestaurantNameList">
+  <object class="GtkListStore" id="FullSearchList">
     <columns>
       <!-- column-name gchararray2 -->
       <column type="gchararray"/>
     </columns>
   </object>
-  <object class="GtkEntryCompletion" id="entrycompletion3">
-    <property name="model">RestaurantNameList</property>
-    <property name="minimum-key-length">0</property>
+  <object class="GtkEntryCompletion" id="FullEntryCompletion">
+    <property name="model">FullSearchList</property>
     <property name="text-column">0</property>
+    <property name="popup-single-match">False</property>
     <child>
-      <object class="GtkCellRendererText"/>
+      <object class="GtkCellRendererText" id="CellRendererSearchBar"/>
       <attributes>
         <attribute name="text">0</attribute>
       </attributes>
@@ -54,7 +54,7 @@
     <property name="default-width">1600</property>
     <property name="default-height">1200</property>
     <child>
-      <object class="GtkOverlay">
+      <object class="GtkOverlay" id="MainOverlay">
         <property name="visible">True</property>
         <property name="can-focus">False</property>
         <child>
@@ -95,7 +95,7 @@
               </packing>
             </child>
             <child>
-              <object class="GtkLabel" id="Label1">
+              <object class="GtkLabel" id="NightModeLabel">
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
                 <property name="label" translatable="yes">Night mode</property>
@@ -107,7 +107,7 @@
               </packing>
             </child>
             <child>
-              <object class="GtkLabel" id="Label2">
+              <object class="GtkLabel" id="FindIntersectionLabel">
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
                 <property name="label" translatable="yes">Find intersections</property>
@@ -278,11 +278,21 @@
                 <property name="visible">True</property>
                 <property name="can-focus">True</property>
                 <property name="placeholder-text" translatable="yes">Search restaurants...</property>
-                <property name="completion">entrycompletion3</property>
               </object>
               <packing>
                 <property name="left-attach">0</property>
                 <property name="top-attach">8</property>
+                <property name="width">3</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+              </object>
+              <packing>
+                <property name="left-attach">0</property>
+                <property name="top-attach">10</property>
                 <property name="width">3</property>
               </packing>
             </child>
@@ -296,17 +306,6 @@
               <packing>
                 <property name="left-attach">0</property>
                 <property name="top-attach">9</property>
-                <property name="width">3</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkLabel">
-                <property name="visible">True</property>
-                <property name="can-focus">False</property>
-              </object>
-              <packing>
-                <property name="left-attach">0</property>
-                <property name="top-attach">10</property>
                 <property name="width">3</property>
               </packing>
             </child>
@@ -329,6 +328,7 @@
             <property name="primary-icon-activatable">False</property>
             <property name="primary-icon-sensitive">False</property>
             <property name="placeholder-text" translatable="yes">Search</property>
+            <property name="completion">FullEntryCompletion</property>
           </object>
           <packing>
             <property name="index">2</property>
