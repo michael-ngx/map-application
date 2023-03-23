@@ -11,7 +11,6 @@
   <object class="GtkEntryCompletion" id="FullEntryCompletion">
     <property name="model">FullSearchList</property>
     <property name="text-column">0</property>
-    <property name="popup-single-match">False</property>
     <child>
       <object class="GtkCellRendererText" id="CellRendererSearchBar"/>
       <attributes>

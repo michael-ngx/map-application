@@ -80,6 +80,10 @@ std::vector<StreetSegmentDetailedInfo> Segment_SegmentDetailedInfo;
 std::vector<std::vector<StreetSegmentIdx>> Intersection_AllStreetSegments;
 // Index: Intersection id, Value: Pre-processed Intersection info
 std::vector<IntersectionInfo> Intersection_IntersectionInfo;
+// Key: Intersection name, Value: IntersectionIdx (no repeating intersection names)
+std::unordered_map<std::string, IntersectionIdx> IntersectionName_IntersectionIdx_no_repeat;
+// Key: Intersection name, Value: IntersectionIdx (Allow repeating intersection names)
+std::unordered_multimap<std::string, IntersectionIdx> IntersectionName_IntersectionIdx;
 
 // *******************************************************************
 // Streets
@@ -89,9 +93,6 @@ std::unordered_map<StreetIdx, StreetInfo> Street_StreetInfo;
 // Keys: Street names w/ id (lower case, no space), Value: street index
 // If street name == "<unknown>", street name has no suffix
 std::multimap<std::string, StreetIdx> StreetName_lower_StreetIdx;
-// Keys: Street names w/ id (full), Value: street index
-// If street name == "<unknown>", street name has no suffix
-std::multimap<std::string, StreetIdx> StreetName_full_StreetIdx;
 
 // *******************************************************************
 // Features
@@ -451,9 +452,10 @@ void closeMap() {
     Segment_SegmentDetailedInfo.clear();
     Intersection_AllStreetSegments.clear();
     Intersection_IntersectionInfo.clear();
+    IntersectionName_IntersectionIdx_no_repeat.clear();
+    IntersectionName_IntersectionIdx.clear();
     Street_StreetInfo.clear();
     StreetName_lower_StreetIdx.clear();
-    StreetName_full_StreetIdx.clear();
     Features_AllInfo.clear();
     POI_AllInfo.clear();
     POI_AllFood.clear();
@@ -579,8 +581,13 @@ void init_intersections(){
         Intersection_AllStreetSegments.push_back(allSegments);
 
         // Pre-process xy position for all intersections
-        Intersection_IntersectionInfo[id].name = getIntersectionName(id);
+        std::string name = getIntersectionName(id);
+        Intersection_IntersectionInfo[id].name = name;
         Intersection_IntersectionInfo[id].position_xy = xy_from_latlon(getIntersectionPosition(id));
+
+        // Populate data structures to allow searching for intersection by name
+        IntersectionName_IntersectionIdx_no_repeat.insert(std::make_pair(name, id));
+        IntersectionName_IntersectionIdx.insert(std::make_pair(name, id));
     }
 }
 
@@ -640,15 +647,11 @@ void init_streets()
         if (streetName == "<unknown>")
         {
             // Add (street name w/ id (lower), streetIdx) pair
-            StreetName_lower_StreetIdx.insert(std::make_pair(streetName, pair.first)); 
-            // Add (street name w/ id (full), streetIdx) pair
-            StreetName_full_StreetIdx.insert(std::make_pair(str, pair.first));         
+            StreetName_lower_StreetIdx.insert(std::make_pair(streetName, pair.first));  
         } else
         {
             // Add (street name w/ id (lower), streetIdx) pair
-            StreetName_lower_StreetIdx.insert(std::make_pair(streetName + "-" + std::to_string(pair.first), pair.first)); 
-            // Add (street name w/ id (full), streetIdx) pair
-            StreetName_full_StreetIdx.insert(std::make_pair(str + " - " + std::to_string(pair.first), pair.first));         
+            StreetName_lower_StreetIdx.insert(std::make_pair(streetName + "-" + std::to_string(pair.first), pair.first));
         }
     }
 }

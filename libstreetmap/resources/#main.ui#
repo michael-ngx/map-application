@@ -114,18 +114,6 @@
               </packing>
             </child>
             <child>
-              <object class="GtkSwitch" id="SubwayLineSwitch">
-                <property name="visible">True</property>
-                <property name="can-focus">True</property>
-                <property name="halign">center</property>
-              </object>
-              <packing>
-                <property name="left-attach">0</property>
-                <property name="top-attach">9</property>
-                <property name="width">3</property>
-              </packing>
-            </child>
-            <child>
               <object class="GtkLabel">
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
@@ -167,6 +155,18 @@
               <packing>
                 <property name="left-attach">0</property>
                 <property name="top-attach">1</property>
+                <property name="width">3</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkSwitch" id="SubwayLineSwitch">
+                <property name="visible">True</property>
+                <property name="can-focus">True</property>
+                <property name="halign">center</property>
+              </object>
+              <packing>
+                <property name="left-attach">0</property>
+                <property name="top-attach">9</property>
                 <property name="width">3</property>
               </packing>
             </child>

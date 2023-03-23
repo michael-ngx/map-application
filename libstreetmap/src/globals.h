@@ -89,6 +89,10 @@ struct IntersectionInfo{
 
 // Index: Intersection id, Value: Pre-processed Intersection info
 extern std::vector<IntersectionInfo> Intersection_IntersectionInfo;
+// Key: Intersection name, Value: IntersectionIdx (no repeating intersection names)
+extern std::unordered_map<std::string, IntersectionIdx> IntersectionName_IntersectionIdx_no_repeat;
+// Key: Intersection name, Value: IntersectionIdx (Allow repeating intersection names)
+extern std::unordered_multimap<std::string, IntersectionIdx> IntersectionName_IntersectionIdx;
 
 // *******************************************************************
 // Streets
@@ -106,9 +110,6 @@ extern std::unordered_map<StreetIdx, StreetInfo> Street_StreetInfo;
 // Keys: Street names w/ id (lower case, no space), Value: street index
 // If street name == "<unknown>", street name has no suffix
 extern std::multimap<std::string, StreetIdx> StreetName_lower_StreetIdx;
-// Keys: Street names w/ id (full), Value: street index
-// If street name == "<unknown>", street name has no suffix
-extern std::multimap<std::string, StreetIdx> StreetName_full_StreetIdx;
 
 // *******************************************************************
 // Features

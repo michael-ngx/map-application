@@ -103,7 +103,7 @@ void draw_main_canvas (ezgl::renderer *g);
  * Initial Setup is run whenever a window is opened. 
  *************************************************************/
 void initial_setup (ezgl::application *application, bool new_window);
-gboolean fuzzy_match_func(GtkEntryCompletion *completion, const gchar *key, GtkTreeIter *iterr, gpointer /*user_data*/);
+gboolean fuzzy_match_func(GtkEntryCompletion *completion, const gchar *user_input, GtkTreeIter *iterr, gpointer /*user_data*/);
 
 /*************************************************************
  * EVENT CALLBACK FUNCTIONS
@@ -118,8 +118,7 @@ void act_on_mouse_click (ezgl::application *application, GdkEventButton */*event
  * These are callback functions for the UI elements
  *************************************************************/
 void input_streets_cbk (GtkWidget */*widget*/, ezgl::application* application);
-void search_button_cbk (GtkWidget */*widget*/, ezgl::application *application);
-void find_button_cbk (GtkWidget */*widget*/, ezgl::application *application);
+void search_activate_cbk (GtkSearchEntry *self, ezgl::application *application);
 void night_mode_cbk (GtkSwitch* /*self*/, gboolean state, ezgl::application* application);
 void subway_station_cbk (GtkSwitch* self, gboolean state, ezgl::application* application);
 void subway_line_cbk (GtkSwitch* self, gboolean state, ezgl::application* application);
@@ -145,8 +144,7 @@ void draw_name_or_arrow (ezgl::renderer *g, std::string street_name, bool arrow,
                         ezgl::point2d from_xy, ezgl::point2d to_xy);
 void draw_pin (ezgl::renderer* g, ezgl::point2d inter_xy);
 std::string get_new_map_path (std::string text_string);
-void search_response (std::string input_1, std::string input_2, ezgl::application *application);
-void find_response (std::string input, ezgl::application *application);
+void search_response (std::string input, ezgl::application *application);
 void draw_distance_scale (ezgl::renderer *g, ezgl::rectangle current_window);
 bool check_collides (ezgl::rectangle rec_1, ezgl::rectangle rec_2);
 bool check_contains (ezgl::rectangle rec_1, ezgl::rectangle rec_2);
@@ -617,54 +615,42 @@ void initial_setup (ezgl::application *application, bool /*new_window*/)
 {
     // Update the status bar message
     application->update_message("Welcome!");
-    // We will increment row each time we insert a new element. Insert search city after find intersections
+    // We will increment row each time we insert a new element.
     int row = 11;
-    
-    // Creates a pointer to night mode switch
+
+    // Connects to SearchBar
+    GObject *SearchBar = application->get_object("SearchBar");
+    g_signal_connect(
+        SearchBar, // pointer to the UI widget
+        "activate", // signal representing "Enter" has been pressed or user clicked search icon
+        G_CALLBACK(search_activate_cbk),
+        application // passing an application pointer to callback function
+    ); 
+
+    // Connects to NightModeSwitch
     GObject *NightModeSwitch = application->get_object("NightModeSwitch");
     g_signal_connect(
         NightModeSwitch, // pointer to the UI widget
         "state-set", // Signal state of switch being changed
-        G_CALLBACK(night_mode_cbk), // name of callback function (you write this function:
-        // make sure its declaration is visible)
+        G_CALLBACK(night_mode_cbk), // callback function
         application // passing an application pointer to callback function
     );  
 
-    // Button to ask user to input names of two streets
-    GObject *search_button = application->get_object("SearchButton");
-    g_signal_connect(
-        search_button, // pointer to the UI widget
-        "clicked", // Signal state of switch being changed
-        G_CALLBACK(search_button_cbk), // Callback function
-        application // passing an application pointer to callback function
-    );
-
-    // Button to find restaurants based on name
-    GObject *find_button = application->get_object("FindButton");
-    g_signal_connect(
-        find_button, // pointer to the UI widget
-        "clicked", // Signal state of switch being changed
-        G_CALLBACK(find_button_cbk), // Callback function
-        application // passing an application pointer to callback function
-    );
-
-    // Creates a pointer to subway station switch
+    // Connects to SubwayStationSwitch
     GObject *SubwayStationSwitch = application->get_object("SubwayStationSwitch");
     g_signal_connect(
         SubwayStationSwitch, // pointer to the UI widget
         "state-set", // Signal state of switch being changed
-        G_CALLBACK(subway_station_cbk), // name of callback function (you write this function:
-        // make sure its declaration is visible)
+        G_CALLBACK(subway_station_cbk), // callback function
         application // passing an application pointer to callback function
     );  
 
-    // Creates a pointer to subway station switch
+    // Connects to SubwayLineSwitch
     GObject *SubwayLineSwitch = application->get_object("SubwayLineSwitch");
     g_signal_connect(
         SubwayLineSwitch, // pointer to the UI widget
         "state-set", // Signal state of switch being changed
-        G_CALLBACK(subway_line_cbk), // name of callback function (you write this function:
-        // make sure its declaration is visible)
+        G_CALLBACK(subway_line_cbk), // name of callback function
         application // passing an application pointer to callback function
     );  
 
@@ -693,26 +679,16 @@ void initial_setup (ezgl::application *application, bool /*new_window*/)
     /***********************************************
      * Sets up entry completion for search bar
      ************************************************/
-    // Connect to FullSearchList and load all street names into it
+    // Connect to FullSearchList and load all intersection names into it
     list_store = GTK_LIST_STORE(application->get_object("FullSearchList"));
-    for (auto it = StreetName_full_StreetIdx.begin(); it != StreetName_full_StreetIdx.end(); it++)
-    {
-        if (it->first == "<unknown>")
-        {
-            continue;
-        }
-        gtk_list_store_append(list_store, &iter);
-        gtk_list_store_set(list_store, &iter, 0, (it->first).c_str(), -1);
-    }
-    for (auto it = POI_AllFood.begin(); it != POI_AllFood.end(); it++)
+    for (auto& pair : IntersectionName_IntersectionIdx_no_repeat)
     {
         gtk_list_store_append(list_store, &iter);
-        gtk_list_store_set(list_store, &iter, 0, (it->first).c_str(), -1);
+        gtk_list_store_set(list_store, &iter, 0, (pair.first).c_str(), -1);
     }
 
     GtkEntryCompletion *completion = GTK_ENTRY_COMPLETION(application->get_object("FullEntryCompletion"));
     gtk_entry_completion_set_match_func(completion, fuzzy_match_func, NULL, NULL);
-
 
 }
 
@@ -785,24 +761,16 @@ void city_change_cbk (GtkComboBoxText* self, ezgl::application* application){
             gtk_switch_set_state(Switch_2, false);
         }
 
-        // Clear GtkListStores of old city
+        // Clear GtkListStores of old city. Load GtkListStore for new city
         gtk_list_store_clear(list_store);
-        // Load GtkListStores for new city
-        for (auto it = StreetName_full_StreetIdx.begin(); it != StreetName_full_StreetIdx.end(); it++)
-        {
-            if (it->first == "<unknown>")
-            {
-                continue;
-            }
-            gtk_list_store_append(list_store, &iter);
-            gtk_list_store_set(list_store, &iter, 0, (it->first).c_str(), -1);
-        }
-        for (auto it = POI_AllFood.begin(); it != POI_AllFood.end(); it++)
+        for (auto& pair : IntersectionName_IntersectionIdx_no_repeat)
         {
             gtk_list_store_append(list_store, &iter);
-            gtk_list_store_set(list_store, &iter, 0, (it->first).c_str(), -1);
+            gtk_list_store_set(list_store, &iter, 0, (pair.first).c_str(), -1);
         }
-
+        // Clear the current text in GtkSearchEntry
+        GObject *search_entry = application->get_object("SearchBar");
+        gtk_entry_set_text(GTK_ENTRY(search_entry), "");
         GtkEntryCompletion *completion = GTK_ENTRY_COMPLETION(application->get_object("FullEntryCompletion"));
         gtk_entry_completion_set_match_func(completion, fuzzy_match_func, NULL, NULL);
         
@@ -903,34 +871,16 @@ void subway_line_cbk (GtkSwitch* self, gboolean state, ezgl::application* applic
     }   
 }
 
-// Callback function for Search button
-void search_button_cbk (GtkWidget */*widget*/, ezgl::application *application)
+// Callback function for Search bar
+void search_activate_cbk (GtkSearchEntry *self, ezgl::application *application)
 {
-    GObject *entry_object_1 = application->get_object("StreetEntry1");
-    GObject *entry_object_2 = application->get_object("StreetEntry2");
-    GtkEntry* gtk_entry_1 = GTK_ENTRY(entry_object_1);
-    GtkEntry* gtk_entry_2 = GTK_ENTRY(entry_object_2);
-    // Getting text from search entries
-    const gchar* text_1 = gtk_entry_get_text(gtk_entry_1);
-    const gchar* text_2 = gtk_entry_get_text(gtk_entry_2);
-    std::string input_1(text_1);
-    std::string input_2(text_2);
+    // Get the text from the search entry
+    const gchar *search_text;
+    search_text = gtk_entry_get_text(GTK_ENTRY(self));
+    std::string input(search_text);
 
-    // Determine how UI responses based on street inputs
-    search_response(input_1, input_2, application);
-}
-
-// Callback function for Find button (Food places)
-void find_button_cbk (GtkWidget */*widget*/, ezgl::application *application)
-{
-    GObject *entry_object = application->get_object("RestaurantSearch");
-    GtkEntry* gtk_entry = GTK_ENTRY(entry_object);
-    // Getting text from search entries
-    const gchar* text = gtk_entry_get_text(gtk_entry);
-    std::string input(text);
-
-    // Determine how UI responses based on restaurant inputs
-    find_response(input, application);
+    // Determine how UI responses based on search input
+    search_response(input, application);
 }
 
 /*******************************************************************************************************************************
@@ -1573,74 +1523,47 @@ std::string get_new_map_path (std::string text_string)
 }
 
 // Response to search button callback
-void search_response (std::string input_1, std::string input_2, ezgl::application *application)
+void search_response (std::string input, ezgl::application *application)
 {
-    if (input_1.empty() || input_2.empty())
+    // No response if input is empty
+    if (input.empty())
     {
-        std::string to_be_converted = "Street name(s) missing. Enter street names in both fields!";
-        const char* message = to_be_converted.c_str();
-        application->create_popup_message("Warning!", message);
-        return;
-    } else if (input_1 == input_2)
-    {
-        std::string to_be_converted = "Please enter 2 different street names";
-        const char* message = to_be_converted.c_str();
-        application->create_popup_message("Warning!", message);
         return;
     }
 
-    // Allow search from partial street name, if street name is unique.
-    // Vector size 0 -> Street name not found, no partials found
-    // Vector size >= 1 -> Use first element in partial name as name for searching
-    // If input name is correct, first element == input name
-    std::vector<StreetIdx> partial_streets_1 = findStreetIdsFromPartialStreetName(input_1);
-    std::vector<StreetIdx> partial_streets_2 = findStreetIdsFromPartialStreetName(input_2);
-
-    // Vector size 0 -> Street name not found (or user input <unknown>), even partials
-    if (partial_streets_1.size() == 0)
+    // Check for intersection
+    // If intersection is not found
+    if (IntersectionName_IntersectionIdx.find(input) == IntersectionName_IntersectionIdx.end())
     {
-        std::string to_be_converted = "Street 1 not found!";
-        const char* message = to_be_converted.c_str();
-        application->create_popup_message("Warning!", message);
-        return;
-    } else if (partial_streets_2.size() == 0)
-    {
-        std::string to_be_converted = "Street 2 not found!";
-        const char* message = to_be_converted.c_str();
-        application->create_popup_message("Warning!", message);
         return;
     }
-    // Vector size >= 1 -> Use first element in partial name (can match input!)
-    // Display all intersections found between 2 streets
-    // There will not be multiple streets given a street name - each street name is appended with its street id
-    std::vector<IntersectionIdx> foundIntersections = findIntersectionsOfTwoStreets(partial_streets_1[0], partial_streets_2[0]);
-
-    if (foundIntersections.size() == 0)
-    {
-        std::string to_be_converted = "No intersections found between " + input_1
-                                    + " and " + input_2;
-        const char* message = to_be_converted.c_str();
-        application->create_popup_message("Warning!", message);
-        return;
-    } else
-    {
-        std::string to_be_converted = "";
-        // Draw all intersections between 2 streets
-        for (int i = 0; i < foundIntersections.size(); i++)
+    // There may be multiple intersections with the same name
+    // If there are multiple, only allow a maximum of 5 intersections to be added to the pop-up window
+    auto range = IntersectionName_IntersectionIdx.equal_range(input);
+    int count = 0;  // Count the number of values
+    std::string to_be_converted = "Intersections between " + input + ":\n";
+    for (auto it = range.first; it != range.second; ++it) {
+        // Highlight the found intersections on the map
+        Intersection_IntersectionInfo[it->second].highlight = true;
+        // Add data for all intersections to pop-up message if count < 5
+        if (count < 5)
         {
-            Intersection_IntersectionInfo[foundIntersections[i]].highlight = true;
-            to_be_converted += "Name: " + Intersection_IntersectionInfo[foundIntersections[i]].name + "\n" 
-                                + "Latitude: " + std::to_string(getIntersectionPosition(foundIntersections[i]).latitude()) + "\n"
-                                + "Longitude: " + std::to_string(getIntersectionPosition(foundIntersections[i]).longitude()) + "\n"
-                                + "------------------------\n";
+            to_be_converted += "Latitude: " + std::to_string(getIntersectionPosition(it->second).latitude()) + "\n"
+                            + "Longitude: " + std::to_string(getIntersectionPosition(it->second).longitude()) + "\n"
+                            + "------------------------\n";
         }
-        const char* message = to_be_converted.c_str();
-        application->create_popup_message("Intersection(s) found: ", message);
+        count++;
     }
+    if (count >= 5)
+    {
+        to_be_converted += "More not shown...\n";
+    }
+    const char* message = to_be_converted.c_str();
+    application->create_popup_message("Intersection(s) found: ", message);
 
     // Move the camera to focus the intersection
     // Center of new location (centered at first intersection found)
-    ezgl::point2d center = Intersection_IntersectionInfo[foundIntersections[0]].position_xy;
+    ezgl::point2d center = Intersection_IntersectionInfo[range.first->second].position_xy;
 
     // Get aspect ratio of current world (viewable region)
     ezgl::renderer* g = application->get_renderer();
@@ -1660,46 +1583,46 @@ void search_response (std::string input_1, std::string input_2, ezgl::applicatio
 
 // Response to find button callback
 // If a restaurant has multiple locations, Find will point to the first one found
-void find_response (std::string input, ezgl::application *application)
-{
-    if (input.empty())
-    {
-        std::string to_be_converted = "Restaurant name missing. Enter restaurant name in the field!";
-        const char* message = to_be_converted.c_str();
-        application->create_popup_message("Warning!", message);
-        return;
-    }
-    // If input restaurant is not found
-    auto POIit = POI_AllFood.find(input);
-    if (POIit == POI_AllFood.end())
-    {
-        std::string to_be_converted = "Restaurant not found!";
-        const char* message = to_be_converted.c_str();
-        application->create_popup_message("Warning!", message);
-        return;
-    }
-    // Push back the location to be displayed
-    POI_AllInfo[POIit->second.id].highlight = true;
+// void find_response (std::string input, ezgl::application *application)
+// {
+//     if (input.empty())
+//     {
+//         std::string to_be_converted = "Restaurant name missing. Enter restaurant name in the field!";
+//         const char* message = to_be_converted.c_str();
+//         application->create_popup_message("Warning!", message);
+//         return;
+//     }
+//     // If input restaurant is not found
+//     auto POIit = POI_AllFood.find(input);
+//     if (POIit == POI_AllFood.end())
+//     {
+//         std::string to_be_converted = "Restaurant not found!";
+//         const char* message = to_be_converted.c_str();
+//         application->create_popup_message("Warning!", message);
+//         return;
+//     }
+//     // Push back the location to be displayed
+//     POI_AllInfo[POIit->second.id].highlight = true;
 
-    // Move the camera to focus the POI
-    // Center of new location
-    ezgl::point2d center = POI_AllInfo[POIit->second.id].POIPoint;
+//     // Move the camera to focus the POI
+//     // Center of new location
+//     ezgl::point2d center = POI_AllInfo[POIit->second.id].POIPoint;
     
-    // Get aspect ratio of current world (viewable region)
-    ezgl::renderer* g = application->get_renderer();
-    visible_world = g->get_visible_world();
-    double width = visible_world.width();
-    double height = visible_world.height();
-    double map_aspect_ratio = width / height;
-    // Set aspect ratio of new camera
-    double new_width = FIND_ZOOM_WIDTH;
-    double new_height = new_width / map_aspect_ratio;
-    ezgl::rectangle new_rect({center.x - new_width / 2, center.y - new_height / 2}, new_width, new_height);
-    g->set_visible_world(new_rect);
+//     // Get aspect ratio of current world (viewable region)
+//     ezgl::renderer* g = application->get_renderer();
+//     visible_world = g->get_visible_world();
+//     double width = visible_world.width();
+//     double height = visible_world.height();
+//     double map_aspect_ratio = width / height;
+//     // Set aspect ratio of new camera
+//     double new_width = FIND_ZOOM_WIDTH;
+//     double new_height = new_width / map_aspect_ratio;
+//     ezgl::rectangle new_rect({center.x - new_width / 2, center.y - new_height / 2}, new_width, new_height);
+//     g->set_visible_world(new_rect);
 
-    // Redraw the main canvas
-    application->refresh_drawing();
-}
+//     // Redraw the main canvas
+//     application->refresh_drawing();
+// }
 
 /*******************************************************************************************************************************
 // Draw the distance scale
@@ -1769,25 +1692,61 @@ bool check_contains (ezgl::rectangle rec_1, ezgl::rectangle rec_2)
     return x_contain && y_contain;
 }
 
-gboolean fuzzy_match_func(GtkEntryCompletion *completion, const gchar *key, GtkTreeIter *iterr, gpointer /*user_data*/)
+gboolean fuzzy_match_func (GtkEntryCompletion *completion, const gchar *user_input, GtkTreeIter *iterr, gpointer /*user_data*/)
 {
     GtkTreeModel *model;
-    gchar *entry_text;
-    gchar *entry_text_lower;
-    gchar *key_lower;
-    gboolean result;
-
+    gchar *user_input_lower, *data_text, *data_text_lower;
+    gboolean result = FALSE;
+    
     model = gtk_entry_completion_get_model(completion);
-    gtk_tree_model_get(model, iterr, 0, &entry_text, -1);
+    gtk_tree_model_get(model, iterr, 0, &data_text, -1);
 
-    entry_text_lower = g_utf8_casefold(entry_text, -1);
-    key_lower = g_utf8_casefold(key, -1);
+    if (data_text == NULL || user_input == NULL)
+    {
+        return result;
+    }
+    // Convert both data_text and user_input to lowercase
+    data_text_lower = g_utf8_strdown(data_text, -1);
+    user_input_lower = g_utf8_strdown(user_input, -1);
 
-    result = (strstr(entry_text_lower, key_lower) != NULL);
+    // Ignores if <unknown> is found in user input or data
+    if (strstr(data_text_lower, "<unknown>") != NULL || strstr(user_input_lower, "<unknown>") != NULL)
+    {
+        return result;
+    }
 
-    g_free(entry_text);
-    g_free(entry_text_lower);
-    g_free(key_lower);
+    // Tokenize data_text_lower and user_input_lower using space as delimiter (Split into words)
+    gchar **data_tokens = g_strsplit(data_text_lower, " ", -1);
+    gchar **user_input_tokens = g_strsplit(user_input_lower, " ", -1);
 
+    // Iterate through each user_input token and check if it's a substring of any entry token
+    for (int i = 0; user_input_tokens[i] != NULL; i++)
+    {
+        gboolean token_matched = FALSE;
+        for (int j = 0; data_tokens[j] != NULL; j++)
+        {
+            if (strstr(data_tokens[j], user_input_tokens[i]))
+            {
+                token_matched = TRUE;
+                break;
+            }
+        }
+        if (!token_matched)
+        {
+            // If at least one user_input token didn't match any entry token, return FALSE
+            result = FALSE;
+            goto exit;
+        }
+    }
+
+    // If all user_input tokens matched at least one entry token, return TRUE
+    result = TRUE;
+
+exit:
+    g_free(user_input_lower);
+    g_strfreev(user_input_tokens);
+    g_free(data_text);
+    g_free(data_text_lower);
+    g_strfreev(data_tokens);
     return result;
 }
