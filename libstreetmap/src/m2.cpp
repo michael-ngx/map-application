@@ -56,7 +56,7 @@ const float FEATURE_ZOOM_1 = 0.01;
 const float FEATURE_ZOOM_2 = 0.05;
 const float FEATURE_ZOOM_3 = 0.1;
 
-// Width of new world to be zoomed to after finding restaurants 
+// Width of new world to be zoomed to after searching
 const double FIND_ZOOM_WIDTH = 1000.0;
 
 // Rectangle of current visible world, in meters
@@ -618,15 +618,6 @@ void initial_setup (ezgl::application *application, bool /*new_window*/)
     // We will increment row each time we insert a new element.
     int row = 11;
 
-    // Connects to SearchBar
-    GObject *SearchBar = application->get_object("SearchBar");
-    g_signal_connect(
-        SearchBar, // pointer to the UI widget
-        "activate", // signal representing "Enter" has been pressed or user clicked search icon
-        G_CALLBACK(search_activate_cbk),
-        application // passing an application pointer to callback function
-    ); 
-
     // Connects to NightModeSwitch
     GObject *NightModeSwitch = application->get_object("NightModeSwitch");
     g_signal_connect(
@@ -679,14 +670,30 @@ void initial_setup (ezgl::application *application, bool /*new_window*/)
     /***********************************************
      * Sets up entry completion for search bar
      ************************************************/
-    // Connect to FullSearchList and load all intersection names into it
+    // Connects to SearchBar
+    GObject *SearchBar = application->get_object("SearchBar");
+    g_signal_connect(
+        SearchBar, // pointer to the UI widget
+        "activate", // signal representing "Enter" has been pressed or user clicked search icon
+        G_CALLBACK(search_activate_cbk),
+        application // passing an application pointer to callback function
+    ); 
+    // Connect to FullSearchList
     list_store = GTK_LIST_STORE(application->get_object("FullSearchList"));
+    // Load all intersection names
     for (auto& pair : IntersectionName_IntersectionIdx_no_repeat)
     {
         gtk_list_store_append(list_store, &iter);
         gtk_list_store_set(list_store, &iter, 0, (pair.first).c_str(), -1);
     }
+    // Load all food place names
+    for (auto& pair : POI_AllFood)
+    {
+        gtk_list_store_append(list_store, &iter);
+        gtk_list_store_set(list_store, &iter, 0, (pair.first).c_str(), -1);
+    }
 
+    // Change entry completion algorithm to support fuzzy search        // TODO: Prioritize closer match (improve algorithm)
     GtkEntryCompletion *completion = GTK_ENTRY_COMPLETION(application->get_object("FullEntryCompletion"));
     gtk_entry_completion_set_match_func(completion, fuzzy_match_func, NULL, NULL);
 
@@ -1525,46 +1532,61 @@ std::string get_new_map_path (std::string text_string)
 // Response to search button callback
 void search_response (std::string input, ezgl::application *application)
 {
-    // No response if input is empty
-    if (input.empty())
+    // No response if input is empty or the input is neither intersection nor food place
+    if (input.empty() || (IntersectionName_IntersectionIdx.find(input) == IntersectionName_IntersectionIdx.end()
+                          && POI_AllFood.find(input) == POI_AllFood.end()))
     {
         return;
     }
-
+    // Center of new camera, to be set to either intersection or food place
+    ezgl::point2d center;
     // Check for intersection
-    // If intersection is not found
-    if (IntersectionName_IntersectionIdx.find(input) == IntersectionName_IntersectionIdx.end())
+    if (IntersectionName_IntersectionIdx.find(input) != IntersectionName_IntersectionIdx.end())
     {
-        return;
-    }
-    // There may be multiple intersections with the same name
-    // If there are multiple, only allow a maximum of 5 intersections to be added to the pop-up window
-    auto range = IntersectionName_IntersectionIdx.equal_range(input);
-    int count = 0;  // Count the number of values
-    std::string to_be_converted = "Intersections between " + input + ":\n";
-    for (auto it = range.first; it != range.second; ++it) {
-        // Highlight the found intersections on the map
-        Intersection_IntersectionInfo[it->second].highlight = true;
-        // Add data for all intersections to pop-up message if count < 5
-        if (count < 5)
-        {
-            to_be_converted += "Latitude: " + std::to_string(getIntersectionPosition(it->second).latitude()) + "\n"
-                            + "Longitude: " + std::to_string(getIntersectionPosition(it->second).longitude()) + "\n"
-                            + "------------------------\n";
+        // There may be multiple intersections with the same name
+        // If there are multiple, only allow a maximum of 5 intersections to be added to the pop-up window
+        auto range = IntersectionName_IntersectionIdx.equal_range(input);
+        int count = 0;  // Count the number of values
+        std::string to_be_converted = "Intersections between " + input + ":\n";
+        for (auto it = range.first; it != range.second; ++it) {
+            // Highlight the found intersections on the map
+            Intersection_IntersectionInfo[it->second].highlight = true;
+            // Add data for all intersections to pop-up message if count < 5
+            if (count < 5)
+            {
+                to_be_converted += "Latitude: " + std::to_string(getIntersectionPosition(it->second).latitude()) + "\n"
+                                    + "Longitude: " + std::to_string(getIntersectionPosition(it->second).longitude()) + "\n"
+                                    + "------------------------\n";
+            }
+            count++;
         }
-        count++;
-    }
-    if (count >= 5)
+        if (count >= 5)
+        {
+            to_be_converted += "More not shown...\n";
+        }
+        const char* message = to_be_converted.c_str();
+        application->create_popup_message("Intersection(s) found: ", message);
+
+        // Move the camera to focus the intersection
+        // Center of new location (centered at first intersection found)
+        center = Intersection_IntersectionInfo[range.first->second].position_xy;
+
+        application->update_message("Found intersection!");
+    } 
+    // Check for food places
+    else if (POI_AllFood.find(input) != POI_AllFood.end())
     {
-        to_be_converted += "More not shown...\n";
+        auto POIit = POI_AllFood.find(input);
+        // Highlight the location to be displayed
+        POI_AllInfo[POIit->second.id].highlight = true;
+
+        // Center of new location
+        center = POI_AllInfo[POIit->second.id].POIPoint;
+
+        application->update_message("Found food place!");
     }
-    const char* message = to_be_converted.c_str();
-    application->create_popup_message("Intersection(s) found: ", message);
-
-    // Move the camera to focus the intersection
-    // Center of new location (centered at first intersection found)
-    ezgl::point2d center = Intersection_IntersectionInfo[range.first->second].position_xy;
-
+    
+    // Move camera to new center
     // Get aspect ratio of current world (viewable region)
     ezgl::renderer* g = application->get_renderer();
     visible_world = g->get_visible_world();
@@ -1580,49 +1602,6 @@ void search_response (std::string input, ezgl::application *application)
     // Redraw the main canvas
     application->refresh_drawing();
 }
-
-// Response to find button callback
-// If a restaurant has multiple locations, Find will point to the first one found
-// void find_response (std::string input, ezgl::application *application)
-// {
-//     if (input.empty())
-//     {
-//         std::string to_be_converted = "Restaurant name missing. Enter restaurant name in the field!";
-//         const char* message = to_be_converted.c_str();
-//         application->create_popup_message("Warning!", message);
-//         return;
-//     }
-//     // If input restaurant is not found
-//     auto POIit = POI_AllFood.find(input);
-//     if (POIit == POI_AllFood.end())
-//     {
-//         std::string to_be_converted = "Restaurant not found!";
-//         const char* message = to_be_converted.c_str();
-//         application->create_popup_message("Warning!", message);
-//         return;
-//     }
-//     // Push back the location to be displayed
-//     POI_AllInfo[POIit->second.id].highlight = true;
-
-//     // Move the camera to focus the POI
-//     // Center of new location
-//     ezgl::point2d center = POI_AllInfo[POIit->second.id].POIPoint;
-    
-//     // Get aspect ratio of current world (viewable region)
-//     ezgl::renderer* g = application->get_renderer();
-//     visible_world = g->get_visible_world();
-//     double width = visible_world.width();
-//     double height = visible_world.height();
-//     double map_aspect_ratio = width / height;
-//     // Set aspect ratio of new camera
-//     double new_width = FIND_ZOOM_WIDTH;
-//     double new_height = new_width / map_aspect_ratio;
-//     ezgl::rectangle new_rect({center.x - new_width / 2, center.y - new_height / 2}, new_width, new_height);
-//     g->set_visible_world(new_rect);
-
-//     // Redraw the main canvas
-//     application->refresh_drawing();
-// }
 
 /*******************************************************************************************************************************
 // Draw the distance scale
@@ -1692,6 +1671,7 @@ bool check_contains (ezgl::rectangle rec_1, ezgl::rectangle rec_2)
     return x_contain && y_contain;
 }
 
+// Algorithm for fuzzy searching
 gboolean fuzzy_match_func (GtkEntryCompletion *completion, const gchar *user_input, GtkTreeIter *iterr, gpointer /*user_data*/)
 {
     GtkTreeModel *model;

@@ -18,34 +18,6 @@
       </attributes>
     </child>
   </object>
-  <object class="GtkListStore" id="StreetNameList">
-    <columns>
-      <!-- column-name gchararray1 -->
-      <column type="gchararray"/>
-    </columns>
-  </object>
-  <object class="GtkEntryCompletion" id="entrycompletion1">
-    <property name="model">StreetNameList</property>
-    <property name="minimum-key-length">0</property>
-    <property name="text-column">0</property>
-    <child>
-      <object class="GtkCellRendererText" id="CellRenderer1"/>
-      <attributes>
-        <attribute name="text">0</attribute>
-      </attributes>
-    </child>
-  </object>
-  <object class="GtkEntryCompletion" id="entrycompletion2">
-    <property name="model">StreetNameList</property>
-    <property name="minimum-key-length">0</property>
-    <property name="text-column">0</property>
-    <child>
-      <object class="GtkCellRendererText" id="CellRenderer2"/>
-      <attributes>
-        <attribute name="text">0</attribute>
-      </attributes>
-    </child>
-  </object>
   <object class="GtkWindow" id="MainWindow">
     <property name="visible">True</property>
     <property name="can-focus">False</property>
@@ -75,7 +47,7 @@
           </object>
         </child>
         <child type="overlay">
-          <!-- n-columns=3 n-rows=19 -->
+          <!-- n-columns=3 n-rows=10 -->
           <object class="GtkGrid" id="InnerGrid">
             <property name="visible">True</property>
             <property name="can-focus">False</property>
@@ -101,58 +73,7 @@
               </object>
               <packing>
                 <property name="left-attach">0</property>
-                <property name="top-attach">11</property>
-                <property name="width">3</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkLabel" id="FindIntersectionLabel">
-                <property name="visible">True</property>
-                <property name="can-focus">False</property>
-                <property name="label" translatable="yes">Find intersections</property>
-              </object>
-              <packing>
-                <property name="left-attach">0</property>
                 <property name="top-attach">2</property>
-                <property name="width">3</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkButton" id="SearchButton">
-                <property name="label" translatable="yes">Search</property>
-                <property name="visible">True</property>
-                <property name="can-focus">True</property>
-                <property name="receives-default">True</property>
-              </object>
-              <packing>
-                <property name="left-attach">0</property>
-                <property name="top-attach">5</property>
-                <property name="width">3</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkEntry" id="StreetEntry1">
-                <property name="visible">True</property>
-                <property name="can-focus">True</property>
-                <property name="placeholder-text" translatable="yes">Street 1...</property>
-                <property name="completion">entrycompletion1</property>
-              </object>
-              <packing>
-                <property name="left-attach">0</property>
-                <property name="top-attach">3</property>
-                <property name="width">3</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkEntry" id="StreetEntry2">
-                <property name="visible">True</property>
-                <property name="can-focus">True</property>
-                <property name="placeholder-text" translatable="yes">Street 2...</property>
-                <property name="completion">entrycompletion2</property>
-              </object>
-              <packing>
-                <property name="left-attach">0</property>
-                <property name="top-attach">4</property>
                 <property name="width">3</property>
               </packing>
             </child>
@@ -164,7 +85,7 @@
               </object>
               <packing>
                 <property name="left-attach">0</property>
-                <property name="top-attach">12</property>
+                <property name="top-attach">3</property>
                 <property name="width">3</property>
               </packing>
             </child>
@@ -176,7 +97,7 @@
               </object>
               <packing>
                 <property name="left-attach">0</property>
-                <property name="top-attach">14</property>
+                <property name="top-attach">5</property>
                 <property name="width">3</property>
               </packing>
             </child>
@@ -188,29 +109,7 @@
               </object>
               <packing>
                 <property name="left-attach">0</property>
-                <property name="top-attach">15</property>
-                <property name="width">3</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkLabel">
-                <property name="visible">True</property>
-                <property name="can-focus">False</property>
-              </object>
-              <packing>
-                <property name="left-attach">0</property>
-                <property name="top-attach">1</property>
-                <property name="width">3</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkLabel">
-                <property name="visible">True</property>
-                <property name="can-focus">False</property>
-              </object>
-              <packing>
-                <property name="left-attach">0</property>
-                <property name="top-attach">13</property>
+                <property name="top-attach">6</property>
                 <property name="width">3</property>
               </packing>
             </child>
@@ -222,18 +121,7 @@
               </object>
               <packing>
                 <property name="left-attach">0</property>
-                <property name="top-attach">18</property>
-                <property name="width">3</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkLabel">
-                <property name="visible">True</property>
-                <property name="can-focus">False</property>
-              </object>
-              <packing>
-                <property name="left-attach">0</property>
-                <property name="top-attach">16</property>
+                <property name="top-attach">9</property>
                 <property name="width">3</property>
               </packing>
             </child>
@@ -242,41 +130,6 @@
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
                 <property name="label" translatable="yes">Subway Lines</property>
-              </object>
-              <packing>
-                <property name="left-attach">0</property>
-                <property name="top-attach">17</property>
-                <property name="width">3</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkLabel">
-                <property name="visible">True</property>
-                <property name="can-focus">False</property>
-                <property name="label" translatable="yes">Find Restaurants</property>
-              </object>
-              <packing>
-                <property name="left-attach">0</property>
-                <property name="top-attach">7</property>
-                <property name="width">3</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkLabel">
-                <property name="visible">True</property>
-                <property name="can-focus">False</property>
-              </object>
-              <packing>
-                <property name="left-attach">0</property>
-                <property name="top-attach">6</property>
-                <property name="width">3</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkEntry" id="RestaurantSearch">
-                <property name="visible">True</property>
-                <property name="can-focus">True</property>
-                <property name="placeholder-text" translatable="yes">Search restaurants...</property>
               </object>
               <packing>
                 <property name="left-attach">0</property>
@@ -291,20 +144,29 @@
               </object>
               <packing>
                 <property name="left-attach">0</property>
-                <property name="top-attach">10</property>
+                <property name="top-attach">4</property>
                 <property name="width">3</property>
               </packing>
             </child>
             <child>
-              <object class="GtkButton" id="FindButton">
-                <property name="label" translatable="yes">Find</property>
+              <object class="GtkLabel">
                 <property name="visible">True</property>
-                <property name="can-focus">True</property>
-                <property name="receives-default">True</property>
+                <property name="can-focus">False</property>
               </object>
               <packing>
                 <property name="left-attach">0</property>
-                <property name="top-attach">9</property>
+                <property name="top-attach">7</property>
+                <property name="width">3</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+              </object>
+              <packing>
+                <property name="left-attach">0</property>
+                <property name="top-attach">1</property>
                 <property name="width">3</property>
               </packing>
             </child>
@@ -315,8 +177,8 @@
         </child>
         <child type="overlay">
           <object class="GtkSearchEntry" id="SearchBar">
-            <property name="width-request">300</property>
-            <property name="height-request">0</property>
+            <property name="width-request">400</property>
+            <property name="height-request">100</property>
             <property name="visible">True</property>
             <property name="can-focus">True</property>
             <property name="halign">start</property>
@@ -326,7 +188,7 @@
             <property name="primary-icon-name">edit-find-symbolic</property>
             <property name="primary-icon-activatable">False</property>
             <property name="primary-icon-sensitive">False</property>
-            <property name="placeholder-text" translatable="yes">Search</property>
+            <property name="placeholder-text" translatable="yes">Search Intersections or Food places</property>
             <property name="completion">FullEntryCompletion</property>
           </object>
           <packing>

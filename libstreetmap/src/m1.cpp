@@ -643,16 +643,7 @@ void init_streets()
             if (c == ' ') continue;
             streetName.push_back(char(tolower(c))); // Names as lowercase, no space
         }
-        // Suffix to add to street name (if <unknown>, add no suffix)
-        if (streetName == "<unknown>")
-        {
-            // Add (street name w/ id (lower), streetIdx) pair
-            StreetName_lower_StreetIdx.insert(std::make_pair(streetName, pair.first));  
-        } else
-        {
-            // Add (street name w/ id (lower), streetIdx) pair
-            StreetName_lower_StreetIdx.insert(std::make_pair(streetName + "-" + std::to_string(pair.first), pair.first));
-        }
+        StreetName_lower_StreetIdx.insert(std::make_pair(streetName, pair.first));
     }
 }
 
