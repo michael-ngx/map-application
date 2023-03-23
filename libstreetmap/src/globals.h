@@ -84,7 +84,6 @@ extern std::vector<std::vector<StreetSegmentIdx>> Intersection_AllStreetSegments
 struct IntersectionInfo{
     ezgl::point2d position_xy;
     std::string name;
-    bool highlight = false;
 };
 
 // Index: Intersection id, Value: Pre-processed Intersection info
@@ -138,7 +137,6 @@ struct POIDetailedInfo
     std::string POIName;
     ezgl::point2d POIPoint;
     OSMID POIOSMID;
-    bool highlight = false;
 };
 // Index: POIIdx, Value: structure that stores all POI information
 extern std::vector<POIDetailedInfo> POI_AllInfo;

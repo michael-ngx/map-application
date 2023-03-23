@@ -43,6 +43,19 @@ bool subway_station_mode = false;
 // Checks if the subway line mode if turned on (to show subway lines)
 bool subway_line_mode = false;
 
+/**********************************************
+ * Gtk pointers
+ *********************************************/
+GObject *NightModeSwitch;
+GObject *SubwayStationSwitch;
+GObject *SubwayLineSwitch;
+GObject *SearchBar;
+GtkListStore *list_store;
+GtkTreeIter iter;
+GtkEntryCompletion *completion;
+GtkSwitch* subway_station_switch;
+GtkSwitch* subway_line_switch;
+
 // Zoom limits for curr_world_width, in meters
 const float ZOOM_LIMIT_0 = 50000;
 const float ZOOM_LIMIT_1 = 15000;
@@ -76,18 +89,10 @@ struct SegShortInfo
     std::string street_type;
 };
 
-// Short info for POI that will be displayed
-struct POIShortInfo
-{
-    std::string POIName;
-    ezgl::point2d POIPoint;
-};
 // All POI whose name will be displayed
 std::vector<std::vector<POIDetailedInfo>> poi_display;
-
-// Getting a pointer to our GtkEntry named "StreetEntry1" and "StreetEntry2"
-GtkListStore *list_store;
-GtkTreeIter iter;
+// All points where pin will be drawn on
+std::vector<ezgl::point2d> pin_display;
 
 /*******************************************************************************************************************************
  * FUNCTION DECLARATIONS
@@ -103,7 +108,6 @@ void draw_main_canvas (ezgl::renderer *g);
  * Initial Setup is run whenever a window is opened. 
  *************************************************************/
 void initial_setup (ezgl::application *application, bool new_window);
-gboolean fuzzy_match_func(GtkEntryCompletion *completion, const gchar *user_input, GtkTreeIter *iterr, gpointer /*user_data*/);
 
 /*************************************************************
  * EVENT CALLBACK FUNCTIONS
@@ -143,11 +147,13 @@ int get_street_width_meters (std::string& street_type);
 void draw_name_or_arrow (ezgl::renderer *g, std::string street_name, bool arrow,
                         ezgl::point2d from_xy, ezgl::point2d to_xy);
 void draw_pin (ezgl::renderer* g, ezgl::point2d inter_xy);
+
 std::string get_new_map_path (std::string text_string);
-void search_response (std::string input, ezgl::application *application);
 void draw_distance_scale (ezgl::renderer *g, ezgl::rectangle current_window);
 bool check_collides (ezgl::rectangle rec_1, ezgl::rectangle rec_2);
 bool check_contains (ezgl::rectangle rec_1, ezgl::rectangle rec_2);
+void search_response (std::string input, ezgl::application *application);
+gboolean fuzzy_match_func(GtkEntryCompletion */*completion*/, const gchar *user_input, GtkTreeIter *iterr, gpointer /*user_data*/);
 
 /*******************************************************************************************************************************
  * DRAW MAP
@@ -570,11 +576,6 @@ void draw_main_canvas (ezgl::renderer *g)
                 }
             }
         }
-        // Draw pinned POI(s)
-        if (tempPOI.highlight)
-        {
-            draw_pin(g, tempPOI.POIPoint);
-        }
     }
     // Display the selected POIs and Icons
     if (curr_world_width < ZOOM_LIMIT_4)
@@ -586,19 +587,15 @@ void draw_main_canvas (ezgl::renderer *g)
     }
 
     /******************************************************
-    * Draw highlighted intersection(s)
+    * Draw pins for currently selected Intersections/POIs
     ******************************************************/
-    for (int i = 0; i < intersectionNum; i++)
+    for (auto& point : pin_display)
     {
-        // Skips segments that are outside of current world
-        if (!visible_world.contains(Intersection_IntersectionInfo[i].position_xy))
+        if (!visible_world.contains(point))
         {
             continue;
         }
-        if (Intersection_IntersectionInfo[i].highlight)
-        {
-            draw_pin(g, Intersection_IntersectionInfo[i].position_xy);
-        }    
+        draw_pin(g, point);
     }
     
     /******************************************************
@@ -619,7 +616,7 @@ void initial_setup (ezgl::application *application, bool /*new_window*/)
     int row = 11;
 
     // Connects to NightModeSwitch
-    GObject *NightModeSwitch = application->get_object("NightModeSwitch");
+    NightModeSwitch = application->get_object("NightModeSwitch");
     g_signal_connect(
         NightModeSwitch, // pointer to the UI widget
         "state-set", // Signal state of switch being changed
@@ -628,7 +625,7 @@ void initial_setup (ezgl::application *application, bool /*new_window*/)
     );  
 
     // Connects to SubwayStationSwitch
-    GObject *SubwayStationSwitch = application->get_object("SubwayStationSwitch");
+    SubwayStationSwitch = application->get_object("SubwayStationSwitch");
     g_signal_connect(
         SubwayStationSwitch, // pointer to the UI widget
         "state-set", // Signal state of switch being changed
@@ -637,13 +634,17 @@ void initial_setup (ezgl::application *application, bool /*new_window*/)
     );  
 
     // Connects to SubwayLineSwitch
-    GObject *SubwayLineSwitch = application->get_object("SubwayLineSwitch");
+    SubwayLineSwitch = application->get_object("SubwayLineSwitch");
     g_signal_connect(
         SubwayLineSwitch, // pointer to the UI widget
         "state-set", // Signal state of switch being changed
         G_CALLBACK(subway_line_cbk), // name of callback function
         application // passing an application pointer to callback function
-    );  
+    );
+
+    // Set GtkSwitch pointers
+    subway_station_switch = GTK_SWITCH(SubwayStationSwitch);
+    subway_line_switch = GTK_SWITCH(SubwayLineSwitch);
 
     // Runtime: Creating drop=down list for filters
     application->create_label(row++, "Sort by");
@@ -671,7 +672,7 @@ void initial_setup (ezgl::application *application, bool /*new_window*/)
      * Sets up entry completion for search bar
      ************************************************/
     // Connects to SearchBar
-    GObject *SearchBar = application->get_object("SearchBar");
+    SearchBar = application->get_object("SearchBar");
     g_signal_connect(
         SearchBar, // pointer to the UI widget
         "activate", // signal representing "Enter" has been pressed or user clicked search icon
@@ -694,7 +695,7 @@ void initial_setup (ezgl::application *application, bool /*new_window*/)
     }
 
     // Change entry completion algorithm to support fuzzy search        // TODO: Prioritize closer match (improve algorithm)
-    GtkEntryCompletion *completion = GTK_ENTRY_COMPLETION(application->get_object("FullEntryCompletion"));
+    completion = GTK_ENTRY_COMPLETION(application->get_object("FullEntryCompletion"));
     gtk_entry_completion_set_match_func(completion, fuzzy_match_func, NULL, NULL);
 
 }
@@ -709,19 +710,30 @@ void act_on_mouse_click (ezgl::application* application, GdkEventButton* /*event
     // User selected intersection
     if (clicked_intersection_distance <= clicked_POI_distance)
     {
-        // Highlight / Unhighlight closest intersections
-        Intersection_IntersectionInfo[inter_id].highlight = !Intersection_IntersectionInfo[inter_id].highlight;
-        if (Intersection_IntersectionInfo[inter_id].highlight)
-        {   // Update mesasge if newly highlight an intersection
+        auto inter_it = std::find(pin_display.begin(), pin_display.end(), Intersection_IntersectionInfo[inter_id].position_xy);
+        // Highlight closest intersections by adding point to pin_display
+        if (inter_it == pin_display.end())
+        {
+            // Clear all pins if newly select intersection
+            pin_display.clear();
+            pin_display.push_back(Intersection_IntersectionInfo[inter_id].position_xy);
             application->update_message("Selected: " + Intersection_IntersectionInfo[inter_id].name);
+        } else  // Unhighlight intersection by removing from pin_display
+        {
+            pin_display.erase(inter_it);
         }
     } else  // User selected POI 
     {   
-        // Add to vector of POIs to be displayed
-        POI_AllInfo[POI_id].highlight = !POI_AllInfo[POI_id].highlight;
-        if (POI_AllInfo[POI_id].highlight)
-        {   // Update mesasge if newly highlight a POI
+        auto POI_it = std::find(pin_display.begin(), pin_display.end(), POI_AllInfo[POI_id].POIPoint);
+        if (POI_it == pin_display.end())
+        {   
+            // Clear all pins if newly select food place
+            pin_display.clear();
+            pin_display.push_back(POI_AllInfo[POI_id].POIPoint);
             application->update_message("Selected: " + POI_AllInfo[POI_id].POIName);
+        } else
+        {
+            pin_display.erase(POI_it);
         }
     }
     application->refresh_drawing();
@@ -752,20 +764,17 @@ void city_change_cbk (GtkComboBoxText* self, ezgl::application* application){
         CURRENT_MAP_PATH = new_map_path;
 
         // Closes current map and loads the new city
+        pin_display.clear();
         closeMap();
         loadMap(new_map_path);
 
         // Clear subway switches if new city doesn't have subways
-        GObject* SubwayStationSwitch = application->get_object("SubwayStationSwitch");
-        GtkSwitch* Switch_1 = GTK_SWITCH(SubwayStationSwitch);
-        GObject* SubwayLineSwitch = application->get_object("SubwayLineSwitch");
-        GtkSwitch* Switch_2 = GTK_SWITCH(SubwayLineSwitch);
         if (AllSubwayRoutes.size() == 0)
         {
-            gtk_switch_set_active(Switch_1, false);
-            gtk_switch_set_state(Switch_1, false);
-            gtk_switch_set_active(Switch_2, false);
-            gtk_switch_set_state(Switch_2, false);
+            gtk_switch_set_active(subway_station_switch, false);
+            gtk_switch_set_state(subway_station_switch, false);
+            gtk_switch_set_active(subway_line_switch, false);
+            gtk_switch_set_state(subway_line_switch, false);
         }
 
         // Clear GtkListStores of old city. Load GtkListStore for new city
@@ -776,9 +785,7 @@ void city_change_cbk (GtkComboBoxText* self, ezgl::application* application){
             gtk_list_store_set(list_store, &iter, 0, (pair.first).c_str(), -1);
         }
         // Clear the current text in GtkSearchEntry
-        GObject *search_entry = application->get_object("SearchBar");
-        gtk_entry_set_text(GTK_ENTRY(search_entry), "");
-        GtkEntryCompletion *completion = GTK_ENTRY_COMPLETION(application->get_object("FullEntryCompletion"));
+        gtk_entry_set_text(GTK_ENTRY(SearchBar), "");
         gtk_entry_completion_set_match_func(completion, fuzzy_match_func, NULL, NULL);
         
         // Reset the world based on new map
@@ -844,6 +851,7 @@ void subway_station_cbk (GtkSwitch* self, gboolean state, ezgl::application* app
         {
             application->update_message("Displaying Subway Stations");
             subway_station_mode = true;
+            pin_display.clear();
             application->refresh_drawing();
         }
     } else
@@ -885,6 +893,10 @@ void search_activate_cbk (GtkSearchEntry *self, ezgl::application *application)
     const gchar *search_text;
     search_text = gtk_entry_get_text(GTK_ENTRY(self));
     std::string input(search_text);
+
+    // Turn off subway station mode when searching for something
+    gtk_switch_set_active(subway_station_switch, false);
+    gtk_switch_set_state(subway_station_switch, false);
 
     // Determine how UI responses based on search input
     search_response(input, application);
@@ -1546,11 +1558,12 @@ void search_response (std::string input, ezgl::application *application)
         // There may be multiple intersections with the same name
         // If there are multiple, only allow a maximum of 5 intersections to be added to the pop-up window
         auto range = IntersectionName_IntersectionIdx.equal_range(input);
+        pin_display.clear();
         int count = 0;  // Count the number of values
         std::string to_be_converted = "Intersections between " + input + ":\n";
         for (auto it = range.first; it != range.second; ++it) {
             // Highlight the found intersections on the map
-            Intersection_IntersectionInfo[it->second].highlight = true;
+            pin_display.push_back(Intersection_IntersectionInfo[it->second].position_xy);
             // Add data for all intersections to pop-up message if count < 5
             if (count < 5)
             {
@@ -1577,8 +1590,9 @@ void search_response (std::string input, ezgl::application *application)
     else if (POI_AllFood.find(input) != POI_AllFood.end())
     {
         auto POIit = POI_AllFood.find(input);
+        pin_display.clear();
         // Highlight the location to be displayed
-        POI_AllInfo[POIit->second.id].highlight = true;
+        pin_display.push_back(POI_AllInfo[POIit->second.id].POIPoint);
 
         // Center of new location
         center = POI_AllInfo[POIit->second.id].POIPoint;
@@ -1672,7 +1686,7 @@ bool check_contains (ezgl::rectangle rec_1, ezgl::rectangle rec_2)
 }
 
 // Algorithm for fuzzy searching
-gboolean fuzzy_match_func (GtkEntryCompletion *completion, const gchar *user_input, GtkTreeIter *iterr, gpointer /*user_data*/)
+gboolean fuzzy_match_func (GtkEntryCompletion */*completion*/, const gchar *user_input, GtkTreeIter *iterr, gpointer /*user_data*/)
 {
     GtkTreeModel *model;
     gchar *user_input_lower, *data_text, *data_text_lower;
