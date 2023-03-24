@@ -132,6 +132,7 @@ void city_change_cbk (GtkComboBoxText* self, ezgl::application* application);
 /************************************************************
  * HELPER FUNCTIONS DECLARATIONS
  ************************************************************/
+// Drawing helper functions
 void draw_feature_area (ezgl::renderer *g, FeatureDetailedInfo tempFeatureInfo);
 void draw_POIs (ezgl::renderer* g, int regionIdx);
 void draw_street_segment_pixel (ezgl::renderer *g, StreetSegmentIdx seg_id, 
@@ -147,12 +148,13 @@ int get_street_width_meters (std::string& street_type);
 void draw_name_or_arrow (ezgl::renderer *g, std::string street_name, bool arrow,
                         ezgl::point2d from_xy, ezgl::point2d to_xy);
 void draw_pin (ezgl::renderer* g, ezgl::point2d inter_xy);
-
-std::string get_new_map_path (std::string text_string);
 void draw_distance_scale (ezgl::renderer *g, ezgl::rectangle current_window);
+// Other helper functions
+std::string get_new_map_path (std::string text_string);
+void search_response (std::string input, ezgl::application *application);
 bool check_collides (ezgl::rectangle rec_1, ezgl::rectangle rec_2);
 bool check_contains (ezgl::rectangle rec_1, ezgl::rectangle rec_2);
-void search_response (std::string input, ezgl::application *application);
+void move_camera (ezgl::point2d center, ezgl::application* application);
 gboolean fuzzy_match_func(GtkEntryCompletion */*completion*/, const gchar *user_input, GtkTreeIter *iterr, gpointer /*user_data*/);
 
 /*******************************************************************************************************************************
@@ -343,7 +345,7 @@ void draw_main_canvas (ezgl::renderer *g)
             ezgl::rectangle segment_rect = Segment_SegmentDetailedInfo[seg_id].segmentRectangle;
             if (!(check_collides(segment_rect, visible_world)
                 || check_contains(segment_rect, visible_world)
-                || check_contains(visible_world,segment_rect))) 
+                || check_contains(visible_world, segment_rect))) 
             {
                 continue;
             }
@@ -684,20 +686,23 @@ void initial_setup (ezgl::application *application, bool /*new_window*/)
     // Load all intersection names
     for (auto& pair : IntersectionName_IntersectionIdx_no_repeat)
     {
+        if (pair.first.find('&') == std::string::npos)
+        {
+            continue;   // Do not input intersections that isn't intersection of at least 2 streets
+        }
         gtk_list_store_append(list_store, &iter);
         gtk_list_store_set(list_store, &iter, 0, (pair.first).c_str(), -1);
     }
-    // Load all food place names
-    for (auto& pair : POI_AllFood)
-    {
-        gtk_list_store_append(list_store, &iter);
-        gtk_list_store_set(list_store, &iter, 0, (pair.first).c_str(), -1);
-    }
+    // Load all food place names - Temporarily disabled for M3
+    // for (auto& pair : POI_AllFood)
+    // {
+    //     gtk_list_store_append(list_store, &iter);
+    //     gtk_list_store_set(list_store, &iter, 0, (pair.first).c_str(), -1);
+    // }
 
     // Change entry completion algorithm to support fuzzy search        // TODO: Prioritize closer match (improve algorithm)
     completion = GTK_ENTRY_COMPLETION(application->get_object("FullEntryCompletion"));
     gtk_entry_completion_set_match_func(completion, fuzzy_match_func, NULL, NULL);
-
 }
 
 // Storing state of mouse clicks
@@ -781,6 +786,10 @@ void city_change_cbk (GtkComboBoxText* self, ezgl::application* application){
         gtk_list_store_clear(list_store);
         for (auto& pair : IntersectionName_IntersectionIdx_no_repeat)
         {
+            if (pair.first.find('&') == std::string::npos)
+            {
+                continue;   // Do not input intersections that isn't intersection of at least 2 streets
+            }
             gtk_list_store_append(list_store, &iter);
             gtk_list_store_set(list_store, &iter, 0, (pair.first).c_str(), -1);
         }
@@ -1456,15 +1465,64 @@ void draw_POIs (ezgl::renderer* g, int regionIdx)
 }
 
 /************************************************************
-// Draw Intersections
+// Draw Pins
 *************************************************************/
-
-// Display pins (intersection if highlighted)
+// Display pins (intersection or POI if highlighted)
 void draw_pin (ezgl::renderer* g, ezgl::point2d inter_xy)
 {
     ezgl::surface *png_surface = g->load_png("libstreetmap/resources/red_pin.png");
     g->draw_surface(png_surface, inter_xy);
     g->free_surface(png_surface);
+}
+
+/*******************************************************************************************************************************
+// Draw the distance scale
+ ********************************************************************************************************************************/
+void draw_distance_scale (ezgl::renderer *g, ezgl::rectangle current_window)
+{
+    //initialize scale variables
+    unsigned scaleNameIdx = 0;
+    double current_width = current_window.right() - current_window.left();
+    double current_height = current_window.top() - current_window.bottom();
+    const int scale_num[12] = {5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000};
+    const std::string scale_name[12] = {"5m", "10m", "20m", "50m", "100m", "200m", "500m", 
+                                        "1km", "2km", "5km", "10km", "20km"};
+    const std::vector<int> scaleNum (scale_num, scale_num + sizeof(scale_num) / sizeof(int));
+    const std::vector<std::string> scaleName (scale_name, 
+                                              scale_name + sizeof(scale_name) / sizeof(std::string));
+    //find the proper scale for the current window
+    auto scale = std::upper_bound (scaleNum.begin(), scaleNum.end(), int(current_width) / 20);
+    if (*scale > 20000)
+    {
+        return;                         //protect the program from corner case
+    }
+    for (unsigned scaleIdx = 0; scaleIdx < scaleNum.size(); scaleIdx++)
+    {
+        if (scaleNum[scaleIdx] == *scale)
+        {
+            scaleNameIdx = scaleIdx;
+            break;
+        }
+    }
+    ezgl::point2d rightPoint;
+    ezgl::point2d leftPoint;
+    rightPoint.x = current_window.right() - current_width / 20;
+    rightPoint.y = current_window.bottom() + current_height / 20;
+    leftPoint.x = rightPoint.x - *scale;
+    leftPoint.y = rightPoint.y;
+    if (night_mode)
+    {
+        g->set_color(255,255,25);
+    } else
+    {
+        g->set_color(0,0,0);
+    }
+    g->set_line_width(5);
+    g->set_text_rotation(0);
+    g->draw_line(leftPoint, rightPoint);
+    g->draw_text({(leftPoint.x + rightPoint.x) / 2, 
+                   current_window.bottom() + current_height / 25}, 
+                   scaleName[scaleNameIdx]);
 }
 
 /*******************************************************************************************************************************
@@ -1541,24 +1599,31 @@ std::string get_new_map_path (std::string text_string)
     return new_map_path;
 }
 
-// Response to search button callback
+/************************************************************
+// Response to search callback
+*************************************************************/
 void search_response (std::string input, ezgl::application *application)
 {
+    pin_display.clear();
     // No response if input is empty or the input is neither intersection nor food place
-    if (input.empty() || (IntersectionName_IntersectionIdx.find(input) == IntersectionName_IntersectionIdx.end()
-                          && POI_AllFood.find(input) == POI_AllFood.end()))
+    if (input.empty())
     {
+        std::string to_be_converted = "Enter intersection in the input field";
+        const char* message = to_be_converted.c_str();
+        application->create_popup_message("Error", message);
         return;
     }
+
     // Center of new camera, to be set to either intersection or food place
     ezgl::point2d center;
-    // Check for intersection
+
+    // 1: User selected from the drop-down list - perfectly matches an intersection name between 2 streeets
+    // TODO: If there are multiple intersections with the same name, user should get to choose which one they want
     if (IntersectionName_IntersectionIdx.find(input) != IntersectionName_IntersectionIdx.end())
     {
         // There may be multiple intersections with the same name
         // If there are multiple, only allow a maximum of 5 intersections to be added to the pop-up window
         auto range = IntersectionName_IntersectionIdx.equal_range(input);
-        pin_display.clear();
         int count = 0;  // Count the number of values
         std::string to_be_converted = "Intersections between " + input + ":\n";
         for (auto it = range.first; it != range.second; ++it) {
@@ -1583,88 +1648,192 @@ void search_response (std::string input, ezgl::application *application)
         // Move the camera to focus the intersection
         // Center of new location (centered at first intersection found)
         center = Intersection_IntersectionInfo[range.first->second].position_xy;
-
+        move_camera(center, application);
+        
         application->update_message("Found intersection!");
     } 
-    // Check for food places
-    else if (POI_AllFood.find(input) != POI_AllFood.end())
+    // 2. User did not select from drop-down list. User entered only 1 street name or 2 street names not separated by '&'
+    else if (input.find('&') == std::string::npos)
     {
-        auto POIit = POI_AllFood.find(input);
-        pin_display.clear();
-        // Highlight the location to be displayed
-        pin_display.push_back(POI_AllInfo[POIit->second.id].POIPoint);
-
-        // Center of new location
-        center = POI_AllInfo[POIit->second.id].POIPoint;
-
-        application->update_message("Found food place!");
+        std::string to_be_converted = "Please enter at least 2 street names, separated by '&'";
+        const char* message = to_be_converted.c_str();
+        application->create_popup_message("Error", message);
+        return;
     }
-    
-    // Move camera to new center
-    // Get aspect ratio of current world (viewable region)
-    ezgl::renderer* g = application->get_renderer();
-    visible_world = g->get_visible_world();
-    double width = visible_world.width();
-    double height = visible_world.height();
-    double map_aspect_ratio = width / height;
-    // Set aspect ratio of new camera
-    double new_width = FIND_ZOOM_WIDTH;
-    double new_height = new_width / map_aspect_ratio;
-    ezgl::rectangle new_rect({center.x - new_width / 2, center.y - new_height / 2}, new_width, new_height);
-    g->set_visible_world(new_rect);
-
-    // Redraw the main canvas
-    application->refresh_drawing();
-}
-
-/*******************************************************************************************************************************
-// Draw the distance scale
- ********************************************************************************************************************************/
-void draw_distance_scale (ezgl::renderer *g, ezgl::rectangle current_window)
-{
-    //initialize scale variables
-    unsigned scaleNameIdx = 0;
-    double current_width = current_window.right() - current_window.left();
-    double current_height = current_window.top() - current_window.bottom();
-    const int scale_num[12] = {5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000};
-    const std::string scale_name[12] = {"5m", "10m", "20m", "50m", "100m", "200m", "500m", 
-                                        "1km", "2km", "5km", "10km", "20km"};
-    const std::vector<int> scaleNum (scale_num, scale_num + sizeof(scale_num) / sizeof(int));
-    const std::vector<std::string> scaleName (scale_name, 
-                                              scale_name + sizeof(scale_name) / sizeof(std::string));
-    //find the proper scale for the current window
-    auto scale = std::upper_bound (scaleNum.begin(), scaleNum.end(), int(current_width) / 20);
-    if (*scale > 20000)
+    // 3. User did enter something with a "&". Now, split the string to get street names, then find streets and intersections by partial name
+    else
     {
-        return;                         //protect the program from corner case
-    }
-    for (unsigned scaleIdx = 0; scaleIdx < scaleNum.size(); scaleIdx++)
-    {
-        if (scaleNum[scaleIdx] == *scale)
-        {
-            scaleNameIdx = scaleIdx;
-            break;
+        // Set to store all streets parsed
+        std::vector<std::string> split_streets;
+        // Vector to store all streets selected to be considered
+        std::vector<std::string> streets_selected;
+        // String for pop-up message
+        std::string to_be_converted = "";
+
+        // Remove all spaces from the input
+        input.erase(std::remove(input.begin(), input.end(), ' '), input.end());
+        // Parse all streets input by the user. Streets are separated by "&" character
+        int pos = 0;
+        std::string street;
+        while ((pos = input.find("&")) != std::string::npos) {
+            street = input.substr(0, pos);
+            split_streets.push_back(street);
+            input.erase(0, pos + 1);
         }
+        split_streets.push_back(input); // add the last street
+
+        // Do not allow enter same inputs
+        if (split_streets.size() == 2 && split_streets[0] == split_streets[1] && split_streets[0] != "")
+        {
+            to_be_converted = "Enter two different streets";
+            const char* message = to_be_converted.c_str();
+            application->create_popup_message("Error", message);
+            return;
+        }
+
+        // Index: count of streets being considered; Value: vector of all intersections of that street
+        std::vector<std::vector<IntersectionIdx>> intersections_selected;
+        // Vector of flags to note if a street selected from partials uniquely defines a street
+        std::vector<bool> street_unique_flags;
+        for (int i = 0; i < split_streets.size(); i++)
+        {
+            std::vector<StreetIdx> partials = findStreetIdsFromPartialStreetName(split_streets[i]);
+            if (partials.size() == 0)
+            {
+                to_be_converted = "Street " + std::to_string(i + 1) + " not found";
+                const char* message = to_be_converted.c_str();
+                application->create_popup_message("Error", message);
+                return;
+            } else
+            {
+                if (partials.size() == 1)
+                {
+                    street_unique_flags.push_back(true);
+                } else
+                {
+                    street_unique_flags.push_back(false);
+                }
+                // Selects the first element of partial street name. Record all intersections of that street
+                intersections_selected.push_back(Street_StreetInfo.at(partials[0]).all_intersections);
+                // Keep track of which street names are selected to find intersections
+                streets_selected.push_back(Street_StreetInfo.at(partials[0]).name);
+            }
+        }
+        // All streets entered have been found through partial street name
+        // Now find union of all vectors of intersections
+        auto first_vect = intersections_selected[0];
+        for (auto curr_vect : intersections_selected)
+        {
+            std::vector<IntersectionIdx> intersection_vect;
+            std::set_intersection(first_vect.begin(), first_vect.end(),
+                                  curr_vect.begin(), curr_vect.end(),
+                                  std::back_inserter(intersection_vect));
+            first_vect = intersection_vect;
+        }
+
+        // Union of intersections of all streets is in first_vect
+        // 3.1. No intersections found between the streets
+        if (first_vect.size() == 0)
+        {
+            to_be_converted += "No intersections found between ";
+            for (int i = 0; i < streets_selected.size(); i++)
+            {
+                to_be_converted += streets_selected[i];
+                if (i != streets_selected.size() - 1)
+                {
+                    to_be_converted += " & ";
+                }
+            }
+        }
+        // 3.2. One intersection found between streets
+        else if (first_vect.size() == 1)
+        {
+            // Highlight the found intersections on the map
+            pin_display.push_back(Intersection_IntersectionInfo[first_vect[0]].position_xy);
+
+            to_be_converted += "Intersection found between ";
+            for (int i = 0; i < streets_selected.size(); i++)
+            {
+                to_be_converted += streets_selected[i];
+                if (i != streets_selected.size() - 1)
+                {
+                    to_be_converted += " & ";
+                }
+            }
+            to_be_converted += ":\n";
+            to_be_converted += "Latitude: " + std::to_string(getIntersectionPosition(first_vect[0]).latitude()) + "\n"
+                                + "Longitude: " + std::to_string(getIntersectionPosition(first_vect[0]).longitude()) + "\n"
+                                + "------------------------\n";
+
+            // Move the camera to focus the intersection
+            center = Intersection_IntersectionInfo[first_vect[0]].position_xy;
+            move_camera(center, application);
+
+            application->update_message("Found intersection!");
+        }
+        // 3.3. More than 1 intersections found between streets
+        // TODO: User will be prompted to choose a specific intersection when direction mode is turned ON
+        else
+        {
+            int count = 0;  // Count the number of intersections
+            to_be_converted += "Multiple intersections found between ";
+            for (int i = 0; i < streets_selected.size(); i++)
+            {
+                to_be_converted += streets_selected[i];
+                if (i != streets_selected.size() - 1)
+                {
+                    to_be_converted += " & ";
+                }
+            }
+            to_be_converted += ":\n";
+            for (auto it = first_vect.begin(); it != first_vect.end(); it++)
+            {
+                // Highlight the found intersections on the map
+                pin_display.push_back(Intersection_IntersectionInfo[*it].position_xy);
+                // Add data for all intersections to pop-up message if count < 5
+                if (count < 5)
+                {
+                    to_be_converted += "Latitude: " + std::to_string(getIntersectionPosition(*it).latitude()) + "\n"
+                                        + "Longitude: " + std::to_string(getIntersectionPosition(*it).longitude()) + "\n"
+                                        + "------------------------\n";
+                }
+                count++;
+            }
+            if (count >= 5)
+            {
+                to_be_converted += "More not shown...\n";
+            }
+            // Set center of new camera (centered at first intersection found)
+            center = Intersection_IntersectionInfo[first_vect[0]].position_xy;
+            move_camera(center, application);
+
+            application->update_message("Found intersection!");
+        }
+
+        // For all situations (that user entered street names with '&')
+        // add warning if any street name entered isn't unique 
+        auto flag_it = std::find(street_unique_flags.begin(), street_unique_flags.end(), false);
+        if (flag_it != street_unique_flags.end())
+        {
+            to_be_converted += "\n\n";
+            to_be_converted += "Note: Token " + std::to_string(std::distance(street_unique_flags.begin(), flag_it) + 1) + " does not uniquely define a street";
+        }
+        const char* message = to_be_converted.c_str();
+        application->create_popup_message("Search intersection", message);
     }
-    ezgl::point2d rightPoint;
-    ezgl::point2d leftPoint;
-    rightPoint.x = current_window.right() - current_width / 20;
-    rightPoint.y = current_window.bottom() + current_height / 20;
-    leftPoint.x = rightPoint.x - *scale;
-    leftPoint.y = rightPoint.y;
-    if (night_mode)
-    {
-        g->set_color(255,255,25);
-    } else
-    {
-        g->set_color(0,0,0);
-    }
-    g->set_line_width(5);
-    g->set_text_rotation(0);
-    g->draw_line(leftPoint, rightPoint);
-    g->draw_text({(leftPoint.x + rightPoint.x) / 2, 
-                   current_window.bottom() + current_height / 25}, 
-                   scaleName[scaleNameIdx]);
+
+    // Check for food places - Temporarily disabled for M3
+    // else if (POI_AllFood.find(input) != POI_AllFood.end())
+    // {
+    //     auto POIit = POI_AllFood.find(input);
+    //     // Highlight the location to be displayed
+    //     pin_display.push_back(POI_AllInfo[POIit->second.id].POIPoint);
+
+    //     // Center of new location
+    //     center = POI_AllInfo[POIit->second.id].POIPoint;
+    //     move_camera(center,application);
+    //     application->update_message("Found food place!");
+    // }
 }
 
 /*******************************************************************************************************************************
@@ -1683,6 +1852,25 @@ bool check_contains (ezgl::rectangle rec_1, ezgl::rectangle rec_2)
     bool x_contain = (rec_1.left() <= rec_2.left()) && (rec_2.right() <= rec_1.right());
     bool y_contain = (rec_1.bottom() <= rec_2.bottom()) && (rec_2.top() <= rec_1.top());
     return x_contain && y_contain;
+}
+
+// Move camera to new center
+void move_camera (ezgl::point2d center, ezgl::application* application)
+{
+    // Get aspect ratio of current world (viewable region)
+    ezgl::renderer* g = application->get_renderer();
+    visible_world = g->get_visible_world();
+    double width = visible_world.width();
+    double height = visible_world.height();
+    double map_aspect_ratio = width / height;
+    // Set aspect ratio of new camera
+    double new_width = FIND_ZOOM_WIDTH;
+    double new_height = new_width / map_aspect_ratio;
+    ezgl::rectangle new_rect({center.x - new_width / 2, center.y - new_height / 2}, new_width, new_height);
+    g->set_visible_world(new_rect);
+
+    // Redraw the main canvas
+    application->refresh_drawing();
 }
 
 // Algorithm for fuzzy searching

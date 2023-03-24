@@ -295,8 +295,8 @@ std::vector<IntersectionIdx> findIntersectionsOfTwoStreets(StreetIdx street_id1,
 
     // Find union of 2 vectors
     // 2 vectors are already sorted in ascending order
-    std::set_intersection(Street_StreetInfo.at(street_id1).all_intersections.begin(), Street_StreetInfo.at(street_id1).all_intersections.end(),
-                        Street_StreetInfo.at(street_id2).all_intersections.begin(), Street_StreetInfo.at(street_id2).all_intersections.end(),
+    std::set_intersection(street1Intersection.begin(), street1Intersection.end(),
+                        street2Intersection.begin(), street2Intersection.end(),
                         std::back_inserter(intersectionTwoSt));
 
     return intersectionTwoSt;
