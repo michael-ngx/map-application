@@ -634,7 +634,8 @@ void init_streets()
         // Sort + unique to remove all the duplicating intersections for each streets
         // Sorting is required for finding union between 2 vectors (to find intersections between 2 streets) later
         sort(pair.second.all_intersections.begin(), pair.second.all_intersections.end());
-        pair.second.all_intersections.erase(unique(pair.second.all_intersections.begin(), pair.second.all_intersections.end()), pair.second.all_intersections.end());
+        auto remove_duplicates = unique(pair.second.all_intersections.begin(), pair.second.all_intersections.end());
+        pair.second.all_intersections.erase(remove_duplicates, pair.second.all_intersections.end());
         
         // Populate ordered multimap for Streets (StreetName - Street index)
         std::string str = pair.second.name;

@@ -18,12 +18,22 @@
       </attributes>
     </child>
   </object>
+  <object class="GtkEntryCompletion" id="FullEntryCompletionDestination">
+    <property name="model">FullSearchList</property>
+    <property name="text-column">0</property>
+    <child>
+      <object class="GtkCellRendererText" id="CellRendererSearchBarDestination"/>
+      <attributes>
+        <attribute name="text">0</attribute>
+      </attributes>
+    </child>
+  </object>
   <object class="GtkWindow" id="MainWindow">
     <property name="visible">True</property>
     <property name="can-focus">False</property>
     <property name="title">Bite Points</property>
-    <property name="default-width">1600</property>
-    <property name="default-height">1200</property>
+    <property name="default-width">1200</property>
+    <property name="default-height">900</property>
     <child>
       <object class="GtkOverlay" id="MainOverlay">
         <property name="visible">True</property>
@@ -38,16 +48,7 @@
           </packing>
         </child>
         <child type="overlay">
-          <object class="GtkStatusbar" id="StatusBar">
-            <property name="visible">True</property>
-            <property name="can-focus">False</property>
-            <property name="valign">end</property>
-            <property name="orientation">vertical</property>
-            <property name="spacing">2</property>
-          </object>
-        </child>
-        <child type="overlay">
-          <!-- n-columns=3 n-rows=10 -->
+          <!-- n-columns=3 n-rows=13 -->
           <object class="GtkGrid" id="InnerGrid">
             <property name="visible">True</property>
             <property name="can-focus">False</property>
@@ -170,10 +171,41 @@
                 <property name="width">3</property>
               </packing>
             </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+              </object>
+              <packing>
+                <property name="left-attach">0</property>
+                <property name="top-attach">10</property>
+                <property name="width">3</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="label" translatable="yes">Navigation</property>
+              </object>
+              <packing>
+                <property name="left-attach">0</property>
+                <property name="top-attach">11</property>
+                <property name="width">3</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkSwitch" id="NavigationSwitch">
+                <property name="visible">True</property>
+                <property name="can-focus">True</property>
+              </object>
+              <packing>
+                <property name="left-attach">0</property>
+                <property name="top-attach">12</property>
+                <property name="width">3</property>
+              </packing>
+            </child>
           </object>
-          <packing>
-            <property name="index">1</property>
-          </packing>
         </child>
         <child type="overlay">
           <object class="GtkSearchEntry" id="SearchBar">
@@ -183,16 +215,48 @@
             <property name="can-focus">True</property>
             <property name="halign">start</property>
             <property name="valign">start</property>
-            <property name="margin-left">15</property>
+            <property name="margin-left">10</property>
             <property name="margin-top">10</property>
             <property name="primary-icon-name">edit-find-symbolic</property>
             <property name="primary-icon-activatable">False</property>
             <property name="primary-icon-sensitive">False</property>
-            <property name="placeholder-text" translatable="yes">Search Intersections or Food places</property>
+            <property name="placeholder-text" translatable="yes">Search Intersections</property>
             <property name="completion">FullEntryCompletion</property>
           </object>
           <packing>
+            <property name="index">1</property>
+          </packing>
+        </child>
+        <child type="overlay">
+          <object class="GtkSearchEntry" id="SearchBarDestination">
+            <property name="width-request">400</property>
+            <property name="height-request">0</property>
+            <property name="visible">True</property>
+            <property name="can-focus">True</property>
+            <property name="halign">start</property>
+            <property name="valign">start</property>
+            <property name="margin-left">10</property>
+            <property name="margin-top">40</property>
+            <property name="primary-icon-name">edit-find-symbolic</property>
+            <property name="primary-icon-activatable">False</property>
+            <property name="primary-icon-sensitive">False</property>
+            <property name="placeholder-text" translatable="yes">Choose destination, or click on the map</property>
+            <property name="completion">FullEntryCompletionDestination</property>
+          </object>
+          <packing>
             <property name="index">2</property>
+          </packing>
+        </child>
+        <child type="overlay">
+          <object class="GtkStatusbar" id="StatusBar">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="valign">end</property>
+            <property name="orientation">vertical</property>
+            <property name="spacing">2</property>
+          </object>
+          <packing>
+            <property name="index">3</property>
           </packing>
         </child>
       </object>

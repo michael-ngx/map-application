@@ -106,7 +106,7 @@ struct StreetInfo
 };
 extern std::unordered_map<StreetIdx, StreetInfo> Street_StreetInfo;
 
-// Keys: Street names w/ id (lower case, no space), Value: street index
+// Keys: Street names (lower case, no space), Value: street id
 // If street name == "<unknown>", street name has no suffix
 extern std::multimap<std::string, StreetIdx> StreetName_lower_StreetIdx;
 
