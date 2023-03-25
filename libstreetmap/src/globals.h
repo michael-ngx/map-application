@@ -87,6 +87,8 @@ double findDistanceBetweenTwoPoints (ezgl::point2d point_1, ezgl::point2d point_
 IntersectionIdx findClosestIntersection(ezgl::point2d my_position);
 // Function to find closest POI of any type, based on xy, not LatLon
 POIIdx findClosestPOI(ezgl::point2d my_position);
+// Returns all intersection ids corresponding to intersection names that start with the given prefix
+std::vector<IntersectionIdx> findIntersectionIdsFromPartialIntersectionName(std::string intersection_prefix);
 
 // *********************************************************************************************************
 // Latlon bounds
@@ -145,8 +147,10 @@ struct IntersectionInfo{
 extern std::vector<IntersectionInfo> Intersection_IntersectionInfo;
 // Key: Intersection name, Value: IntersectionIdx (no repeating intersection names)
 extern std::unordered_map<std::string, IntersectionIdx> IntersectionName_IntersectionIdx_no_repeat;
-// Key: Intersection name, Value: IntersectionIdx (Allow repeating intersection names)
+// Key: Intersection name, Value: IntersectionIdx
 extern std::unordered_multimap<std::string, IntersectionIdx> IntersectionName_IntersectionIdx;
+// Key: Intersection name (lower case, no space), Value: IntersectionIdx
+extern std::multimap<std::string, IntersectionIdx> IntersectionName_lower_IntersectionIdx;
 
 // *********************************************************************************************************
 // Streets
@@ -162,7 +166,6 @@ struct StreetInfo
 extern std::unordered_map<StreetIdx, StreetInfo> Street_StreetInfo;
 
 // Keys: Street names (lower case, no space), Value: street id
-// If street name == "<unknown>", street name has no suffix
 extern std::multimap<std::string, StreetIdx> StreetName_lower_StreetIdx;
 
 // *********************************************************************************************************

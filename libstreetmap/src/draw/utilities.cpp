@@ -36,3 +36,21 @@ void move_camera (ezgl::point2d center, ezgl::application* application)
     // Redraw the main canvas
     application->refresh_drawing();
 }
+
+// Input: original string. Output: string lowercased and space removed
+std::string lower_no_space (std::string input)
+{
+    std::string result = "";
+    if (input.empty())
+    {
+        return result;
+    }
+    for (auto& c : input){
+        if (c == ' ')
+        {
+            continue;
+        }
+        result.push_back(char(tolower(c)));
+    }
+    return result;
+}

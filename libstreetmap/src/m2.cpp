@@ -645,12 +645,9 @@ void initial_setup (ezgl::application *application, bool /*new_window*/)
     // Connect to FullSearchList
     list_store = GTK_LIST_STORE(application->get_object("FullSearchList"));
     // Load all intersection names
+    // Intersection names may or may not contain '&'
     for (auto& pair : IntersectionName_IntersectionIdx_no_repeat)
     {
-        if (pair.first.find('&') == std::string::npos)
-        {
-            continue;   // Do not input intersections that isn't intersection of at least 2 streets
-        }
         gtk_list_store_append(list_store, &iter);
         gtk_list_store_set(list_store, &iter, 0, (pair.first).c_str(), -1);
     }
@@ -668,41 +665,58 @@ void initial_setup (ezgl::application *application, bool /*new_window*/)
     gtk_entry_completion_set_match_func(completion_destination, fuzzy_match_func, NULL, NULL);
 }
 
+                                            
+                                            // 1. Both entries are clear
+                                                // focus-in-event to see which field to fill
+                                            // 2. User previously searched for/clicked on an intersection --> Set that intersection as the starting point
+                                            // TODO: Swap button (?)
 // Storing state of mouse clicks
 void act_on_mouse_click (ezgl::application* application, GdkEventButton* /*event*/, double x, double y)
 {
-    // Check whether the mouse clicked closer to a POI or an intersection
-    IntersectionIdx inter_id = findClosestIntersection(ezgl::point2d(x, y));
-    POIIdx POI_id = findClosestPOI(ezgl::point2d(x, y));
-    
-    // User selected intersection
-    if (clicked_intersection_distance <= clicked_POI_distance)
+    // If not in navigation mode --> Exploration mode --> Allow highlighting only one intersection/POI at a time
+    if (!navigation_mode)
     {
-        auto inter_it = std::find(pin_display.begin(), pin_display.end(), Intersection_IntersectionInfo[inter_id].position_xy);
-        // Highlight closest intersections by adding point to pin_display
-        if (inter_it == pin_display.end())
+        // Check whether the mouse clicked closer to a POI or an intersection
+        IntersectionIdx inter_id = findClosestIntersection(ezgl::point2d(x, y));
+        POIIdx POI_id = findClosestPOI(ezgl::point2d(x, y));
+        
+        // User selected intersection
+        if (clicked_intersection_distance <= clicked_POI_distance)
         {
-            // Clear all pins if newly select intersection
-            pin_display.clear();
-            pin_display.push_back(Intersection_IntersectionInfo[inter_id].position_xy);
-            application->update_message("Selected: " + Intersection_IntersectionInfo[inter_id].name);
-        } else  // Unhighlight intersection by removing from pin_display
-        {
-            pin_display.erase(inter_it);
-        }
-    } else  // User selected POI 
-    {   
-        auto POI_it = std::find(pin_display.begin(), pin_display.end(), POI_AllInfo[POI_id].POIPoint);
-        if (POI_it == pin_display.end())
+            auto inter_it = std::find(pin_display.begin(), pin_display.end(), Intersection_IntersectionInfo[inter_id].position_xy);
+            // Highlight closest intersections by adding point to pin_display
+            if (inter_it == pin_display.end())
+            {
+                // Clear all pins if newly select intersection
+                pin_display.clear();
+                pin_display.push_back(Intersection_IntersectionInfo[inter_id].position_xy);
+                application->update_message("Selected: " + Intersection_IntersectionInfo[inter_id].name);
+            } else  // Unhighlight intersection by removing from pin_display
+            {
+                pin_display.erase(inter_it);
+            }
+        } else  // User selected POI 
         {   
-            // Clear all pins if newly select food place
-            pin_display.clear();
-            pin_display.push_back(POI_AllInfo[POI_id].POIPoint);
-            application->update_message("Selected: " + POI_AllInfo[POI_id].POIName);
-        } else
-        {
-            pin_display.erase(POI_it);
+            auto POI_it = std::find(pin_display.begin(), pin_display.end(), POI_AllInfo[POI_id].POIPoint);
+            if (POI_it == pin_display.end())
+            {   
+                // Clear all pins if newly select food place
+                pin_display.clear();
+                pin_display.push_back(POI_AllInfo[POI_id].POIPoint);
+                application->update_message("Selected: " + POI_AllInfo[POI_id].POIName);
+            } else
+            {
+                pin_display.erase(POI_it);
+            }
         }
     }
+    // Navigation mode
+    else
+    {
+        // Record closest intersection
+        IntersectionIdx inter_id = findClosestIntersection(ezgl::point2d(x, y));
+        // Put the intersection name into input field
+    }
+    
     application->refresh_drawing();
 }
