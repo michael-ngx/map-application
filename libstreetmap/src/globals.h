@@ -75,8 +75,9 @@ const int NUM_REGIONS = 12;
 
 // All points where pin will be drawn on - Cleared and Modified based on user input
 extern std::vector<ezgl::point2d> pin_display;
-
-
+// Starting point and destination point
+extern ezgl::point2d start_point;
+extern ezgl::point2d destination_point;
 
 // *********************************************************************************************************
 // Overloaded functions from M1

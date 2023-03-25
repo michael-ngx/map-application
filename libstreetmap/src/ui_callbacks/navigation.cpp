@@ -26,9 +26,6 @@ void navigation_response (std::string input_1, std::string input_2, ezgl::applic
 
     // Center of new camera, to be set to see the path
     ezgl::point2d center;
-    // Starting point and destination point
-    ezgl::point2d start_point;
-    ezgl::point2d destination_point;
     // User feedback popup messages
     std::string to_be_converted = "";
     std::string headline = "";
@@ -450,6 +447,12 @@ void navigation_response (std::string input_1, std::string input_2, ezgl::applic
         const char* headline_ctr = headline.c_str();
         application->create_popup_message(headline_ctr, message);
     }
+
+
+    // Navigate!
+    std::cout << "NAVIGATE BETWEEN " << start_point.x << " " << start_point.y << " and " 
+    << destination_point.x << " " << destination_point.y << std::endl;
+
+
     application->refresh_drawing();
-    return;
 }

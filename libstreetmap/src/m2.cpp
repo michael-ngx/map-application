@@ -61,6 +61,9 @@ bool navigation_mode = false;
 
 // Rectangle of current visible world, in meters
 ezgl::rectangle visible_world;
+// Starting point and destination point (Initialized to 0, 0)
+ezgl::point2d start_point = ezgl::point2d(0, 0);
+ezgl::point2d destination_point = ezgl::point2d(0, 0);
 
 // Short info for segments whose street name will be displayed
 struct SegShortInfo
@@ -678,45 +681,88 @@ void act_on_mouse_click (ezgl::application* application, GdkEventButton* /*event
     {
         // Check whether the mouse clicked closer to a POI or an intersection
         IntersectionIdx inter_id = findClosestIntersection(ezgl::point2d(x, y));
-        POIIdx POI_id = findClosestPOI(ezgl::point2d(x, y));
+        // POIIdx POI_id = findClosestPOI(ezgl::point2d(x, y)); - temporarily disablied for M3
         
         // User selected intersection
-        if (clicked_intersection_distance <= clicked_POI_distance)
-        {
+        // if (clicked_intersection_distance <= clicked_POI_distance)
+        // {
             auto inter_it = std::find(pin_display.begin(), pin_display.end(), Intersection_IntersectionInfo[inter_id].position_xy);
             // Highlight closest intersections by adding point to pin_display
             if (inter_it == pin_display.end())
             {
-                // Clear all pins if newly select intersection
+                // Clear all pins if newly select intersection. 
                 pin_display.clear();
-                pin_display.push_back(Intersection_IntersectionInfo[inter_id].position_xy);
-                application->update_message("Selected: " + Intersection_IntersectionInfo[inter_id].name);
+                // Set start point to selected position
+                start_point = Intersection_IntersectionInfo[inter_id].position_xy;
+                // Highlight only selected intersection
+                pin_display.push_back(start_point);
+                // Set Search bar to contain intersection name
+                std::string intersection_name = Intersection_IntersectionInfo[inter_id].name;
+                const gchar* cstr = intersection_name.c_str();
+                gtk_entry_set_text(GTK_ENTRY(SearchBar), cstr);
             } else  // Unhighlight intersection by removing from pin_display
             {
                 pin_display.erase(inter_it);
             }
-        } else  // User selected POI 
-        {   
-            auto POI_it = std::find(pin_display.begin(), pin_display.end(), POI_AllInfo[POI_id].POIPoint);
-            if (POI_it == pin_display.end())
-            {   
-                // Clear all pins if newly select food place
-                pin_display.clear();
-                pin_display.push_back(POI_AllInfo[POI_id].POIPoint);
-                application->update_message("Selected: " + POI_AllInfo[POI_id].POIName);
-            } else
-            {
-                pin_display.erase(POI_it);
-            }
-        }
+        // } else  // User selected POI - temporarily disablied for M3
+        // {   
+        //     auto POI_it = std::find(pin_display.begin(), pin_display.end(), POI_AllInfo[POI_id].POIPoint);
+        //     if (POI_it == pin_display.end())
+        //     {   
+        //         // Clear all pins if newly select food place.
+        //         pin_display.clear();
+        //         // Set start point to selected position
+        //         start_point = POI_AllInfo[POI_id].POIPoint;
+        //         // Highlight only selected POI
+        //         pin_display.push_back(start_point);
+                
+        //         // Set Search bar to contain intersection name
+        //         std::string POIname = POI_AllInfo[POI_id].POIName;
+        //         const gchar* cstr = POIname.c_str();
+        //         gtk_entry_set_text(GTK_ENTRY(SearchBar), cstr);
+        //     } else
+        //     {
+        //         pin_display.erase(POI_it);
+        //     }
+        // }
     }
     // Navigation mode
     else
     {
         // Record closest intersection
         IntersectionIdx inter_id = findClosestIntersection(ezgl::point2d(x, y));
-        // Put the intersection name into input field
+        std::string intersection_name = Intersection_IntersectionInfo[inter_id].name;
+        const gchar* cstr = intersection_name.c_str();
+        
+        // Put the intersection name into input field, depending on which field is hightlighted
+        if (gtk_widget_has_focus(GTK_WIDGET(SearchBarDestination)))
+        {
+            gtk_entry_set_text(GTK_ENTRY(SearchBarDestination), cstr);
+            // Set destination point
+            destination_point = Intersection_IntersectionInfo[inter_id].position_xy;
+        } else
+        {
+            gtk_entry_set_text(GTK_ENTRY(SearchBar), cstr);
+            // Set starting point
+            start_point = Intersection_IntersectionInfo[inter_id].position_xy;
+        }
+        // Change pin display for new start and destination
+        pin_display.clear();
+        pin_display.push_back(start_point);
+        pin_display.push_back(destination_point);
+
+        // Start navigate if both fields are filled
+        const gchar *search_text;
+        search_text = gtk_entry_get_text(GTK_ENTRY(SearchBar));
+        std::string input_1(search_text);
+        search_text = gtk_entry_get_text(GTK_ENTRY(SearchBarDestination));
+        std::string input_2(search_text);
+        if (!input_1.empty() && !input_2.empty())
+        {
+            std::cout << "NAVIGATE BETWEEN " << start_point.x << " " << start_point.y << " and " 
+                      << destination_point.x << " " << destination_point.y << std::endl;
+        }
     }
-    
+
     application->refresh_drawing();
 }

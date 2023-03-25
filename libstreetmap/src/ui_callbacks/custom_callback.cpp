@@ -165,6 +165,14 @@ void navigation_switch_cbk (GtkSwitch* /*self*/, gboolean state, ezgl::applicati
         gtk_widget_show(GTK_WIDGET(SearchBarDestination));
         // Change placeholder of first search bar
         gtk_entry_set_placeholder_text(GTK_ENTRY(SearchBar), "Choose starting point, or click on the map");
+        // Grab the focus to destination search bar if the content of the first search bar is not empty
+        const gchar *search_text;
+        search_text = gtk_entry_get_text(GTK_ENTRY(SearchBar));
+        std::string input_1(search_text);
+        if (!input_1.empty())
+        {
+            gtk_widget_grab_focus(GTK_WIDGET(SearchBarDestination));
+        }
         application->refresh_drawing();
     } else
     {
