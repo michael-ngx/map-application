@@ -1,11 +1,12 @@
-#include "UI callbacks/custom_callback.hpp"
+#include "ui_callbacks/custom_callback.hpp"
 
 
 /*******************************************************************************************************************************
  * UI CALLBACKS
  ********************************************************************************************************************************/
 
-void city_change_cbk (GtkComboBoxText* self, ezgl::application* application){
+void city_change_cbk (GtkComboBoxText* self, ezgl::application* application)
+{
     //Getting current text content
     auto text = gtk_combo_box_text_get_active_text(self);
     std::string text_string = text;

@@ -10,6 +10,7 @@
 #include "ezgl/application.hpp"
 #include "m1.h"
 #include "globals.h"
+#include "draw/utilities.hpp"
 
 // Response to user input for searching/navigation
 void search_response (std::string input, ezgl::application *application);

@@ -7,7 +7,7 @@
 #ifndef CALLBACKS_H
 #define CALLBACKS_H
 
-#include "UI callbacks/input_response.hpp"
+#include "ui_callbacks/input_response.hpp"
 
 void input_streets_cbk(GtkWidget *widget, ezgl::application* application);
 void search_activate_cbk(GtkSearchEntry *self, ezgl::application* application);
