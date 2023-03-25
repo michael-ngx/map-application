@@ -119,6 +119,7 @@ struct StreetSegmentDetailedInfo{
     bool oneWay;
     double length;
     double travel_time;
+    float speedLimit;        //
     StreetIdx streetID;         // Index of street this segment belongs to
     std::string streetName;
     int numCurvePoints;      // number of curve points between the ends

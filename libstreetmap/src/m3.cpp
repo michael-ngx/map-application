@@ -36,8 +36,22 @@
 // (e.g. going from Bloor Street West to Bloor Street East) we have a turn.
 double computePathTravelTime(const std::vector<StreetSegmentIdx>& path, 
                              const double turn_penalty){
-                                 
-                             }
+    double travelTime = 0;
+    if(path.size() != 0){
+        for(int PathSegmentIdx = 0; PathSegmentIdx < path.size(); PathSegmentIdx++)
+        {
+            if(path[PathSegmentIdx+1] != path[PathSegmentIdx])
+            {
+                travelTime += turn_penalty;
+            }
+            travelTime += Segment_SegmentDetailedInfo[path[PathSegmentIdx]].travel_time;
+        }
+        return travelTime;
+    }else
+    {
+        return 0;
+    }
+}
 
 
 // Returns a path (route) between the start intersection (intersect_id.first)

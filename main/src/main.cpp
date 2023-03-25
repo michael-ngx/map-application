@@ -23,6 +23,7 @@
 
 #include "m1.h"
 #include "m2.h"
+#include "m3.h"
 #include "globals.h"
 //Program exit codes
 constexpr int SUCCESS_EXIT_CODE = 0;        //Everyting went OK
