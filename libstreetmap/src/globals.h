@@ -10,11 +10,9 @@
 
 #include "ezgl/application.hpp"
 #include <unordered_map>
-#include <map>
-#include <vector>
 
 // *********************************************************************************************************
-// Global GTK pointers - Implemented in m2
+// Global GTK pointers - M2
 // *********************************************************************************************************
 extern GObject *NightModeSwitch;
 extern GObject *SubwayStationSwitch;
@@ -33,17 +31,19 @@ extern GtkSwitch* navigation_switch;
 // *********************************************************************************************************
 // Global constants
 // *********************************************************************************************************
-// Check current map path for city switching
+// Check current map path for city switching - Main
 extern std::string CURRENT_MAP_PATH;
-// Checks if night mode is on
+// Check current filter for applying filters - M2
+extern std::string CURRENT_FILTER;
+// Checks if night mode is on - M2
 extern bool night_mode;
-// Checks if filter is on
+// Checks if filter is on - M2
 extern bool filtered;
-// Checks if the subway station mode if turned on (to show subway stations)
+// Checks if the subway station mode if turned on (to show subway stations) - M2
 extern bool subway_station_mode;
-// Checks if the subway line mode if turned on (to show subway lines)
+// Checks if the subway line mode if turned on (to show subway lines) - M2
 extern bool subway_line_mode;
-// Checks if the navigation mode if turned on (to allow navigation)
+// Checks if the navigation mode if turned on (to allow navigation) - M2
 extern bool navigation_mode;
 
 // Distance of closest intersection/POI, calculated in M1 - used in M2
@@ -53,13 +53,30 @@ extern double clicked_POI_distance;
 
 // Rectangle for visible world - Updated every frame in M2
 extern ezgl::rectangle visible_world;
+
+// Zoom limits for curr_world_width, in meters
+const float ZOOM_LIMIT_0 = 50000;
+const float ZOOM_LIMIT_1 = 15000;
+const float ZOOM_LIMIT_2 = 5000;
+const float ZOOM_LIMIT_3 = 2000;
+const float ZOOM_LIMIT_4 = 1500;
+
+// Percentage of accessing feature array based on zoom levels
+const float FEATURE_ZOOM_0 = 0.001;
+const float FEATURE_ZOOM_1 = 0.01;
+const float FEATURE_ZOOM_2 = 0.05;
+const float FEATURE_ZOOM_3 = 0.1;
+
+// Width of new world to be zoomed to after searching
+const double FIND_ZOOM_WIDTH = 1000.0;
+
+// Number of screen regions for displaying street names and arrows
+const int NUM_REGIONS = 12;
+
 // All points where pin will be drawn on - Cleared and Modified based on user input
 extern std::vector<ezgl::point2d> pin_display;
 
-// *********************************************************************************************************
-// Global helper functions
-// *********************************************************************************************************
-void move_camera (ezgl::point2d center, ezgl::application* application);
+
 
 // *********************************************************************************************************
 // Overloaded functions from M1
@@ -93,8 +110,7 @@ extern int POINum;
 
 // *********************************************************************************************************
 // Street Segments
-// *********************************************************************************************************
-
+// ********************************************************************************************************
 // Pre-processed information of each street segment
 struct StreetSegmentDetailedInfo{
     OSMID wayOSMID;             // OSM ID of the source way
@@ -181,6 +197,8 @@ struct POIDetailedInfo
 extern std::vector<POIDetailedInfo> POI_AllInfo;
 // Key: POI Name, Value: All Food POI locations
 extern std::multimap<std::string, POIDetailedInfo> POI_AllFood;
+// All POI whose name will be displayed
+extern std::vector<std::vector<POIDetailedInfo>> poi_display;
 
 // *********************************************************************************************************
 // OSM
