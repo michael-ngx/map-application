@@ -21,6 +21,7 @@
 #include "m1.h"
 #include "globals.h"
 #include "OSMDatabaseAPI.h"
+#include "draw/utilities.hpp"
 #include <iostream>
 #include <set>
 #include <unordered_map>
@@ -82,16 +83,17 @@ std::vector<std::vector<StreetSegmentIdx>> Intersection_AllStreetSegments;
 std::vector<IntersectionInfo> Intersection_IntersectionInfo;
 // Key: Intersection name, Value: IntersectionIdx (no repeating intersection names)
 std::unordered_map<std::string, IntersectionIdx> IntersectionName_IntersectionIdx_no_repeat;
-// Key: Intersection name, Value: IntersectionIdx (Allow repeating intersection names)
+// Key: Intersection name, Value: IntersectionIdx
 std::unordered_multimap<std::string, IntersectionIdx> IntersectionName_IntersectionIdx;
+// Key: Intersection name (lower case, no space), Value: IntersectionIdx
+std::multimap<std::string, IntersectionIdx> IntersectionName_lower_IntersectionIdx;
 
 // *******************************************************************
 // Streets
 // *******************************************************************
 // Keys: Street idx, Value: Street Info struct
 std::unordered_map<StreetIdx, StreetInfo> Street_StreetInfo;
-// Keys: Street names w/ id (lower case, no space), Value: street index
-// If street name == "<unknown>", street name has no suffix
+// Keys: Street names (lower case, no space), Value: street index
 std::multimap<std::string, StreetIdx> StreetName_lower_StreetIdx;
 
 // *******************************************************************
@@ -305,27 +307,48 @@ std::vector<IntersectionIdx> findIntersectionsOfTwoStreets(StreetIdx street_id1,
 // Returns all street ids corresponding to street names that start with the 
 // given prefix
 // Speed Requirement --> high
-std::vector<StreetIdx> findStreetIdsFromPartialStreetName(std::string street_prefix){
+std::vector<StreetIdx> findStreetIdsFromPartialStreetName(std::string street_prefix)
+{
     std::vector<StreetIdx> result;
     // Avoid crashing with empty input.
-    // Do not allow user to search for <unknown>
-    if (street_prefix.empty() || street_prefix == "<unknown>")
+    if (street_prefix.empty())
     {
         return result;
     }
 
     // Manipulate street_prefix to lowercase, ignore space
-    std::string prefix = "";
-    for (auto& c : street_prefix){
-        if (c == ' ') continue;
-        prefix.push_back(char(tolower(c)));
-    }
+    std::string prefix = lower_no_space(street_prefix);
 
     // Find street by street prefix
     std::multimap<std::string, StreetIdx>::iterator node = StreetName_lower_StreetIdx.lower_bound(prefix); // Iterator to first candidate
 
     // Increase iterator through ordered map will always reach larger strings by string comparision
     while (node->first.compare(0, prefix.size(), prefix) == 0){
+        result.push_back(node->second);
+        node++;
+    }
+    return result;
+}
+
+// Returns all intersection ids corresponding to intersection names that start with the given prefix
+std::vector<IntersectionIdx> findIntersectionIdsFromPartialIntersectionName(std::string intersection_prefix)
+{
+    std::vector<IntersectionIdx> result;
+    // Avoid crashing with empty input.
+    if (intersection_prefix.empty())
+    {
+        return result;
+    }
+
+    // Manipulate intersection_prefix to lowercase, ignore space
+    std::string prefix = lower_no_space(intersection_prefix);
+
+    // Find intersection by intersection prefix
+    std::multimap<std::string, IntersectionIdx>::iterator node = IntersectionName_lower_IntersectionIdx.lower_bound(prefix); // Iterator to first candidate
+
+    // Increase iterator through ordered map will always reach larger strings by string comparision
+    while (node->first.compare(0, prefix.size(), prefix) == 0)
+    {
         result.push_back(node->second);
         node++;
     }
@@ -454,6 +477,7 @@ void closeMap() {
     Intersection_IntersectionInfo.clear();
     IntersectionName_IntersectionIdx_no_repeat.clear();
     IntersectionName_IntersectionIdx.clear();
+    IntersectionName_lower_IntersectionIdx.clear();
     Street_StreetInfo.clear();
     StreetName_lower_StreetIdx.clear();
     Features_AllInfo.clear();
@@ -588,6 +612,7 @@ void init_intersections(){
         // Populate data structures to allow searching for intersection by name
         IntersectionName_IntersectionIdx_no_repeat.insert(std::make_pair(name, id));
         IntersectionName_IntersectionIdx.insert(std::make_pair(name, id));
+        IntersectionName_lower_IntersectionIdx.insert(std::make_pair(lower_no_space(name), id));
     }
 }
 
@@ -638,13 +663,8 @@ void init_streets()
         pair.second.all_intersections.erase(remove_duplicates, pair.second.all_intersections.end());
         
         // Populate ordered multimap for Streets (StreetName - Street index)
-        std::string str = pair.second.name;
-        std::string streetName = "";
-        for (auto& c : str){
-            if (c == ' ') continue;
-            streetName.push_back(char(tolower(c))); // Names as lowercase, no space
-        }
-        StreetName_lower_StreetIdx.insert(std::make_pair(streetName, pair.first));
+        // Names as lowercase, no space
+        StreetName_lower_StreetIdx.insert(std::make_pair(lower_no_space(pair.second.name), pair.first));
     }
 }
 

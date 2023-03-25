@@ -154,6 +154,7 @@ void subway_line_cbk (GtkSwitch* self, gboolean state, ezgl::application* applic
     }   
 }
 
+// Callback function for navigation mode switch
 void navigation_switch_cbk (GtkSwitch* /*self*/, gboolean state, ezgl::application* application)
 {
     if(state)
@@ -164,6 +165,14 @@ void navigation_switch_cbk (GtkSwitch* /*self*/, gboolean state, ezgl::applicati
         gtk_widget_show(GTK_WIDGET(SearchBarDestination));
         // Change placeholder of first search bar
         gtk_entry_set_placeholder_text(GTK_ENTRY(SearchBar), "Choose starting point, or click on the map");
+        // Grab the focus to destination search bar if the content of the first search bar is not empty
+        const gchar *search_text;
+        search_text = gtk_entry_get_text(GTK_ENTRY(SearchBar));
+        std::string input_1(search_text);
+        if (!input_1.empty())
+        {
+            gtk_widget_grab_focus(GTK_WIDGET(SearchBarDestination));
+        }
         application->refresh_drawing();
     } else
     {
@@ -173,6 +182,8 @@ void navigation_switch_cbk (GtkSwitch* /*self*/, gboolean state, ezgl::applicati
         gtk_widget_hide(GTK_WIDGET(SearchBarDestination));
         // Change placeholder of first search bar
         gtk_entry_set_placeholder_text(GTK_ENTRY(SearchBar), "Search Intersections");
+        // Clear the currently selected pins
+        pin_display.clear();
         application->refresh_drawing();
     }
 }
@@ -292,12 +303,6 @@ gboolean fuzzy_match_func (GtkEntryCompletion */*completion*/, const gchar *user
     // Convert both data_text and user_input to lowercase
     data_text_lower = g_utf8_strdown(data_text, -1);
     user_input_lower = g_utf8_strdown(user_input, -1);
-
-    // Ignores if <unknown> is found in user input or data
-    if (strstr(data_text_lower, "<unknown>") != NULL || strstr(user_input_lower, "<unknown>") != NULL)
-    {
-        return result;
-    }
 
     // Tokenize data_text_lower and user_input_lower using space as delimiter (Split into words)
     gchar **data_tokens = g_strsplit(data_text_lower, " ", -1);
