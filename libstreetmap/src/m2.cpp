@@ -21,7 +21,7 @@
 #include "m1.h"
 #include "m2.h"
 #include "globals.h"
-#include "OSMDatabaseAPI.h"
+#include "UI callbacks/input_response.h"
 #include "string.h"
 #include <cmath>
 #include <string>
@@ -128,11 +128,11 @@ void act_on_mouse_click (ezgl::application *application, GdkEventButton */*event
  * These are callback functions for the UI elements
  *************************************************************/
 void input_streets_cbk (GtkWidget */*widget*/, ezgl::application* application);
-void search_activate_cbk (GtkSearchEntry *self, ezgl::application *application);
+void search_activate_cbk (GtkSearchEntry */*self*/, ezgl::application *application);
 void night_mode_cbk (GtkSwitch* /*self*/, gboolean state, ezgl::application* application);
 void subway_station_cbk (GtkSwitch* self, gboolean state, ezgl::application* application);
 void subway_line_cbk (GtkSwitch* self, gboolean state, ezgl::application* application);
-void navigation_cbk (GtkSwitch* /*self*/, gboolean state, ezgl::application* application);
+void navigation_switch_cbk (GtkSwitch* /*self*/, gboolean state, ezgl::application* application);
 void poi_filter_cbk (GtkComboBoxText* self, ezgl::application* application);
 void city_change_cbk (GtkComboBoxText* self, ezgl::application* application);
 
@@ -158,10 +158,8 @@ void draw_pin (ezgl::renderer* g, ezgl::point2d inter_xy);
 void draw_distance_scale (ezgl::renderer *g, ezgl::rectangle current_window);
 // Other helper functions
 std::string get_new_map_path (std::string text_string);
-void search_response (std::string input, ezgl::application *application);
 bool check_collides (ezgl::rectangle rec_1, ezgl::rectangle rec_2);
 bool check_contains (ezgl::rectangle rec_1, ezgl::rectangle rec_2);
-void move_camera (ezgl::point2d center, ezgl::application* application);
 gboolean fuzzy_match_func(GtkEntryCompletion */*completion*/, const gchar *user_input, GtkTreeIter *iterr, gpointer /*user_data*/);
 
 /*******************************************************************************************************************************
@@ -656,7 +654,7 @@ void initial_setup (ezgl::application *application, bool /*new_window*/)
     g_signal_connect(
         NavigationSwitch, // pointer to the UI widget
         "state-set", // Signal state of switch being changed
-        G_CALLBACK(navigation_cbk), // name of callback function
+        G_CALLBACK(navigation_switch_cbk), // name of callback function
         application // passing an application pointer to callback function
     );
 
@@ -698,7 +696,8 @@ void initial_setup (ezgl::application *application, bool /*new_window*/)
         G_CALLBACK(search_activate_cbk),
         application // passing an application pointer to callback function
     );
-    // Connects to the second search bar and hides it
+    // Connects to the second search bar 
+    // Default: Hides second search bar
     SearchBarDestination = application->get_object("SearchBarDestination");
     g_signal_connect(
         SearchBarDestination, // pointer to the UI widget
@@ -706,6 +705,7 @@ void initial_setup (ezgl::application *application, bool /*new_window*/)
         G_CALLBACK(search_activate_cbk),
         application // passing an application pointer to callback function
     );
+    gtk_widget_hide(GTK_WIDGET(SearchBarDestination));
 
     // Connect to FullSearchList
     list_store = GTK_LIST_STORE(application->get_object("FullSearchList"));
@@ -726,7 +726,7 @@ void initial_setup (ezgl::application *application, bool /*new_window*/)
     //     gtk_list_store_set(list_store, &iter, 0, (pair.first).c_str(), -1);
     // }
 
-    // Change entry completion algorithm to support fuzzy search        // TODO: Prioritize closer match (improve algorithm)
+    // Change entry completion algorithm to support fuzzy search        // TODO: Prioritize closer match (improve suggestion)
     completion = GTK_ENTRY_COMPLETION(application->get_object("FullEntryCompletion"));
     completion_destination = GTK_ENTRY_COMPLETION(application->get_object("FullEntryCompletionDestination"));
     gtk_entry_completion_set_match_func(completion, fuzzy_match_func, NULL, NULL);
@@ -809,6 +809,9 @@ void city_change_cbk (GtkComboBoxText* self, ezgl::application* application){
             gtk_switch_set_active(subway_line_switch, false);
             gtk_switch_set_state(subway_line_switch, false);
         }
+        // Clear navigation switch
+        gtk_switch_set_active(navigation_switch, false);
+        gtk_switch_set_state(navigation_switch, false);
 
         // Clear GtkListStores of old city. Load GtkListStore for new city
         gtk_list_store_clear(list_store);
@@ -823,7 +826,9 @@ void city_change_cbk (GtkComboBoxText* self, ezgl::application* application){
         }
         // Clear the current text in GtkSearchEntry
         gtk_entry_set_text(GTK_ENTRY(SearchBar), "");
+        gtk_entry_set_text(GTK_ENTRY(SearchBarDestination), "");
         gtk_entry_completion_set_match_func(completion, fuzzy_match_func, NULL, NULL);
+        gtk_entry_completion_set_match_func(completion_destination, fuzzy_match_func, NULL, NULL);
         
         // Reset the world based on new map
         ezgl::rectangle new_world(xy_from_latlon(latlon_bound.min),
@@ -923,35 +928,52 @@ void subway_line_cbk (GtkSwitch* self, gboolean state, ezgl::application* applic
     }   
 }
 
-void navigation_cbk (GtkSwitch* /*self*/, gboolean state, ezgl::application* application)
+void navigation_switch_cbk (GtkSwitch* /*self*/, gboolean state, ezgl::application* application)
 {
     if(state)
     {
         application->update_message("Navigation mode turned on");
         navigation_mode = true;
+        // Unhide second search bar
+        gtk_widget_show(GTK_WIDGET(SearchBarDestination));
+        // Change placeholder of first search bar
+        gtk_entry_set_placeholder_text(GTK_ENTRY(SearchBar), "Choose starting point, or click on the map");
         application->refresh_drawing();
     } else
     {
         application->update_message("Navigation mode turned off");
         navigation_mode = false;
+        // Hide second search bar
+        gtk_widget_hide(GTK_WIDGET(SearchBarDestination));
+        // Change placeholder of first search bar
+        gtk_entry_set_placeholder_text(GTK_ENTRY(SearchBar), "Search Intersections");
         application->refresh_drawing();
     }
 }
 
-// Callback function for Search bar
-void search_activate_cbk (GtkSearchEntry *self, ezgl::application *application)
+// Callback function for Search bars (shared by both starting point and destination bars)
+void search_activate_cbk (GtkSearchEntry */*self*/, ezgl::application *application)
 {
-    // Get the text from the search entry
     const gchar *search_text;
-    search_text = gtk_entry_get_text(GTK_ENTRY(self));
-    std::string input(search_text);
+    // Get the text from the first search entry
+    search_text = gtk_entry_get_text(GTK_ENTRY(SearchBar));
+    std::string input_1(search_text);
 
-    // Turn off subway station mode when searching for something
+    // Turn off subway station mode when searching/navigating something
     gtk_switch_set_active(subway_station_switch, false);
     gtk_switch_set_state(subway_station_switch, false);
 
-    // Determine how UI responses based on search input
-    search_response(input, application);
+    // Determine how UI responses based on inputs and whether navigation mode is ON
+    if (navigation_mode)
+    {
+        // Get the text from the second search entry
+        search_text = gtk_entry_get_text(GTK_ENTRY(SearchBarDestination));
+        std::string input_2(search_text);
+        navigation_response(input_1, input_2, application);
+    } else
+    {
+        search_response(input_1, application);
+    }
 }
 
 /*******************************************************************************************************************************
@@ -1640,272 +1662,6 @@ std::string get_new_map_path (std::string text_string)
         new_map_path = "None";
     }
     return new_map_path;
-}
-
-/************************************************************
-// Response to search callback
-*************************************************************/
-void search_response (std::string input, ezgl::application *application)
-{
-    pin_display.clear();
-    // No response if input is empty or the input is neither intersection nor food place
-    if (input.empty())
-    {
-        std::string to_be_converted = "Enter intersection in the input field";
-        const char* message = to_be_converted.c_str();
-        application->create_popup_message("Error", message);
-        application->refresh_drawing();
-        return;
-    }
-
-    // Center of new camera, to be set to either intersection or food place
-    ezgl::point2d center;
-
-    // 1: User selected from the drop-down list - perfectly matches an intersection name between 2 streeets
-    // TODO: If there are multiple intersections with the same name, user should get to choose which one they want
-    if (IntersectionName_IntersectionIdx.find(input) != IntersectionName_IntersectionIdx.end())
-    {
-        // There may be multiple intersections with the same name
-        // If there are multiple, only allow a maximum of 5 intersections to be added to the pop-up window
-        auto range = IntersectionName_IntersectionIdx.equal_range(input);
-        int count = 0;  // Count the number of values
-        std::string to_be_converted = "Intersections between " + input + ":\n";
-        for (auto it = range.first; it != range.second; ++it) {
-            // Highlight the found intersections on the map
-            pin_display.push_back(Intersection_IntersectionInfo[it->second].position_xy);
-            // Add data for all intersections to pop-up message if count < 5
-            if (count < 5)
-            {
-                to_be_converted += "Latitude: " + std::to_string(getIntersectionPosition(it->second).latitude()) + "\n"
-                                    + "Longitude: " + std::to_string(getIntersectionPosition(it->second).longitude()) + "\n"
-                                    + "------------------------\n";
-            }
-            count++;
-        }
-        if (count >= 5)
-        {
-            to_be_converted += "More not shown...\n";
-        }
-        const char* message = to_be_converted.c_str();
-        application->create_popup_message("Intersection(s) found: ", message);
-
-        // Move the camera to focus the intersection
-        // Center of new location (centered at first intersection found)
-        center = Intersection_IntersectionInfo[range.first->second].position_xy;
-        move_camera(center, application);
-        
-        application->update_message("Found intersection!");
-    } 
-    // 2. User did not select from drop-down list.
-    // User entered only 1 street name or 2 street names not separated by '&'
-    else if (input.find('&') == std::string::npos)
-    {
-        std::string to_be_converted = "Please enter at least 2 street names, separated by '&'";
-        const char* message = to_be_converted.c_str();
-        application->create_popup_message("Error", message);
-        application->refresh_drawing();
-        return;
-    }
-    // 3. User did enter something with a "&". Now, split the string to get street names, then find streets and intersections by partial name
-    else
-    {
-        // Set to store all streets parsed (lower cased, no space)
-        std::vector<std::string> split_streets;
-        // Vector to store all streets selected to be considered
-        std::vector<std::string> streets_selected;
-        // String for pop-up message
-        std::string to_be_converted = "";
-
-        // Remove all spaces from the input
-        input.erase(std::remove(input.begin(), input.end(), ' '), input.end());
-        // Parse all streets input from the user. Streets are separated by "&" character
-        int pos = 0;
-        std::string street;
-        while ((pos = input.find("&")) != std::string::npos)
-        {
-            street = input.substr(0, pos);
-            split_streets.push_back(street);
-            input.erase(0, pos + 1);
-        }
-        split_streets.push_back(input); // add the last street
-
-        // Do not allow enter same inputs (avoid showing all intersections of one street)
-        if (split_streets.size() == 2 && split_streets[0] == split_streets[1] && split_streets[0] != "")
-        {
-            to_be_converted = "Enter two different streets";
-            const char* message = to_be_converted.c_str();
-            application->create_popup_message("Error", message);
-            application->refresh_drawing();
-            return;
-        }
-
-        // Index: count of streets being considered; Value: vector of all intersections of that street
-        std::vector<std::vector<IntersectionIdx>> intersections_selected;
-        // Vector of flags to note if a street selected from partials uniquely defines a street
-        std::vector<bool> street_unique_flags;
-        for (int i = 0; i < split_streets.size(); i++)
-        {
-            std::vector<StreetIdx> partials = findStreetIdsFromPartialStreetName(split_streets[i]);
-            if (partials.size() == 0)
-            {
-                to_be_converted = "Street " + std::to_string(i + 1) + " not found";
-                const char* message = to_be_converted.c_str();
-                application->create_popup_message("Error", message);
-                application->refresh_drawing();
-                return;
-            } else
-            {
-                if (partials.size() == 1)
-                {
-                    street_unique_flags.push_back(true);
-                } else
-                {
-                    street_unique_flags.push_back(false);
-                }
-                // Select the matching name as the first name found in partial name
-                // This name may also not be unique. We record all intersections of streets with the same name
-                StreetIdx selected_idx = partials[0];
-                std::string selected_name = Street_StreetInfo.at(selected_idx).name;
-                // Keep track of which street names are selected to find intersections
-                streets_selected.push_back(selected_name);
-
-                // Remove space and lowercase of selected name (since StreetName_lower_StreetIdx has keys as non-space and lowercase)
-                std::string selected_name_lower = "";
-                for (auto& c : selected_name){
-                    if (c == ' ') continue;
-                    selected_name_lower.push_back(char(tolower(c)));
-                }
-                // Record all intersections of all streets with the same name into a same vector (all_inter_same_name)
-                auto range = StreetName_lower_StreetIdx.equal_range(selected_name_lower);
-                std::vector<IntersectionIdx> all_inter_same_name;
-                for (auto it = range.first; it != range.second; it++)
-                {
-                    all_inter_same_name.insert(all_inter_same_name.end(),
-                                               Street_StreetInfo.at(it->second).all_intersections.begin(),
-                                               Street_StreetInfo.at(it->second).all_intersections.end());
-                }
-                // Add this vector
-                sort(all_inter_same_name.begin(), all_inter_same_name.end());
-                intersections_selected.push_back(all_inter_same_name);
-            }
-        }
-        // All streets entered have been found through partial street name
-        // Now find union of all vectors of intersections
-        auto first_vect = intersections_selected[0];
-        for (auto curr_vect : intersections_selected)
-        {
-            std::vector<IntersectionIdx> intersection_vect;
-            std::set_intersection(first_vect.begin(), first_vect.end(),
-                                  curr_vect.begin(), curr_vect.end(),
-                                  std::back_inserter(intersection_vect));
-            first_vect = intersection_vect;
-        }
-
-        // Union of intersections of all streets is in first_vect
-        // 3.1. No intersections found between the streets
-        if (first_vect.size() == 0)
-        {
-            to_be_converted += "No intersections found between ";
-            for (int i = 0; i < streets_selected.size(); i++)
-            {
-                to_be_converted += streets_selected[i];
-                if (i != streets_selected.size() - 1)
-                {
-                    to_be_converted += " & ";
-                }
-            }
-            application->update_message("No intersections found!");
-
-        }
-        // 3.2. One intersection found between streets
-        else if (first_vect.size() == 1)
-        {
-            // Highlight the found intersections on the map
-            pin_display.push_back(Intersection_IntersectionInfo[first_vect[0]].position_xy);
-
-            to_be_converted += "Intersection found between ";
-            for (int i = 0; i < streets_selected.size(); i++)
-            {
-                to_be_converted += streets_selected[i];
-                if (i != streets_selected.size() - 1)
-                {
-                    to_be_converted += " & ";
-                }
-            }
-            to_be_converted += ":\n";
-            to_be_converted += "Latitude: " + std::to_string(getIntersectionPosition(first_vect[0]).latitude()) + "\n"
-                                + "Longitude: " + std::to_string(getIntersectionPosition(first_vect[0]).longitude()) + "\n"
-                                + "------------------------\n";
-
-            // Move the camera to focus the intersection
-            center = Intersection_IntersectionInfo[first_vect[0]].position_xy;
-            move_camera(center, application);
-
-            application->update_message("Found intersection!");
-        }
-        // 3.3. More than 1 intersections found between streets
-        // TODO: User will be prompted to choose a specific intersection when direction mode is turned ON
-        else
-        {
-            int count = 0;  // Count the number of intersections
-            to_be_converted += "Multiple intersections found between ";
-            for (int i = 0; i < streets_selected.size(); i++)
-            {
-                to_be_converted += streets_selected[i];
-                if (i != streets_selected.size() - 1)
-                {
-                    to_be_converted += " & ";
-                }
-            }
-            to_be_converted += ":\n";
-            for (auto it = first_vect.begin(); it != first_vect.end(); it++)
-            {
-                // Highlight the found intersections on the map
-                pin_display.push_back(Intersection_IntersectionInfo[*it].position_xy);
-                // Add data for all intersections to pop-up message if count < 5
-                if (count < 5)
-                {
-                    to_be_converted += "Latitude: " + std::to_string(getIntersectionPosition(*it).latitude()) + "\n"
-                                        + "Longitude: " + std::to_string(getIntersectionPosition(*it).longitude()) + "\n"
-                                        + "------------------------\n";
-                }
-                count++;
-            }
-            if (count >= 5)
-            {
-                to_be_converted += "More not shown...\n";
-            }
-            // Set center of new camera (centered at first intersection found)
-            center = Intersection_IntersectionInfo[first_vect[0]].position_xy;
-            move_camera(center, application);
-
-            application->update_message("Found intersection!");
-        }
-
-        // For all situations (that user entered street names with '&')
-        // add warning if any street name entered isn't unique 
-        auto flag_it = std::find(street_unique_flags.begin(), street_unique_flags.end(), false);
-        if (flag_it != street_unique_flags.end())
-        {
-            to_be_converted += "\n\n";
-            to_be_converted += "Note: Token " + std::to_string(std::distance(street_unique_flags.begin(), flag_it) + 1) + " does not uniquely define a street";
-        }
-        const char* message = to_be_converted.c_str();
-        application->create_popup_message("Search intersection", message);
-    }
-
-    // Check for food places - Temporarily disabled for M3
-    // else if (POI_AllFood.find(input) != POI_AllFood.end())
-    // {
-    //     auto POIit = POI_AllFood.find(input);
-    //     // Highlight the location to be displayed
-    //     pin_display.push_back(POI_AllInfo[POIit->second.id].POIPoint);
-
-    //     // Center of new location
-    //     center = POI_AllInfo[POIit->second.id].POIPoint;
-    //     move_camera(center,application);
-    //     application->update_message("Found food place!");
-    // }
 }
 
 /*******************************************************************************************************************************

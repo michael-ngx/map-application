@@ -9,22 +9,61 @@
 #define GLOBALS_H
 
 #include "ezgl/application.hpp"
-#include "ezgl/graphics.hpp"
 #include <unordered_map>
 #include <map>
 #include <vector>
 
-// *******************************************************************
-// Other cross-milestone access constants
-// *******************************************************************
+// *********************************************************************************************************
+// Global GTK pointers - Implemented in m2
+// *********************************************************************************************************
+extern GObject *NightModeSwitch;
+extern GObject *SubwayStationSwitch;
+extern GObject *SubwayLineSwitch;
+extern GObject *NavigationSwitch;
+extern GObject *SearchBar;
+extern GObject *SearchBarDestination;
+extern GtkListStore *list_store;
+extern GtkTreeIter iter;
+extern GtkEntryCompletion *completion;
+extern GtkEntryCompletion *completion_destination;
+extern GtkSwitch* subway_station_switch;
+extern GtkSwitch* subway_line_switch;
+extern GtkSwitch* navigation_switch;
+
+// *********************************************************************************************************
+// Global constants
+// *********************************************************************************************************
 // Check current map path for city switching
 extern std::string CURRENT_MAP_PATH;
+// Checks if night mode is on
+extern bool night_mode;
+// Checks if filter is on
+extern bool filtered;
+// Checks if the subway station mode if turned on (to show subway stations)
+extern bool subway_station_mode;
+// Checks if the subway line mode if turned on (to show subway lines)
+extern bool subway_line_mode;
+// Checks if the navigation mode if turned on (to allow navigation)
+extern bool navigation_mode;
+
+// Distance of closest intersection/POI, calculated in M1 - used in M2
+// Distances are used to determine whether user selected an intersection or a POI
 extern double clicked_intersection_distance;
 extern double clicked_POI_distance;
 
-// *******************************************************************
+// Rectangle for visible world - Updated every frame in M2
+extern ezgl::rectangle visible_world;
+// All points where pin will be drawn on - Cleared and Modified based on user input
+extern std::vector<ezgl::point2d> pin_display;
+
+// *********************************************************************************************************
+// Global helper functions
+// *********************************************************************************************************
+void move_camera (ezgl::point2d center, ezgl::application* application);
+
+// *********************************************************************************************************
 // Overloaded functions from M1
-// *******************************************************************
+// *********************************************************************************************************
 // Find distance between 2 points based on xy
 double findDistanceBetweenTwoPoints (ezgl::point2d point_1, ezgl::point2d point_2);
 // Function to find closest intersection based on xy, not LatLon
@@ -32,9 +71,9 @@ IntersectionIdx findClosestIntersection(ezgl::point2d my_position);
 // Function to find closest POI of any type, based on xy, not LatLon
 POIIdx findClosestPOI(ezgl::point2d my_position);
 
-// *******************************************************************
+// *********************************************************************************************************
 // Latlon bounds
-// *******************************************************************
+// *********************************************************************************************************
 extern LatLonBounds latlon_bound;
 extern double max_lat, max_lon;
 extern double min_lat, min_lon;
@@ -43,18 +82,18 @@ extern double lat_avg;
 ezgl::point2d xy_from_latlon(LatLon latlon);
 LatLon latlon_from_xy(double x, double y);
 
-// *******************************************************************
+// *********************************************************************************************************
 // Numbers (counts)
-// *******************************************************************
+// *********************************************************************************************************
 extern int intersectionNum;
 extern int segmentNum;
 extern int streetNum;
 extern int featureNum;
 extern int POINum;
 
-// *******************************************************************
+// *********************************************************************************************************
 // Street Segments
-// *******************************************************************
+// *********************************************************************************************************
 
 // Pre-processed information of each street segment
 struct StreetSegmentDetailedInfo{
@@ -93,9 +132,9 @@ extern std::unordered_map<std::string, IntersectionIdx> IntersectionName_Interse
 // Key: Intersection name, Value: IntersectionIdx (Allow repeating intersection names)
 extern std::unordered_multimap<std::string, IntersectionIdx> IntersectionName_IntersectionIdx;
 
-// *******************************************************************
+// *********************************************************************************************************
 // Streets
-// *******************************************************************
+// *********************************************************************************************************
 struct StreetInfo
 {
     StreetIdx id;   // Street Idx
@@ -110,9 +149,9 @@ extern std::unordered_map<StreetIdx, StreetInfo> Street_StreetInfo;
 // If street name == "<unknown>", street name has no suffix
 extern std::multimap<std::string, StreetIdx> StreetName_lower_StreetIdx;
 
-// *******************************************************************
+// *********************************************************************************************************
 // Features
-// *******************************************************************
+// *********************************************************************************************************
 //Stores pre-processed information of features
 struct FeatureDetailedInfo{
     FeatureType featureType;                    // Type of the feature
@@ -127,9 +166,9 @@ struct FeatureDetailedInfo{
 //Index: FeatureIdx, Value: structure that stores all feature information
 extern std::vector<FeatureDetailedInfo> Features_AllInfo;
 
-// *******************************************************************
+// *********************************************************************************************************
 // POI
-// *******************************************************************
+// *********************************************************************************************************
 struct POIDetailedInfo
 {
     POIIdx id;
@@ -143,9 +182,9 @@ extern std::vector<POIDetailedInfo> POI_AllInfo;
 // Key: POI Name, Value: All Food POI locations
 extern std::multimap<std::string, POIDetailedInfo> POI_AllFood;
 
-// *******************************************************************
+// *********************************************************************************************************
 // OSM
-// *******************************************************************
+// *********************************************************************************************************
 // Keys: OSMID, Value: vector of (tag, value) pairs
 extern std::unordered_map<OSMID, std::vector<std::pair<std::string, std::string>>> OSMID_Nodes_AllTagPairs;
 // Keys: OSMID, Value: Type of highway of corresponding wayOSMID (only for segments)
