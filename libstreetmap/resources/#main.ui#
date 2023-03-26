@@ -28,6 +28,16 @@
       </attributes>
     </child>
   </object>
+  <object class="GtkImage" id="image1">
+    <property name="visible">True</property>
+    <property name="can-focus">False</property>
+    <property name="stock">gtk-info</property>
+  </object>
+  <object class="GtkImage" id="image2">
+    <property name="visible">True</property>
+    <property name="can-focus">False</property>
+    <property name="stock">gtk-missing-image</property>
+  </object>
   <object class="GtkWindow" id="MainWindow">
     <property name="visible">True</property>
     <property name="can-focus">False</property>
@@ -248,12 +258,12 @@
         </child>
         <child type="overlay">
           <object class="GtkButton" id="ZoomFitButton">
-            <property name="label" translatable="yes">Zoom Fit</property>
             <property name="visible">True</property>
             <property name="can-focus">True</property>
             <property name="receives-default">True</property>
             <property name="halign">end</property>
             <property name="valign">end</property>
+            <property name="image">image2</property>
           </object>
           <packing>
             <property name="index">4</property>
@@ -261,13 +271,13 @@
         </child>
         <child type="overlay">
           <object class="GtkButton" id="Tutorial">
-            <property name="label" translatable="yes">Zoom Fit</property>
             <property name="visible">True</property>
             <property name="can-focus">True</property>
             <property name="receives-default">True</property>
             <property name="halign">end</property>
             <property name="valign">end</property>
-            <property name="margin-end">919</property>
+            <property name="margin-end">1170</property>
+            <property name="image">image1</property>
           </object>
           <packing>
             <property name="index">5</property>

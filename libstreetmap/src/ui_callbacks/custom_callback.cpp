@@ -213,6 +213,19 @@ void search_activate_cbk (GtkSearchEntry */*self*/, ezgl::application *applicati
     }
 }
 
+// Callback function for tutorial button
+void tutorial_cbk(GtkButton* /*self*/, ezgl::application* application)
+{
+    std::string to_be_converted = "Nightmode \n \n";
+    to_be_converted += "Subway Stations: \n \n";
+    to_be_converted += "Subway Lines: \n \n";
+    to_be_converted += "Switch City: \n \n";
+    to_be_converted += "Sort by: \n \n";
+    to_be_converted += "Navigation: \n";
+
+    const char* message = to_be_converted.c_str();
+    application->create_popup_message("Tutorial", message);
+}
 /*******************************************************************************************************************************
  * UI CALLBACK HELPER FUNCTIONS
  ********************************************************************************************************************************/

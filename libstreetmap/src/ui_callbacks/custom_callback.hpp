@@ -17,6 +17,7 @@ void subway_line_cbk(GtkSwitch* self, gboolean state, ezgl::application* applica
 void navigation_switch_cbk(GtkSwitch* self, gboolean state, ezgl::application* application);
 void poi_filter_cbk(GtkComboBoxText* self, ezgl::application* application);
 void city_change_cbk(GtkComboBoxText* self, ezgl::application* application);
+void tutorial_cbk(GtkButton* self, ezgl::application* application);
 
 std::string get_new_map_path (std::string text_string);
 gboolean fuzzy_match_func(GtkEntryCompletion */*completion*/, const gchar *user_input, GtkTreeIter *iterr, gpointer /*user_data*/);

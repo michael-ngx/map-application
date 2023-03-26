@@ -40,7 +40,8 @@ double computePathTravelTime(const std::vector<StreetSegmentIdx>& path,
     if(path.size() != 0){
         for(int PathSegmentIdx = 0; PathSegmentIdx < path.size(); PathSegmentIdx++)
         {
-            if(path[PathSegmentIdx+1] != path[PathSegmentIdx])
+            if(PathSegmentIdx < path.size() - 1
+                && Segment_SegmentDetailedInfo[path[PathSegmentIdx+1]].streetID != Segment_SegmentDetailedInfo[path[PathSegmentIdx]].streetID)
             {
                 travelTime += turn_penalty;
             }

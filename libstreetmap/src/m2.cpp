@@ -38,6 +38,7 @@ GObject *SubwayLineSwitch;
 GObject *NavigationSwitch;
 GObject *SearchBar;
 GObject *SearchBarDestination;
+GObject *TutorialButton;
 GtkListStore *list_store;
 GtkTreeIter iter;
 GtkEntryCompletion *completion;
@@ -596,6 +597,14 @@ void initial_setup (ezgl::application *application, bool /*new_window*/)
         application // passing an application pointer to callback function
     );
 
+    // Connects to Tutorial button
+    TutorialButton = application->get_object("Tutorial");
+    g_signal_connect(
+        TutorialButton,
+        "clicked",
+        G_CALLBACK(tutorial_cbk),
+        application
+    );
     // Set GtkSwitch pointers
     subway_station_switch = GTK_SWITCH(SubwayStationSwitch);
     subway_line_switch = GTK_SWITCH(SubwayLineSwitch);
@@ -622,7 +631,7 @@ void initial_setup (ezgl::application *application, bool /*new_window*/)
         "London", "New Delhi", "New York", "Rio de Janeiro", "Saint Helena",
         "Singapore", "Sydney", "Tehran", "Tokyo"}
     );
-
+    
     /***********************************************
      * Sets up entry completion for search bar
      ************************************************/

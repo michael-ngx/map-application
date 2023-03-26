@@ -124,6 +124,9 @@ std::vector<SubwayRoutes> AllSubwayRoutes;
 std::unordered_map<OSMID, int> OSMID_NodeIndex;
 std::unordered_map<OSMID, int> OSMID_WayIndex;
 
+// Initialize first city for city switching
+std::string CURRENT_MAP_PATH = " ";
+
 /*******************************************************************************************************************************
  * STREET MAP LIBRARY
  ********************************************************************************************************************************/
