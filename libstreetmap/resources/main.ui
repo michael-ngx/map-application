@@ -271,7 +271,8 @@
             <property name="receives-default">True</property>
             <property name="halign">end</property>
             <property name="valign">end</property>
-            <property name="margin-end">1170</property>
+            <property name="margin-end">1085</property>
+            <property name="margin-bottom">2</property>
             <property name="image">image1</property>
           </object>
           <packing>
