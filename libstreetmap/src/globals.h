@@ -20,6 +20,7 @@ extern GObject *SubwayLineSwitch;
 extern GObject *NavigationSwitch;
 extern GObject *SearchBar;
 extern GObject *SearchBarDestination;
+extern GObject *TutorialButton;
 extern GtkListStore *list_store;
 extern GtkTreeIter iter;
 extern GtkEntryCompletion *completion;
@@ -73,11 +74,25 @@ const double FIND_ZOOM_WIDTH = 1000.0;
 // Number of screen regions for displaying street names and arrows
 const int NUM_REGIONS = 12;
 
-// All points where pin will be drawn on - Cleared and Modified based on user input
-extern std::vector<ezgl::point2d> pin_display;
+// All points where pins will be drawn on - Cleared and Modified based on user input
+extern std::vector<ezgl::point2d> pin_display_start;
+extern std::vector<ezgl::point2d> pin_display_dest;
 // Starting point and destination point
 extern ezgl::point2d start_point;
 extern ezgl::point2d destination_point;
+// Bool to check if an intersection in a search bar is "Set"
+// "Set" means clicked directly on the map/Pressed Enter to search
+// "Unset" is when user modified text in the search bar
+// Navigations are executed only when both text fields are set
+extern bool start_point_set;
+extern bool destination_point_set;
+// Bool to check if the content of the search bar is being changed 
+// by autocomplete (search_response and navigation_response)
+// or by user (adding/deleting characters, etc.) 
+// If done by autocomplete, "changed" signal from GtkSearchEntry 
+// should not modify the start_point_set or destination_point_set
+extern bool search_1_forced_change;
+extern bool search_2_forced_change;
 
 // *********************************************************************************************************
 // Overloaded functions from M1

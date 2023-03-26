@@ -1,11 +1,11 @@
-#include "ui_callbacks/input_response.hpp" 
+#include "ui_callbacks/response.hpp" 
 
 /****************************************************************************************************************************
-// Response to search callback
+* Response to search callback
 *****************************************************************************************************************************/
-void search_response (std::string input, ezgl::application *application)
+bool search_response (std::string input, ezgl::application *application)
 {
-    pin_display.clear();
+    pin_display_start.clear();
 
     // No response if input is empty
     if (input.empty())
@@ -14,7 +14,17 @@ void search_response (std::string input, ezgl::application *application)
         const char* message = to_be_converted.c_str();
         application->create_popup_message("Error", message);
         application->refresh_drawing();
-        return;
+        return false;
+    }
+
+    // Prevent searching for <unknown>
+    if (input == "<unknown>")
+    {
+        std::string to_be_converted = "Undefined intersection";
+        const char* message = to_be_converted.c_str();
+        application->create_popup_message("Error", message);
+        application->refresh_drawing();
+        return false;
     }
 
     // Center of new camera, to be set to either intersection or food place
@@ -28,12 +38,13 @@ void search_response (std::string input, ezgl::application *application)
         // There may be multiple intersections with the same name
         // If there are multiple, only allow a maximum of 5 intersections to be added to the pop-up window
         auto range = IntersectionName_IntersectionIdx.equal_range(input);
-
+        // Set start point to first intersection if there are multiple
+        start_point = Intersection_IntersectionInfo[range.first->second].position_xy;
         int count = 0;  // Count the number of values
         std::string to_be_converted = "Intersection(s) " + input + ":\n";
         for (auto it = range.first; it != range.second; ++it) {
             // Highlight the found intersections on the map
-            pin_display.push_back(Intersection_IntersectionInfo[it->second].position_xy);
+            pin_display_start.push_back(Intersection_IntersectionInfo[it->second].position_xy);
             // Add data for all intersections to pop-up message if count < 5
             if (count < 5)
             {
@@ -55,6 +66,7 @@ void search_response (std::string input, ezgl::application *application)
         // Center of new location (centered at first intersection found)
         center = Intersection_IntersectionInfo[range.first->second].position_xy;
         move_camera(center, application);
+        return true;
     }
 
     //*****************************************************************************************************
@@ -71,7 +83,7 @@ void search_response (std::string input, ezgl::application *application)
             const char* message = to_be_converted.c_str();
             application->create_popup_message("Error", message);
             application->refresh_drawing();
-            return;
+            return false;
         } else if (partials.size() == 1)
         {
             std::string to_be_converted = "Intersection(s) on " + Intersection_IntersectionInfo[partials[0]].name + ":\n\n";
@@ -81,11 +93,13 @@ void search_response (std::string input, ezgl::application *application)
             application->create_popup_message("Intersection found: ", message);
             application->update_message("Found intersection!");
 
+            // Set start point to first intersection if there are multiple
+            start_point = Intersection_IntersectionInfo[partials[0]].position_xy;
             // Move the camera to focus the intersection
             // Center of new location (centered at first intersection found)
-            center = Intersection_IntersectionInfo[partials[0]].position_xy;
+            center = start_point;
             // Highlight the found intersection on the map
-            pin_display.push_back(center);
+            pin_display_start.push_back(center);
             move_camera(center, application);
         } else
         {
@@ -99,7 +113,7 @@ void search_response (std::string input, ezgl::application *application)
             int count = 0;  // Count the number of values
             for (auto it = range.first; it != range.second; ++it) {
                 // Highlight the found intersections on the map
-                pin_display.push_back(Intersection_IntersectionInfo[it->second].position_xy);
+                pin_display_start.push_back(Intersection_IntersectionInfo[it->second].position_xy);
                 // Add data for all intersections to pop-up message if count < 5
                 if (count < 5)
                 {
@@ -119,16 +133,19 @@ void search_response (std::string input, ezgl::application *application)
             application->create_popup_message("Intersection(s) found: ", message);
             application->update_message("Found intersection!");
 
+            // Set start point to first intersection if there are multiple
+            start_point = Intersection_IntersectionInfo[range.first->second].position_xy;
             // Move the camera to focus the intersection
             // Center of new location (centered at first intersection found)
-            center = Intersection_IntersectionInfo[range.first->second].position_xy;
+            center = start_point;
             move_camera(center, application);
-
-            // Change the content of the search bar to first partials found
-            std::string new_search_bar_content = Intersection_IntersectionInfo[partials[0]].name;
-            const gchar* cstr = new_search_bar_content.c_str();
-            gtk_entry_set_text(GTK_ENTRY(SearchBar), cstr);
         }
+        // Change the content of the search bar to first partials found
+        // This should not change the start_point_set to false
+        std::string new_search_bar_content = Intersection_IntersectionInfo[partials[0]].name;
+        search_1_forced_change = true;
+        gtk_entry_set_text(GTK_ENTRY(SearchBar), new_search_bar_content.c_str());
+        return true;
     }
 
     //*****************************************************************************************************
@@ -136,18 +153,21 @@ void search_response (std::string input, ezgl::application *application)
     //*****************************************************************************************************
     else
     {
-        // Vector to store all streets parsed (lower cased, no space)
+        // All streets parsed (lowercase, no space)
         std::vector<std::string> split_streets;
-        // Vector to store all streets selected to be considered
+        // All streets selected to be considered (First occurence of partial street name)
         std::vector<std::string> streets_selected;
+        // Flags of all streets to note if a street selected from partials uniquely defines a street
+        std::vector<bool> street_unique_flags;
         // Index: count of streets being considered; Value: vector of all intersections of that street
         std::vector<std::vector<IntersectionIdx>> intersections_selected;
-        // Vector of flags to note if a street selected from partials uniquely defines a street
-        std::vector<bool> street_unique_flags;
         // String for pop-up message
         std::string to_be_converted = "";
+        // User feedback headline
+        std::string headline = "";
 
         // Parse all streets input from the user. Streets are separated by "&" character
+        // TODO: Edge cases streets that have "&" in name
         input.erase(std::remove(input.begin(), input.end(), ' '), input.end());
         int pos = 0;
         std::string street;
@@ -163,24 +183,26 @@ void search_response (std::string input, ezgl::application *application)
         if (split_streets.size() == 2 && split_streets[0] == split_streets[1] && split_streets[0] != "")
         {
             to_be_converted = "Enter two different streets";
-            const char* message = to_be_converted.c_str();
-            application->create_popup_message("Error", message);
+            application->create_popup_message("Error", to_be_converted.c_str());
             application->refresh_drawing();
-            return;
+            return false;
         }
-
+        
+        // Search partials & get intersections for each streets parsed
         for (int i = 0; i < split_streets.size(); i++)
         {
             std::vector<StreetIdx> partials = findStreetIdsFromPartialStreetName(split_streets[i]);
+            // No partials were found for given token
             if (partials.size() == 0)
             {
                 to_be_converted = "Token " + std::to_string(i + 1) + " does not match any streets";
                 const char* message = to_be_converted.c_str();
                 application->create_popup_message("Error", message);
                 application->refresh_drawing();
-                return;
+                return false;
             } else
             {
+                // Set flags for uniqueness of each street entered to give hints
                 if (partials.size() == 1)
                 {
                     street_unique_flags.push_back(true);
@@ -190,16 +212,11 @@ void search_response (std::string input, ezgl::application *application)
                 }
                 // Select the matching name as the first name found in partial name
                 // This name may also not be unique. We record all intersections of streets with the same name
-                StreetIdx selected_idx = partials[0];
-                std::string selected_name = Street_StreetInfo.at(selected_idx).name;
+                std::string selected_name = Street_StreetInfo.at(partials[0]).name;
                 // Keep track of which street names are selected to find intersections
                 streets_selected.push_back(selected_name);
-
-                // Remove space and lowercase of selected name (since StreetName_lower_StreetIdx has keys as non-space and lowercase)
-                std::string selected_name_lower = lower_no_space (selected_name);
-
                 // Record all intersections of all streets with the same name into a same vector (all_inter_same_name)
-                auto range = StreetName_lower_StreetIdx.equal_range(selected_name_lower);
+                auto range = StreetName_lower_StreetIdx.equal_range(lower_no_space(selected_name));
                 std::vector<IntersectionIdx> all_inter_same_name;
                 for (auto it = range.first; it != range.second; it++)
                 {
@@ -213,8 +230,9 @@ void search_response (std::string input, ezgl::application *application)
             }
         }
 
-        // All streets entered have been found through partial street name
+        // All streets entered have been found through partial street name, with intersections recorded
         // Change the current text on the search bar to street names that are selected
+        // This should not change the start_point_set to false
         std::string new_search_bar_content = "";
         for (int i = 0; i < streets_selected.size(); i++)
         {
@@ -224,8 +242,8 @@ void search_response (std::string input, ezgl::application *application)
                 new_search_bar_content += " & ";
             }
         }
-        const gchar* cstr = new_search_bar_content.c_str();
-        gtk_entry_set_text(GTK_ENTRY(SearchBar), cstr);
+        search_1_forced_change = true;
+        gtk_entry_set_text(GTK_ENTRY(SearchBar), new_search_bar_content.c_str());
 
         // Now find union of all vectors of intersections
         auto first_vect = intersections_selected[0];
@@ -250,14 +268,20 @@ void search_response (std::string input, ezgl::application *application)
                     to_be_converted += " & ";
                 }
             }
-            application->update_message("No intersections found!");
-
+            auto flag_it = std::find(street_unique_flags.begin(), street_unique_flags.end(), false);
+            if (flag_it != street_unique_flags.end())
+            {
+                to_be_converted += "\n\n";
+                to_be_converted += "Note: Token " + std::to_string(std::distance(street_unique_flags.begin(), flag_it) + 1) + " does not uniquely define a street";
+            }
+            application->create_popup_message("Note", to_be_converted.c_str());
+            return false;
         }
         // 3.2. One intersection found between streets
         else if (first_vect.size() == 1)
         {
             // Highlight the found intersections on the map
-            pin_display.push_back(Intersection_IntersectionInfo[first_vect[0]].position_xy);
+            pin_display_start.push_back(Intersection_IntersectionInfo[first_vect[0]].position_xy);
 
             to_be_converted += "Intersection found between ";
             for (int i = 0; i < streets_selected.size(); i++)
@@ -273,8 +297,10 @@ void search_response (std::string input, ezgl::application *application)
                                 + "Longitude: " + std::to_string(getIntersectionPosition(first_vect[0]).longitude()) + "\n"
                                 + "------------------------\n";
 
+            // Set start point
+            start_point = Intersection_IntersectionInfo[first_vect[0]].position_xy;
             // Move the camera to focus the intersection
-            center = Intersection_IntersectionInfo[first_vect[0]].position_xy;
+            center = start_point;
             move_camera(center, application);
 
             application->update_message("Found intersection!");
@@ -297,7 +323,7 @@ void search_response (std::string input, ezgl::application *application)
             for (auto it = first_vect.begin(); it != first_vect.end(); it++)
             {
                 // Highlight the found intersections on the map
-                pin_display.push_back(Intersection_IntersectionInfo[*it].position_xy);
+                pin_display_start.push_back(Intersection_IntersectionInfo[*it].position_xy);
                 // Add data for all intersections to pop-up message if count < 5
                 if (count < 5)
                 {
@@ -311,8 +337,11 @@ void search_response (std::string input, ezgl::application *application)
             {
                 to_be_converted += "More not shown...\n";
             }
+
+            // Set start point
+            start_point = Intersection_IntersectionInfo[first_vect[0]].position_xy;
             // Set center of new camera (centered at first intersection found)
-            center = Intersection_IntersectionInfo[first_vect[0]].position_xy;
+            center = start_point;
             move_camera(center, application);
 
             application->update_message("Found intersection!");
@@ -326,16 +355,18 @@ void search_response (std::string input, ezgl::application *application)
             to_be_converted += "\n\n";
             to_be_converted += "Note: Token " + std::to_string(std::distance(street_unique_flags.begin(), flag_it) + 1) + " does not uniquely define a street";
         }
-        const char* message = to_be_converted.c_str();
-        application->create_popup_message("Search intersection", message);
+        application->create_popup_message("Note", to_be_converted.c_str());
+        return true;
     }
+
+    return true;
 
     // Check for food places - Temporarily disabled for M3
     // else if (POI_AllFood.find(input) != POI_AllFood.end())
     // {
     //     auto POIit = POI_AllFood.find(input);
     //     // Highlight the location to be displayed
-    //     pin_display.push_back(POI_AllInfo[POIit->second.id].POIPoint);
+    //     pin_display_start.push_back(POI_AllInfo[POIit->second.id].POIPoint);
 
     //     // Center of new location
     //     center = POI_AllInfo[POIit->second.id].POIPoint;

@@ -13,7 +13,7 @@
 #include "draw/utilities.hpp"
 
 // Response to user input for searching/navigation
-void search_response (std::string input, ezgl::application *application);
-void navigation_response (std::string input_1, std::string input_2, ezgl::application *application);
+bool search_response (std::string input, ezgl::application *application);
+bool navigation_response (std::string input, bool start_search_bar, ezgl::application *application);
 
 #endif /* RESPONSE_H */

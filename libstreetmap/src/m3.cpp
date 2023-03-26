@@ -34,21 +34,23 @@
 // given turn_penalty (in seconds) per turn implied by the path.  If there is
 // no turn, then there is no penalty. Note that whenever the street id changes
 // (e.g. going from Bloor Street West to Bloor Street East) we have a turn.
-double computePathTravelTime(const std::vector<StreetSegmentIdx>& path, 
-                             const double turn_penalty){
+double computePathTravelTime (const std::vector<StreetSegmentIdx>& path, 
+                             const double turn_penalty)
+{
     double travelTime = 0;
-    if(path.size() != 0){
-        for(int PathSegmentIdx = 0; PathSegmentIdx < path.size(); PathSegmentIdx++)
+    if(path.size() != 0)
+    {
+        for(int i = 0; i < path.size(); i++)
         {
-            if(PathSegmentIdx < path.size() - 1
-                && Segment_SegmentDetailedInfo[path[PathSegmentIdx+1]].streetID != Segment_SegmentDetailedInfo[path[PathSegmentIdx]].streetID)
+            if(i < path.size() - 1
+                && Segment_SegmentDetailedInfo[path[i + 1]].streetID != Segment_SegmentDetailedInfo[path[i]].streetID)
             {
                 travelTime += turn_penalty;
             }
-            travelTime += Segment_SegmentDetailedInfo[path[PathSegmentIdx]].travel_time;
+            travelTime += Segment_SegmentDetailedInfo[path[i]].travel_time;
         }
         return travelTime;
-    }else
+    } else
     {
         return 0;
     }
@@ -64,8 +66,10 @@ double computePathTravelTime(const std::vector<StreetSegmentIdx>& path,
 // with the shortest travel time is returned. The path is returned as a vector
 // of street segment ids; traversing these street segments, in the returned
 // order, would take one from the start to the destination intersection.
-std::vector<StreetSegmentIdx> findPathBetweenIntersections(
+std::vector<StreetSegmentIdx> findPathBetweenIntersections (
                   const std::pair<IntersectionIdx, IntersectionIdx> intersect_ids,
-                  const double turn_penalty){
-
-                  }
+                  const double turn_penalty)
+{
+    std::vector<StreetSegmentIdx> result;
+    return result;
+}

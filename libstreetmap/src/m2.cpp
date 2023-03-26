@@ -20,7 +20,8 @@
  */
 #include "m1.h"
 #include "m2.h"
-#include "ui_callbacks/custom_callback.hpp"
+#include "ui_callbacks/widgets.hpp"
+#include "ui_callbacks/setup.hpp"
 #include "draw/draw.hpp"
 #include "draw/utilities.hpp"
 #include <cmath>
@@ -65,6 +66,19 @@ ezgl::rectangle visible_world;
 // Starting point and destination point (Initialized to 0, 0)
 ezgl::point2d start_point = ezgl::point2d(0, 0);
 ezgl::point2d destination_point = ezgl::point2d(0, 0);
+// Bool to check if an intersection in a search bar is "Set"
+// "Set" means clicked directly on the map/Pressed Enter to search
+// "Unset" is when user modified text in the search bar
+// Navigations are executed only when both text fields are set
+bool start_point_set = false;
+bool destination_point_set = false;
+// Bool to check if the content of the search bar is being changed 
+// by autocomplete (search_response and navigation_response)
+// or by user (adding/deleting characters, etc.) 
+// If done by autocomplete, "changed" signal from GtkSearchEntry 
+// should not modify the start_point_set or destination_point_set
+bool search_1_forced_change = false;
+bool search_2_forced_change = false;
 
 // Short info for segments whose street name will be displayed
 struct SegShortInfo
@@ -80,7 +94,8 @@ struct SegShortInfo
 // All POI whose name will be displayed
 std::vector<std::vector<POIDetailedInfo>> poi_display;
 // All points where pin will be drawn on
-std::vector<ezgl::point2d> pin_display;
+std::vector<ezgl::point2d> pin_display_start;
+std::vector<ezgl::point2d> pin_display_dest;
 
 /*******************************************************************************************************************************
  * FUNCTION DECLARATIONS
@@ -91,14 +106,6 @@ std::vector<ezgl::point2d> pin_display;
  * The graphics object expects that x and y values will be in the main canvas' world coordinate system.
  *************************************************************/
 void draw_main_canvas (ezgl::renderer *g);
-
-/*************************************************************
- * APPLICATION EVENT SETUP
- *************************************************************/
-// Initial Setup is run whenever a window is opened. 
-void initial_setup (ezgl::application *application, bool new_window);
-// Register mouse click
-void act_on_mouse_click (ezgl::application *application, GdkEventButton */*event*/, double x, double y);
 
 
 /*******************************************************************************************************************************
@@ -535,7 +542,15 @@ void draw_main_canvas (ezgl::renderer *g)
     /********************************************************************************
     * Draw pins for currently selected Intersections/POIs
     ********************************************************************************/
-    for (auto& point : pin_display)
+    for (auto& point : pin_display_start)
+    {
+        if (!visible_world.contains(point))
+        {
+            continue;
+        }
+        draw_pin(g, point);
+    }
+    for (auto& point : pin_display_dest)
     {
         if (!visible_world.contains(point))
         {
@@ -548,230 +563,4 @@ void draw_main_canvas (ezgl::renderer *g)
     * Draw the distance scale
     ********************************************************************************/
     draw_distance_scale (g, visible_world);
-}
-
- /*******************************************************************************************************************************
- * APPLICATION SETUP
- ********************************************************************************************************************************/
-// Function called before the activation of the application
-void initial_setup (ezgl::application *application, bool /*new_window*/)
-{
-    // Update the status bar message
-    application->update_message("Welcome!");
-    // We will increment row each time we insert a new element.
-    int row = 14;
-
-    // Connects to NightModeSwitch
-    NightModeSwitch = application->get_object("NightModeSwitch");
-    g_signal_connect(
-        NightModeSwitch, // pointer to the UI widget
-        "state-set", // Signal state of switch being changed
-        G_CALLBACK(night_mode_cbk), // callback function
-        application // passing an application pointer to callback function
-    );  
-
-    // Connects to SubwayStationSwitch
-    SubwayStationSwitch = application->get_object("SubwayStationSwitch");
-    g_signal_connect(
-        SubwayStationSwitch, // pointer to the UI widget
-        "state-set", // Signal state of switch being changed
-        G_CALLBACK(subway_station_cbk), // callback function
-        application // passing an application pointer to callback function
-    );
-
-    // Connects to SubwayLineSwitch
-    SubwayLineSwitch = application->get_object("SubwayLineSwitch");
-    g_signal_connect(
-        SubwayLineSwitch, // pointer to the UI widget
-        "state-set", // Signal state of switch being changed
-        G_CALLBACK(subway_line_cbk), // name of callback function
-        application // passing an application pointer to callback function
-    );
-
-    // Connects to NavigationSwitch
-    NavigationSwitch = application->get_object("NavigationSwitch");
-    g_signal_connect(
-        NavigationSwitch, // pointer to the UI widget
-        "state-set", // Signal state of switch being changed
-        G_CALLBACK(navigation_switch_cbk), // name of callback function
-        application // passing an application pointer to callback function
-    );
-
-    // Connects to Tutorial button
-    TutorialButton = application->get_object("Tutorial");
-    g_signal_connect(
-        TutorialButton,
-        "clicked",
-        G_CALLBACK(tutorial_cbk),
-        application
-    );
-    // Set GtkSwitch pointers
-    subway_station_switch = GTK_SWITCH(SubwayStationSwitch);
-    subway_line_switch = GTK_SWITCH(SubwayLineSwitch);
-    navigation_switch = GTK_SWITCH(NavigationSwitch);
-
-    // Runtime: Creating drop=down list for filters
-    application->create_label(row++, "Sort by");
-    application->create_combo_box_text(
-        "Select", 
-        row++,
-        poi_filter_cbk,
-        {"All", "Restaurant", "School", "Hospital", "Bar", "Fast Food",
-        "Ice Cream", "Cafe", "University", "Post Office", "Fuel", "Bank", "BBQ"}
-    );
-
-    // Runtime: Creating drop-down list for different cities, connected to city_change_cbk
-    application->create_label(row++, "Switch city:");     
-    application->create_combo_box_text(
-        "CitySelect", 
-        row++,
-        city_change_cbk,
-        {" ", "Toronto", "Beijing", "Cairo", "Cape Town", "Golden Horseshoe", 
-        "Hamilton", "Hong Kong", "Iceland", "Interlaken", "Kyiv",
-        "London", "New Delhi", "New York", "Rio de Janeiro", "Saint Helena",
-        "Singapore", "Sydney", "Tehran", "Tokyo"}
-    );
-    
-    /***********************************************
-     * Sets up entry completion for search bar
-     ************************************************/
-    // Connects to SearchBar
-    SearchBar = application->get_object("SearchBar");
-    g_signal_connect(
-        SearchBar, // pointer to the UI widget
-        "activate", // signal representing "Enter" has been pressed or user clicked search icon
-        G_CALLBACK(search_activate_cbk),
-        application // passing an application pointer to callback function
-    );
-    // Connects to the second search bar 
-    // Default: Hides second search bar
-    SearchBarDestination = application->get_object("SearchBarDestination");
-    g_signal_connect(
-        SearchBarDestination, // pointer to the UI widget
-        "activate", // signal representing "Enter" has been pressed or user clicked search icon
-        G_CALLBACK(search_activate_cbk),
-        application // passing an application pointer to callback function
-    );
-    gtk_widget_hide(GTK_WIDGET(SearchBarDestination));
-
-    // Connect to FullSearchList
-    list_store = GTK_LIST_STORE(application->get_object("FullSearchList"));
-    // Load all intersection names
-    // Intersection names may or may not contain '&'
-    for (auto& pair : IntersectionName_IntersectionIdx_no_repeat)
-    {
-        gtk_list_store_append(list_store, &iter);
-        gtk_list_store_set(list_store, &iter, 0, (pair.first).c_str(), -1);
-    }
-    // Load all food place names - Temporarily disabled for M3
-    // for (auto& pair : POI_AllFood)
-    // {
-    //     gtk_list_store_append(list_store, &iter);
-    //     gtk_list_store_set(list_store, &iter, 0, (pair.first).c_str(), -1);
-    // }
-
-    // Change entry completion algorithm to support fuzzy search        // TODO: Prioritize closer match (improve suggestion)
-    completion = GTK_ENTRY_COMPLETION(application->get_object("FullEntryCompletion"));
-    completion_destination = GTK_ENTRY_COMPLETION(application->get_object("FullEntryCompletionDestination"));
-    gtk_entry_completion_set_match_func(completion, fuzzy_match_func, NULL, NULL);
-    gtk_entry_completion_set_match_func(completion_destination, fuzzy_match_func, NULL, NULL);
-}
-
-                                            
-                                            // 1. Both entries are clear
-                                                // focus-in-event to see which field to fill
-                                            // 2. User previously searched for/clicked on an intersection --> Set that intersection as the starting point
-                                            // TODO: Swap button (?)
-// Storing state of mouse clicks
-void act_on_mouse_click (ezgl::application* application, GdkEventButton* /*event*/, double x, double y)
-{
-    // If not in navigation mode --> Exploration mode --> Allow highlighting only one intersection/POI at a time
-    if (!navigation_mode)
-    {
-        // Check whether the mouse clicked closer to a POI or an intersection
-        IntersectionIdx inter_id = findClosestIntersection(ezgl::point2d(x, y));
-        // POIIdx POI_id = findClosestPOI(ezgl::point2d(x, y)); - temporarily disablied for M3
-        
-        // User selected intersection
-        // if (clicked_intersection_distance <= clicked_POI_distance)
-        // {
-            auto inter_it = std::find(pin_display.begin(), pin_display.end(), Intersection_IntersectionInfo[inter_id].position_xy);
-            // Highlight closest intersections by adding point to pin_display
-            if (inter_it == pin_display.end())
-            {
-                // Clear all pins if newly select intersection. 
-                pin_display.clear();
-                // Set start point to selected position
-                start_point = Intersection_IntersectionInfo[inter_id].position_xy;
-                // Highlight only selected intersection
-                pin_display.push_back(start_point);
-                // Set Search bar to contain intersection name
-                std::string intersection_name = Intersection_IntersectionInfo[inter_id].name;
-                const gchar* cstr = intersection_name.c_str();
-                gtk_entry_set_text(GTK_ENTRY(SearchBar), cstr);
-            } else  // Unhighlight intersection by removing from pin_display
-            {
-                pin_display.erase(inter_it);
-            }
-        // } else  // User selected POI - temporarily disablied for M3
-        // {   
-        //     auto POI_it = std::find(pin_display.begin(), pin_display.end(), POI_AllInfo[POI_id].POIPoint);
-        //     if (POI_it == pin_display.end())
-        //     {   
-        //         // Clear all pins if newly select food place.
-        //         pin_display.clear();
-        //         // Set start point to selected position
-        //         start_point = POI_AllInfo[POI_id].POIPoint;
-        //         // Highlight only selected POI
-        //         pin_display.push_back(start_point);
-                
-        //         // Set Search bar to contain intersection name
-        //         std::string POIname = POI_AllInfo[POI_id].POIName;
-        //         const gchar* cstr = POIname.c_str();
-        //         gtk_entry_set_text(GTK_ENTRY(SearchBar), cstr);
-        //     } else
-        //     {
-        //         pin_display.erase(POI_it);
-        //     }
-        // }
-    }
-    // Navigation mode
-    else
-    {
-        // Record closest intersection
-        IntersectionIdx inter_id = findClosestIntersection(ezgl::point2d(x, y));
-        std::string intersection_name = Intersection_IntersectionInfo[inter_id].name;
-        const gchar* cstr = intersection_name.c_str();
-        
-        // Put the intersection name into input field, depending on which field is hightlighted
-        if (gtk_widget_has_focus(GTK_WIDGET(SearchBarDestination)))
-        {
-            gtk_entry_set_text(GTK_ENTRY(SearchBarDestination), cstr);
-            // Set destination point
-            destination_point = Intersection_IntersectionInfo[inter_id].position_xy;
-        } else
-        {
-            gtk_entry_set_text(GTK_ENTRY(SearchBar), cstr);
-            // Set starting point
-            start_point = Intersection_IntersectionInfo[inter_id].position_xy;
-        }
-        // Change pin display for new start and destination
-        pin_display.clear();
-        pin_display.push_back(start_point);
-        pin_display.push_back(destination_point);
-
-        // Start navigate if both fields are filled
-        const gchar *search_text;
-        search_text = gtk_entry_get_text(GTK_ENTRY(SearchBar));
-        std::string input_1(search_text);
-        search_text = gtk_entry_get_text(GTK_ENTRY(SearchBarDestination));
-        std::string input_2(search_text);
-        if (!input_1.empty() && !input_2.empty())
-        {
-            std::cout << "NAVIGATE BETWEEN " << start_point.x << " " << start_point.y << " and " 
-                      << destination_point.x << " " << destination_point.y << std::endl;
-        }
-    }
-
-    application->refresh_drawing();
 }
