@@ -74,6 +74,8 @@ std::string CURRENT_MAP_PATH = " ";
 // Distance of closest POI/Intersection on-click to determine which to hightlight
 double clicked_intersection_distance;
 double clicked_POI_distance;
+// Max speed limit of current city
+double MAX_SPEED_LIMIT;
 
 // *******************************************************************
 // Street Segments
@@ -591,6 +593,12 @@ void init_segments()
 
         // Pre-calculate travel time of each street segments
         processedInfo.travel_time = processedInfo.length/rawInfo.speedLimit;
+
+        // To record the max speed limit of a street in the city (for A* path finding)
+        if (rawInfo.speedLimit > MAX_SPEED_LIMIT)
+        {
+            MAX_SPEED_LIMIT = rawInfo.speedLimit;
+        }
 
         // Push processed info into vector
         Segment_SegmentDetailedInfo.push_back(processedInfo);

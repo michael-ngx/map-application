@@ -28,6 +28,10 @@ void draw_street_segment_pixel (ezgl::renderer *g, StreetSegmentIdx seg_id,
             g->set_color(96, 96, 96);
         }
     }
+    if (street_type == "path")
+    {
+         g->set_color(ezgl::RED);
+    }
     // Set line width based on current zoom level and street type    
     int line_width = get_street_width_pixel(street_type); 
     g->set_line_width(line_width);
@@ -73,6 +77,10 @@ void draw_street_segment_meters (ezgl::renderer *g, StreetSegmentIdx seg_id,
         {
             g->set_color(96, 96, 96);
         }
+    }
+    if (street_type == "path")
+    {
+         g->set_color(ezgl::RED);
     }
     // Set street width (in meters) based on current zoom level and street type 
     int width_meters = get_street_width_meters(street_type);
@@ -148,6 +156,12 @@ void draw_line_meters (ezgl::renderer *g, ezgl::point2d from_xy,
 // Manually fix street width with pixels according to zoom levels (far zoom levels)
 int get_street_width_pixel (std::string& street_type)
 {
+    // If the segment is part of path
+    if (street_type == "path")
+    {
+        return 5;
+    }
+    // Else, determine width based on street type and zoom levels
     double curr_world_width = visible_world.width();
     if (curr_world_width > ZOOM_LIMIT_0)
     {
@@ -225,6 +239,9 @@ int get_street_width_meters (std::string& street_type)
     } else if (street_type == "residential") 
     {
         return 3;
+    } else if (street_type == "path")
+    {
+        return 5;
     } else {
         return 1;
     }

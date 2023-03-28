@@ -252,7 +252,12 @@ void act_on_mouse_click (ezgl::application* application, GdkEventButton* /*event
         // Start navigate if both fields are set
         if (start_point_set && destination_point_set)
         {
-            std::cout << "NAVIGATE!" << std::endl;
+            found_path.clear();
+            found_path = findPathBetweenIntersections(std::make_pair(2000, 5000), 0);        // TEST: 2 random intersections in the map
+            pin_display_start.clear();
+            pin_display_start.push_back(Intersection_IntersectionInfo[2000].position_xy);
+            pin_display_dest.clear();
+            pin_display_dest.push_back(Intersection_IntersectionInfo[5000].position_xy);
         }
     }
     application->refresh_drawing();

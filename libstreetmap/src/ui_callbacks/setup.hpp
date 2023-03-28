@@ -6,6 +6,7 @@
 #define SETUP_H
 
 #include "ui_callbacks/widgets.hpp"
+#include "m3.h"
 
 // Initial Setup is run whenever a window is opened. 
 void initial_setup (ezgl::application *application, bool new_window);

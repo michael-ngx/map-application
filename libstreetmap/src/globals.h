@@ -136,8 +136,8 @@ struct StreetSegmentDetailedInfo{
     IntersectionIdx from, to;   // Intersection ID this segment runs from/to
     bool oneWay;
     double length;
-    double travel_time;
-    float speedLimit;        //
+    double travel_time;         // Travel time, in seconds
+    float speedLimit;           // Speed limit of current segment, in m/s
     StreetIdx streetID;         // Index of street this segment belongs to
     std::string streetName;
     int numCurvePoints;      // number of curve points between the ends
@@ -243,6 +243,33 @@ extern std::vector<SubwayRoutes> AllSubwayRoutes;
 
 extern std::unordered_map<OSMID, int> OSMID_NodeIndex;
 extern std::unordered_map<OSMID, int> OSMID_WayIndex;
+
+// *********************************************************************************************************
+// A* Path finding
+// *********************************************************************************************************
+// Max speed limit of a street in the city
+extern double MAX_SPEED_LIMIT;
+
+// A struct to represent a node in the search graph
+struct Node
+{
+    IntersectionIdx id;
+    double g;       // g-value (cost of path from start node to this node)
+    double h;       // h-value (heuristic estimate of cost from this node to goal node)
+                    // NOTE that h-value must never overestimate the cost to reach the goal
+                    // Therefore, h = Euclidean distance to goal node / Largest speed limit in the city
+
+    IntersectionIdx parent;     // node that leads to this node on the shortest path found so far
+    StreetSegmentIdx shortest_segment;      // segment (with least travel time) that leads to this node
+    // Compare the f-value (f = g + h) between 2 nodes
+    // Used to set up ascending priority queue (pops the smallest value first)
+    bool operator< (const Node& other) const
+    {
+        return (g + h) > (other.g + other.h);
+    }
+};
+
+extern std::vector<StreetSegmentIdx> found_path;
 
 #endif /* GLOBALS_H */
 

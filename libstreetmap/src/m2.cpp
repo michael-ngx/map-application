@@ -97,6 +97,9 @@ std::vector<std::vector<POIDetailedInfo>> poi_display;
 std::vector<ezgl::point2d> pin_display_start;
 std::vector<ezgl::point2d> pin_display_dest;
 
+// All street segments of the path found (to be drawn)
+std::vector<StreetSegmentIdx> found_path;
+
 /*******************************************************************************************************************************
  * FUNCTION DECLARATIONS
  ********************************************************************************************************************************/
@@ -312,6 +315,12 @@ void draw_main_canvas (ezgl::renderer *g)
             
             // To store information of current street segment (that will be sent to either highway_segments or seg_names_and_arrows)
             SegShortInfo segment_short_info;
+
+            if (std::find(found_path.begin(), found_path.end(), seg_id) != found_path.end())
+            {
+                draw_street_segment_pixel(g, seg_id, from_xy, to_xy, "path");
+                continue;
+            }
 
             // Stores highways into vector to be drawn later
             if ((highway_type == "motorway" || highway_type == "motorway_link"))
