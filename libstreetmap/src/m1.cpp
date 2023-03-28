@@ -364,7 +364,8 @@ std::vector<IntersectionIdx> findIntersectionIdsFromPartialIntersectionName(std:
 
 // Returns the length of a given street in meters
 // Speed Requirement --> high 
-double findStreetLength(StreetIdx street_id){
+double findStreetLength (StreetIdx street_id)
+{
     // Get street length from street id
     return Street_StreetInfo.at(street_id).length;
 }
@@ -372,7 +373,8 @@ double findStreetLength(StreetIdx street_id){
 // Returns the nearest point of interest of the given type (e.g. "restaurant") 
 // to the given position
 // Speed Requirement --> none 
-POIIdx findClosestPOI(LatLon my_position, std::string POItype){
+POIIdx findClosestPOI (LatLon my_position, std::string POItype)
+{
     POIIdx closestPOI = 0; //return value
     double tempDistance; //store temporary distance
     bool initialized = false; //flag for smallest distance initialization
@@ -638,7 +640,7 @@ void init_streets()
             StreetInfo street_info;
             street_info.id = street_id;
             street_info.name = getStreetName(street_id);
-            street_info.length = 0.0;
+            street_info.length = segmentInfo.length;
 
             street_info.all_segments.push_back(seg_id);
             street_info.all_intersections.push_back(Segment_SegmentDetailedInfo[seg_id].from);
@@ -648,16 +650,13 @@ void init_streets()
         {
             // Push segment into street info
             Street_StreetInfo.at(street_id).all_segments.push_back(seg_id);
-            
             // Push intersections into street info
             // Intersections will appear duplicates here. Intersections will be sorted and duplicates will be removed in next for loop
             Street_StreetInfo.at(street_id).all_intersections.push_back(Segment_SegmentDetailedInfo[seg_id].from);
             Street_StreetInfo.at(street_id).all_intersections.push_back(Segment_SegmentDetailedInfo[seg_id].to);
-            // Do not add length to <unknown> streets
-            if (street_id != 0)
-            {
-                Street_StreetInfo.at(street_id).length += Segment_SegmentDetailedInfo[seg_id].length;
-            }
+
+            // Add segment length to street
+            Street_StreetInfo.at(street_id).length += Segment_SegmentDetailedInfo[seg_id].length;
         }
     }
 

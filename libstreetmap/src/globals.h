@@ -107,7 +107,7 @@ POIIdx findClosestPOI(ezgl::point2d my_position);
 std::vector<IntersectionIdx> findIntersectionIdsFromPartialIntersectionName(std::string intersection_prefix);
 
 // *********************************************************************************************************
-// Latlon bounds
+// Latlon bounds of the city & conversions
 // *********************************************************************************************************
 extern LatLonBounds latlon_bound;
 extern double max_lat, max_lon;
@@ -118,7 +118,7 @@ ezgl::point2d xy_from_latlon(LatLon latlon);
 LatLon latlon_from_xy(double x, double y);
 
 // *********************************************************************************************************
-// Numbers (counts)
+// Total counts of objects
 // *********************************************************************************************************
 extern int intersectionNum;
 extern int segmentNum;
