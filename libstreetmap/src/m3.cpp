@@ -195,20 +195,7 @@ std::vector<StreetSegmentIdx> findPathBetweenIntersections (
                     record_node[neighbor].g = g;
                     record_node[neighbor].parent = current.id;
                     record_node[neighbor].parent_segment = min_segment;
-                    // Change the previous neighbor node (that has larger g-value) inside the pq to the neighbor node with new value
-                    std::priority_queue<Node> pq2;
-                    while (!pq.empty())
-                    {
-                        Node temp = pq.top();
-                        pq.pop();
-                        if (temp.id == neighbor)
-                        {
-                            continue;
-                        }
-                        pq2.push(temp);
-                    }
-                    pq2.push(record_node[neighbor]);
-                    pq = pq2;
+                    pq.push(record_node[neighbor]);
                 }
             } else
             {
