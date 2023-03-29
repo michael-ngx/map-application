@@ -63,9 +63,11 @@ bool navigation_mode = false;
 
 // Rectangle of current visible world, in meters
 ezgl::rectangle visible_world;
-// Starting point and destination point (Initialized to 0, 0)
+// Starting point and destination point (Initialized to 0, 0) and id to -1, -1
 ezgl::point2d start_point = ezgl::point2d(0, 0);
 ezgl::point2d destination_point = ezgl::point2d(0, 0);
+IntersectionIdx start_point_id = -1;
+IntersectionIdx destination_point_id = -1;
 // Bool to check if an intersection in a search bar is "Set"
 // "Set" means clicked directly on the map/Pressed Enter to search
 // "Unset" is when user modified text in the search bar
@@ -303,6 +305,12 @@ void draw_main_canvas (ezgl::renderer *g)
             {
                 continue;
             }
+            // Skip segment if segment is part of found_path (will be drawn later)
+            if (std::find(found_path.begin(), found_path.end(), seg_id) != found_path.end())
+            {
+                continue;
+            }
+
             // Get LatLon information of from and to intersections from each segments
             IntersectionIdx from_id = Segment_SegmentDetailedInfo[seg_id].from;
             IntersectionIdx to_id = Segment_SegmentDetailedInfo[seg_id].to;
@@ -315,12 +323,6 @@ void draw_main_canvas (ezgl::renderer *g)
             
             // To store information of current street segment (that will be sent to either highway_segments or seg_names_and_arrows)
             SegShortInfo segment_short_info;
-
-            if (std::find(found_path.begin(), found_path.end(), seg_id) != found_path.end())
-            {
-                draw_street_segment_pixel(g, seg_id, from_xy, to_xy, "path");
-                continue;
-            }
 
             // Stores highways into vector to be drawn later
             if ((highway_type == "motorway" || highway_type == "motorway_link"))
@@ -478,6 +480,25 @@ void draw_main_canvas (ezgl::renderer *g)
                     }
                 }
             }
+        }
+    }
+
+    /********************************************************************************
+    * Draw result path of navigation mode
+    ********************************************************************************/
+    for (auto seg_id : found_path)
+    {
+        IntersectionIdx from_id = Segment_SegmentDetailedInfo[seg_id].from;
+        IntersectionIdx to_id = Segment_SegmentDetailedInfo[seg_id].to;
+        ezgl::point2d from_xy = Intersection_IntersectionInfo[from_id].position_xy;
+        ezgl::point2d to_xy = Intersection_IntersectionInfo[to_id].position_xy;
+
+        if (ZOOM_LIMIT_2 <= curr_world_width)
+        {
+            draw_street_segment_pixel(g, seg_id, from_xy, to_xy, "path");
+        } else
+        {
+            draw_street_segment_meters(g, seg_id, from_xy, to_xy, "path");
         }
     }
 

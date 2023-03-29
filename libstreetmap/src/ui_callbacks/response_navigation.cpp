@@ -60,6 +60,7 @@ bool navigation_response (std::string input, bool start_search_bar, ezgl::applic
             }
             // Save the position of the (first) intersection found as starting point
             start_point = Intersection_IntersectionInfo[range.first->second].position_xy;
+            start_point_id = range.first->second;
             // Highlight the starting point on the map
             pin_display_start.push_back(start_point);
         } else
@@ -70,6 +71,7 @@ bool navigation_response (std::string input, bool start_search_bar, ezgl::applic
             }
             // Save the position of the (first) intersection found as destination point
             destination_point = Intersection_IntersectionInfo[range.first->second].position_xy;
+            destination_point_id = range.first->second;
             // Highlight the destination point on the map
             pin_display_dest.push_back(destination_point);
         }
@@ -99,12 +101,14 @@ bool navigation_response (std::string input, bool start_search_bar, ezgl::applic
             {
                 // Save the position of the unique intersection found as starting point
                 start_point = Intersection_IntersectionInfo[partials[0]].position_xy;
+                start_point_id = partials[0];
                 // Highlight the starting point
                 pin_display_start.push_back(start_point);
             } else
             {
                 // Save the position of the unique intersection found as destination
                 destination_point = Intersection_IntersectionInfo[partials[0]].position_xy;
+                destination_point_id = partials[0];
                 // Highlight the destination
                 pin_display_dest.push_back(destination_point);
             }
@@ -116,6 +120,7 @@ bool navigation_response (std::string input, bool start_search_bar, ezgl::applic
                 to_be_converted += "Start name is not unique. First occurence chosen.\n";
                 // Save the position of the (first) intersection found as starting point
                 start_point = Intersection_IntersectionInfo[partials[0]].position_xy;
+                start_point_id = partials[0];
                 // Highlight the found intersection on the map
                 pin_display_start.push_back(start_point);
             } else
@@ -124,6 +129,7 @@ bool navigation_response (std::string input, bool start_search_bar, ezgl::applic
                 to_be_converted += "Destination name is not unique. First name occurence was chosen.\n";
                 // Save the position of the (first) intersection found as destination point
                 destination_point = Intersection_IntersectionInfo[partials[0]].position_xy;
+                destination_point_id = partials[0];
                 // Highlight the destination point on the map
                 pin_display_dest.push_back(destination_point);
             }
@@ -286,6 +292,7 @@ bool navigation_response (std::string input, bool start_search_bar, ezgl::applic
                 to_be_converted = "Starting point: Unique intersection found\n";
                 // Save the position of the (first) intersection found as starting point
                 start_point = Intersection_IntersectionInfo[first_vect[0]].position_xy;
+                start_point_id = first_vect[0];
                 // Highlight the starting point on the map
                 pin_display_start.push_back(start_point);
             } else
@@ -293,6 +300,7 @@ bool navigation_response (std::string input, bool start_search_bar, ezgl::applic
                 to_be_converted = "Destination: Unique intersection found\n";
                 // Save the position of the (first) intersection found as starting point
                 destination_point = Intersection_IntersectionInfo[first_vect[0]].position_xy;
+                destination_point_id = first_vect[0];
                 // Highlight the starting point on the map
                 pin_display_dest.push_back(destination_point);
             }
@@ -308,12 +316,14 @@ bool navigation_response (std::string input, bool start_search_bar, ezgl::applic
             {
                 // Save the position of the (first) intersection found as starting point
                 start_point = Intersection_IntersectionInfo[first_vect[0]].position_xy;
+                start_point_id = first_vect[0];
                 // Highlight the starting point on the map
                 pin_display_start.push_back(start_point);
             } else
             {
                 // Save the position of the (first) intersection found as starting point
                 destination_point = Intersection_IntersectionInfo[first_vect[0]].position_xy;
+                destination_point_id = first_vect[0];
                 // Highlight the starting point on the map
                 pin_display_dest.push_back(destination_point);
             }

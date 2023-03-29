@@ -40,6 +40,8 @@ bool search_response (std::string input, ezgl::application *application)
         auto range = IntersectionName_IntersectionIdx.equal_range(input);
         // Set start point to first intersection if there are multiple
         start_point = Intersection_IntersectionInfo[range.first->second].position_xy;
+        start_point_id = range.first->second;
+        // Feed back message
         int count = 0;  // Count the number of values
         std::string to_be_converted = "Intersection(s) " + input + ":\n";
         for (auto it = range.first; it != range.second; ++it) {
@@ -95,6 +97,7 @@ bool search_response (std::string input, ezgl::application *application)
 
             // Set start point to first intersection if there are multiple
             start_point = Intersection_IntersectionInfo[partials[0]].position_xy;
+            start_point_id = partials[0];
             // Move the camera to focus the intersection
             // Center of new location (centered at first intersection found)
             center = start_point;
@@ -135,6 +138,7 @@ bool search_response (std::string input, ezgl::application *application)
 
             // Set start point to first intersection if there are multiple
             start_point = Intersection_IntersectionInfo[range.first->second].position_xy;
+            start_point_id = range.first->second;
             // Move the camera to focus the intersection
             // Center of new location (centered at first intersection found)
             center = start_point;
@@ -299,6 +303,7 @@ bool search_response (std::string input, ezgl::application *application)
 
             // Set start point
             start_point = Intersection_IntersectionInfo[first_vect[0]].position_xy;
+            start_point_id = first_vect[0];
             // Move the camera to focus the intersection
             center = start_point;
             move_camera(center, application);
@@ -340,6 +345,7 @@ bool search_response (std::string input, ezgl::application *application)
 
             // Set start point
             start_point = Intersection_IntersectionInfo[first_vect[0]].position_xy;
+            start_point_id = first_vect[0];
             // Set center of new camera (centered at first intersection found)
             center = start_point;
             move_camera(center, application);

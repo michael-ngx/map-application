@@ -74,18 +74,18 @@ std::vector<StreetSegmentIdx> findPathBetweenIntersections (
     IntersectionIdx dest_id = intersect_ids.second;
     // Create the starting node
     double h_start = findDistanceBetweenTwoPoints(Intersection_IntersectionInfo[start_id].position_xy, 
-                                                  Intersection_IntersectionInfo[dest_id].position_xy) 
-                    / MAX_SPEED_LIMIT;
+                                                  Intersection_IntersectionInfo[dest_id].position_xy) / MAX_SPEED_LIMIT;
     Node startNode = {start_id, 0, h_start, -1, -1};
     
-    // Create the priority queue and the visited hash table
+    // Create the priority queue and the record_node hash table
     std::priority_queue<Node> pq;
+    std::unordered_map<IntersectionIdx, Node> record_node;
+    // Keep track of visited nodes
     std::unordered_map<IntersectionIdx, Node> visited;
 
-    // Add the starting node to the priority queue (FIFO)
+    // Add the starting node to the priority queue (FIFO) and record_node hash table
     pq.push(startNode);
-    // Hash table to check if node is visited
-    visited[start_id] = startNode;
+    record_node[start_id] = startNode;
 
     // A* algorithm
     while (!pq.empty())
@@ -102,20 +102,42 @@ std::vector<StreetSegmentIdx> findPathBetweenIntersections (
             while (current.parent != -1)
             {
                 result.insert(result.begin(), current.shortest_segment);
-                current = visited[current.parent];
+                current = record_node[current.parent];
             }
             result.insert(result.begin(), current.shortest_segment);
             break;
         }
 
+        // If current node is visited --> Skip to next node in priority queue
+        if (visited.find(current.id) != visited.end())
+        {
+            continue;
+        }
+        // Mark current node as visited
+        auto it = record_node.find(current.id);
+        visited.insert(std::make_pair(it->first, it->second));
+
         // Generate neighboring nodes and explore
         std::vector<IntersectionIdx> neighbors = findAdjacentIntersections(current.id);
+        // If current node has no neighbors --> skip
+        if (neighbors.empty())
+        {
+            continue;
+        }
+
+        // Get all segments around current node
+        std::vector<StreetSegmentIdx> streetSegments = findStreetSegmentsOfIntersection(current.id);
+        // Explore all neighbors
         for (IntersectionIdx neighbor : neighbors)
         {
+            // If neighbor node is visited --> Skip to next neighbor
+            if (visited.find(neighbor) != visited.end())
+            {
+                continue;
+            }
             // Get the street segments connecting the current node and the neighbor node
             // There may be multiple segments connecting 2 adjacent nodes
             // NOTE: segments may belong to different streets
-            std::vector<StreetSegmentIdx> streetSegments = findStreetSegmentsOfIntersection(current.id);
             std::vector<StreetSegmentIdx> connectingStreetSegments;
             for (StreetSegmentIdx streetSegment : streetSegments)
             {
@@ -130,38 +152,63 @@ std::vector<StreetSegmentIdx> findPathBetweenIntersections (
                 }
             }
 
+            // g-value for neighbor = min g-value from the selected min segment
+            // Initialize to first streetSegment in connectingStreetSegments
+            double g = current.g + Segment_SegmentDetailedInfo[connectingStreetSegments[0]].travel_time;
             // Calculate the h-value of the neighbor node (fixed for each node)
             double h = findDistanceBetweenTwoPoints(Intersection_IntersectionInfo[neighbor].position_xy,
-                                                    Intersection_IntersectionInfo[dest_id].position_xy)
-                        / MAX_SPEED_LIMIT;
+                                                    Intersection_IntersectionInfo[dest_id].position_xy) / MAX_SPEED_LIMIT;
+            // min_segment for neighbor = segment that leads to min g-value
+            // Initialize to first streetSegment in connectingStreetSegments
+            StreetSegmentIdx min_segment = connectingStreetSegments[0];
+            
             
             for (StreetSegmentIdx streetSegment : connectingStreetSegments)
             {
                 // Calculate the g-value of the neighbor node, based on different street segments
                 // Record the segment with shortest travel time
-                double g = current.g + computePathTravelTime({streetSegment}, turn_penalty);
+                double g_temp = current.g + Segment_SegmentDetailedInfo[streetSegment].travel_time;
                 // if (current.street != streetsegment.street)
                 // {
                 //     g += turn_penalty;
                 // }
-
-                // If the neighbor node has been visited before, set g-value, parent, and shortest_segment
-                // to the path with least travel time
-                if (visited.find(neighbor) != visited.end())
+                // Somehow check if choosing the current streetsegment leads to a new street
+                if (g_temp < g)
                 {
-                    if (g < visited[neighbor].g)
-                    {
-                        visited[neighbor].g = g;
-                        visited[neighbor].parent = current.id;
-                        visited[neighbor].shortest_segment = streetSegment;
-                        pq.push(visited[neighbor]);
-                    }
-                } else
-                {
-                    Node neighborNode = {neighbor, g, h, current.id, streetSegment};
-                    visited[neighbor] = neighborNode;
-                    pq.push(neighborNode);
+                    g = g_temp;
+                    min_segment = streetSegment;
                 }
+            }
+
+            // If the neighbor node has been recorded before, set g-value, parent, and shortest_segment
+            // to the path with least travel time
+            if (record_node.find(neighbor) != record_node.end())
+            {
+                if (g < record_node[neighbor].g)
+                {
+                    record_node[neighbor].g = g;
+                    record_node[neighbor].parent = current.id;
+                    record_node[neighbor].shortest_segment = min_segment;
+                    // Change the previous neighbor node (that has larger g-value) inside the pq to the neighbor node with new value
+                    std::priority_queue<Node> pq2;
+                    while (!pq.empty())
+                    {
+                        Node temp = pq.top();
+                        pq.pop();
+                        if (temp.id == neighbor)
+                        {
+                            continue;
+                        }
+                        pq2.push(temp);
+                    }
+                    pq2.push(record_node[neighbor]);
+                    pq = pq2;
+                }
+            } else
+            {
+                Node neighborNode = {neighbor, g, h, current.id, min_segment};
+                record_node[neighbor] = neighborNode;
+                pq.push(neighborNode);
             }
         }
     }

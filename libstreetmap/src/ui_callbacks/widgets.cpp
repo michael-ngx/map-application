@@ -34,7 +34,9 @@ void search_activate_cbk_start (GtkSearchEntry */*self*/, ezgl::application *app
         // Start navigation if both points are "Set"
         if (start_point_set && destination_point_set)
         {
-            std::cout << "NAVIGATE!" << std::endl;
+            found_path.clear();
+            found_path = findPathBetweenIntersections(std::make_pair(start_point_id, destination_point_id), 0);
+            application->refresh_drawing();
         }
     } else
     {
@@ -72,7 +74,9 @@ void search_activate_cbk_dest (GtkSearchEntry */*self*/, ezgl::application* appl
         // Start navigation if both points are "Set"
         if (start_point_set && destination_point_set)
         {
-            std::cout << "NAVIGATE!" << std::endl;
+            found_path.clear();
+            found_path = findPathBetweenIntersections(std::make_pair(start_point_id, destination_point_id), 0);
+            application->refresh_drawing();
         }
     }
 }
@@ -89,6 +93,7 @@ void search_changed_cbk_start (GtkSearchEntry */*self*/, ezgl::application *appl
     {
         start_point_set = false;
         pin_display_start.clear();
+        found_path.clear();
         application->refresh_drawing();
     }
 }
@@ -101,6 +106,7 @@ void search_changed_cbk_dest (GtkSearchEntry */*self*/, ezgl::application* appli
     {
         destination_point_set = false;
         pin_display_dest.clear();
+        found_path.clear();
         application->refresh_drawing();
     }
 }
@@ -195,7 +201,8 @@ void navigation_switch_cbk (GtkSwitch* /*self*/, gboolean state, ezgl::applicati
     {
         application->update_message("Navigation mode turned off");
         navigation_mode = false;
-        // Unset the search fields
+        // Unset the destination search fields
+        destination_point_id = -1;
         destination_point_set = false;
         // Change placeholder of first search bar
         gtk_entry_set_placeholder_text(GTK_ENTRY(SearchBar), "Search Intersections");
@@ -203,8 +210,10 @@ void navigation_switch_cbk (GtkSwitch* /*self*/, gboolean state, ezgl::applicati
         gtk_entry_set_text(GTK_ENTRY(SearchBarDestination), "");
         // Hide second search bar
         gtk_widget_hide(GTK_WIDGET(SearchBarDestination));
-        // Clear all pins
+        // Clear all destination pins
         pin_display_dest.clear();
+        // Clear found path
+        found_path.clear();
         application->refresh_drawing();
     }
 }
@@ -234,10 +243,13 @@ void city_change_cbk (GtkComboBoxText* self, ezgl::application* application)
         // Clear pin displays and set mode of search bars
         pin_display_start.clear();
         pin_display_dest.clear();
+        found_path.clear();
         start_point_set = false;
         destination_point_set = false;
         search_1_forced_change = false;
         search_2_forced_change = false;
+        start_point_id = -1;
+        destination_point_id = -1;
         // Closes current map and loads the new city
         closeMap();
         loadMap(new_map_path);

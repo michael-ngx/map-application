@@ -9,6 +9,7 @@
 
 #include "ezgl/application.hpp"
 #include "m1.h"
+#include "m3.h"
 #include "globals.h"
 #include "draw/utilities.hpp"
 

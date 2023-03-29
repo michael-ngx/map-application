@@ -80,6 +80,8 @@ extern std::vector<ezgl::point2d> pin_display_dest;
 // Starting point and destination point
 extern ezgl::point2d start_point;
 extern ezgl::point2d destination_point;
+extern IntersectionIdx start_point_id;
+extern IntersectionIdx destination_point_id;
 // Bool to check if an intersection in a search bar is "Set"
 // "Set" means clicked directly on the map/Pressed Enter to search
 // "Unset" is when user modified text in the search bar
@@ -269,6 +271,7 @@ struct Node
     }
 };
 
+// Storing vector for found path for special display
 extern std::vector<StreetSegmentIdx> found_path;
 
 #endif /* GLOBALS_H */
