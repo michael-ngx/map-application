@@ -72,20 +72,20 @@ std::vector<StreetSegmentIdx> findPathBetweenIntersections (
     std::vector<StreetSegmentIdx> result;
     IntersectionIdx start_id = intersect_ids.first;
     IntersectionIdx dest_id = intersect_ids.second;
-    // Create the starting node
-    double h_start = findDistanceBetweenTwoPoints(Intersection_IntersectionInfo[start_id].position_xy, 
-                                                  Intersection_IntersectionInfo[dest_id].position_xy) / MAX_SPEED_LIMIT;
-    Node startNode = {start_id, 0, h_start, -1, -1};
     
     // Create the priority queue and the record_node hash table
     std::priority_queue<Node> pq;
     std::unordered_map<IntersectionIdx, Node> record_node;
-    // Keep track of visited nodes
-    std::unordered_map<IntersectionIdx, Node> visited;
+    // Keep track of visited node ids
+    std::unordered_map<IntersectionIdx, bool> visited;
 
+    // Create the starting node
     // Add the starting node to the priority queue (FIFO) and record_node hash table
+    double h_start = findDistanceBetweenTwoPoints(Intersection_IntersectionInfo[start_id].position_xy, 
+                                                  Intersection_IntersectionInfo[dest_id].position_xy) / MAX_SPEED_LIMIT;
+    Node startNode = {start_id, 0, h_start, -1, -1};
     pq.push(startNode);
-    record_node[start_id] = startNode;
+    record_node.insert(std::make_pair(start_id, startNode));
 
     // A* algorithm
     while (!pq.empty())
@@ -113,8 +113,7 @@ std::vector<StreetSegmentIdx> findPathBetweenIntersections (
             continue;
         }
         // Mark current node as visited
-        auto it = record_node.find(current.id);
-        visited.insert(std::make_pair(it->first, it->second));
+        visited.insert(std::make_pair(current.id, NULL));
 
         // Generate neighboring nodes and explore
         std::vector<IntersectionIdx> neighbors = findAdjacentIntersections(current.id);
