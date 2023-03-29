@@ -104,7 +104,6 @@ std::vector<StreetSegmentIdx> findPathBetweenIntersections (
                 result.insert(result.begin(), current.shortest_segment);
                 current = record_node[current.parent];
             }
-            result.insert(result.begin(), current.shortest_segment);
             break;
         }
 
