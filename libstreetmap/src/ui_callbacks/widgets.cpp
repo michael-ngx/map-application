@@ -35,7 +35,7 @@ void search_activate_cbk_start (GtkSearchEntry */*self*/, ezgl::application *app
         if (start_point_set && destination_point_set)
         {
             found_path.clear();
-            found_path = findPathBetweenIntersections(std::make_pair(start_point_id, destination_point_id), 0);
+            found_path = findPathBetweenIntersections(std::make_pair(start_point_id, destination_point_id), DEFAULT_TURN_PENALTY);
             application->refresh_drawing();
         }
     } else
@@ -75,7 +75,7 @@ void search_activate_cbk_dest (GtkSearchEntry */*self*/, ezgl::application* appl
         if (start_point_set && destination_point_set)
         {
             found_path.clear();
-            found_path = findPathBetweenIntersections(std::make_pair(start_point_id, destination_point_id), 0);
+            found_path = findPathBetweenIntersections(std::make_pair(start_point_id, destination_point_id), DEFAULT_TURN_PENALTY);
             application->refresh_drawing();
         }
     }

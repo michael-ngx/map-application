@@ -256,7 +256,7 @@ void act_on_mouse_click (ezgl::application* application, GdkEventButton* /*event
         if (start_point_set && destination_point_set)
         {
             found_path.clear();
-            found_path = findPathBetweenIntersections(std::make_pair(start_point_id, destination_point_id), 0);
+            found_path = findPathBetweenIntersections(std::make_pair(start_point_id, destination_point_id), DEFAULT_TURN_PENALTY);
         }
     }
     application->refresh_drawing();

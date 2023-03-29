@@ -101,7 +101,7 @@ std::vector<StreetSegmentIdx> findPathBetweenIntersections (
             // Reconstruct the path from the goal node to the start node
             while (current.parent != -1)
             {
-                result.insert(result.begin(), current.shortest_segment);
+                result.insert(result.begin(), current.parent_segment);
                 current = record_node[current.parent];
             }
             break;
@@ -154,6 +154,11 @@ std::vector<StreetSegmentIdx> findPathBetweenIntersections (
             // g-value for neighbor = min g-value from the selected min segment
             // Initialize to first streetSegment in connectingStreetSegments
             double g = current.g + Segment_SegmentDetailedInfo[connectingStreetSegments[0]].travel_time;
+            if ((current.parent_segment != -1) && 
+                (Segment_SegmentDetailedInfo[current.parent_segment].streetName != Segment_SegmentDetailedInfo[connectingStreetSegments[0]].streetName))
+            {
+                g += turn_penalty;
+            }
             // Calculate the h-value of the neighbor node (fixed for each node)
             double h = findDistanceBetweenTwoPoints(Intersection_IntersectionInfo[neighbor].position_xy,
                                                     Intersection_IntersectionInfo[dest_id].position_xy) / MAX_SPEED_LIMIT;
@@ -167,11 +172,13 @@ std::vector<StreetSegmentIdx> findPathBetweenIntersections (
                 // Calculate the g-value of the neighbor node, based on different street segments
                 // Record the segment with shortest travel time
                 double g_temp = current.g + Segment_SegmentDetailedInfo[streetSegment].travel_time;
-                // if (current.street != streetsegment.street)
-                // {
-                //     g += turn_penalty;
-                // }
-                // Somehow check if choosing the current streetsegment leads to a new street
+                // Add turn_penalty if choosing the current streetsegment leads to a new street
+                if ((current.parent_segment != -1) && 
+                    (Segment_SegmentDetailedInfo[current.parent_segment].streetName != Segment_SegmentDetailedInfo[streetSegment].streetName))
+                {
+                    g_temp += turn_penalty;
+                }
+                // Update attirbutes for the neighbor node 
                 if (g_temp < g)
                 {
                     g = g_temp;
@@ -179,7 +186,7 @@ std::vector<StreetSegmentIdx> findPathBetweenIntersections (
                 }
             }
 
-            // If the neighbor node has been recorded before, set g-value, parent, and shortest_segment
+            // If the neighbor node has been recorded before, set g-value, parent, and parent_segment
             // to the path with least travel time
             if (record_node.find(neighbor) != record_node.end())
             {
@@ -187,7 +194,7 @@ std::vector<StreetSegmentIdx> findPathBetweenIntersections (
                 {
                     record_node[neighbor].g = g;
                     record_node[neighbor].parent = current.id;
-                    record_node[neighbor].shortest_segment = min_segment;
+                    record_node[neighbor].parent_segment = min_segment;
                     // Change the previous neighbor node (that has larger g-value) inside the pq to the neighbor node with new value
                     std::priority_queue<Node> pq2;
                     while (!pq.empty())

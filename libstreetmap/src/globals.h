@@ -249,6 +249,9 @@ extern std::unordered_map<OSMID, int> OSMID_WayIndex;
 // *********************************************************************************************************
 // A* Path finding
 // *********************************************************************************************************
+// Turn penalty default for map
+const double DEFAULT_TURN_PENALTY = 30;
+
 // Max speed limit of a street in the city
 extern double MAX_SPEED_LIMIT;
 
@@ -262,7 +265,7 @@ struct Node
                     // Therefore, h = Euclidean distance to goal node / Largest speed limit in the city
 
     IntersectionIdx parent;     // node that leads to this node on the shortest path found so far
-    StreetSegmentIdx shortest_segment;      // segment (with least travel time) that leads to this node
+    StreetSegmentIdx parent_segment;      // segment (with least travel time) that leads to this node
     // Compare the f-value (f = g + h) between 2 nodes
     // Used to set up ascending priority queue (pops the smallest value first)
     bool operator< (const Node& other) const
