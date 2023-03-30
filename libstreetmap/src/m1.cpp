@@ -662,20 +662,23 @@ void init_segments()
         ezgl::point2d point_xy = xy_from_latlon(getIntersectionPosition(rawInfo.from));
         double max_x = point_xy.x;
         double max_y = point_xy.y;
-        double min_x = max_lat;
-        double min_y = max_lon;
+        double min_x = point_xy.x;
+        double min_y = point_xy.y;
 
         // Pre-calculate length of each street segments (including curve points)
         // Determine rectangle bounds of each segment
-        if (rawInfo.numCurvePoints == 0){
+        if (rawInfo.numCurvePoints == 0)
+        {
             LatLon point_1 = getIntersectionPosition(rawInfo.from);
             LatLon point_2 = getIntersectionPosition(rawInfo.to);
             processedInfo.length = findDistanceBetweenTwoPoints(point_1, point_2);
 
             ezgl::point2d point_1_xy = xy_from_latlon(point_1);
             ezgl::point2d point_2_xy = xy_from_latlon(point_2);
-            processedInfo.segmentRectangle = ezgl::rectangle(point_1_xy, point_2_xy);
-        } else{
+            processedInfo.segmentRectangle = ezgl::rectangle({std::min(point_1_xy.x, point_2_xy.x), std::min(point_1_xy.y, point_2_xy.y)}, 
+                                                             {std::max(point_1_xy.x, point_2_xy.x), std::max(point_1_xy.y, point_2_xy.y)});
+        } else
+        {
             LatLon point_1 = getIntersectionPosition(rawInfo.from);
             processedInfo.length = 0.0; // Starting length
             // Iterate through all curve points

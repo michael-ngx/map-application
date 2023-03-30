@@ -152,10 +152,6 @@ extern std::vector<StreetSegmentDetailedInfo> Segment_SegmentDetailedInfo;
 // *******************************************************************
 // Intersections
 // *******************************************************************
-
-// Index: Intersection id, Value: vector of all segments that cross through the intersection
-extern std::vector<std::vector<StreetSegmentIdx>> Intersection_AllStreetSegments;
-
 // Struct for preprocessed information of Intersections
 struct IntersectionInfo{
     ezgl::point2d position_xy;
