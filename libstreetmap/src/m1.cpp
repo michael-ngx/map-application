@@ -86,8 +86,6 @@ std::vector<StreetSegmentDetailedInfo> Segment_SegmentDetailedInfo;
 // *******************************************************************
 // Intersections
 // *******************************************************************
-// Index: Intersection id, Value: vector of all segments that cross through the intersection
-std::vector<std::vector<StreetSegmentIdx>> Intersection_AllStreetSegments;
 // Index: Intersection id, Value: Pre-processed Intersection info
 std::vector<IntersectionInfo> Intersection_IntersectionInfo;
 // Key: Intersection name, Value: IntersectionIdx (no repeating intersection names)
@@ -206,7 +204,7 @@ double findStreetSegmentTravelTime(StreetSegmentIdx street_segment_id){
 // 1-way street)
 // the returned vector should NOT contain duplicate intersections
 // Corner case: cul-de-sacs can connect an intersection to itself 
-// (from and to intersection on  street segment are the same). In that case
+// (from and to intersection on street segment are the same). In that case
 // include the intersection in the returned vector (no special handling needed).
 // Speed Requirement --> high 
 
@@ -280,7 +278,7 @@ IntersectionIdx findClosestIntersection(ezgl::point2d my_position)
 // Returns the street segments that connect to the given intersection 
 // Speed Requirement --> high
 std::vector<StreetSegmentIdx> findStreetSegmentsOfIntersection(IntersectionIdx intersection_id){
-    return Intersection_AllStreetSegments[intersection_id];
+    return Intersection_IntersectionInfo[intersection_id].all_segments;
 }
 
 // Returns all intersections along the a given street.
@@ -484,7 +482,6 @@ std::string getOSMNodeTagValue (OSMID OSMid, std::string key){
 void closeMap() {
     //Clean-up your map related data structures here
     Segment_SegmentDetailedInfo.clear();
-    Intersection_AllStreetSegments.clear();
     Intersection_IntersectionInfo.clear();
     IntersectionName_IntersectionIdx_no_repeat.clear();
     IntersectionName_IntersectionIdx.clear();
@@ -514,177 +511,22 @@ void m1_init(){
     intersectionNum = getNumIntersections();
     featureNum = getNumFeatures();
     POINum = getNumPointsOfInterest();
-    // Init database
+    // Initialize database
     init_features();
     init_POI();
-    init_intersections();
     init_segments();
-    init_streets();    
+    init_streets();
+    init_intersections();
     init_osm_nodes();
     init_osm_ways();
     init_osm_relations_subways();
 }
 
 // *******************************************************************
-// Street Segments
+// Features and LatLon
 // *******************************************************************
-void init_segments()
-{
-    // Vector of StreetSegmentDetailedInfo (StreetSegmentIdx - StreetSegmentDetailedInfo)
-    for (int segment = 0; segment < segmentNum; segment++)                  // Corresponds to id of all street segments
-    {                 
-        StreetSegmentInfo rawInfo = getStreetSegmentInfo(segment);          // Raw info object   
-        StreetSegmentDetailedInfo processedInfo;                            // Processed info object
-        
-        processedInfo.wayOSMID = rawInfo.wayOSMID;
-        processedInfo.from = rawInfo.from;
-        processedInfo.to = rawInfo.to;
-        processedInfo.oneWay = rawInfo.oneWay;
-        processedInfo.streetID = rawInfo.streetID;
-        processedInfo.numCurvePoints = rawInfo.numCurvePoints;
-        processedInfo.streetName = getStreetName(processedInfo.streetID);       // (get the name of the street that each segment belongs to - for m2)
-        
-        // Find max and min x, y for defining rectangles of each segment
-        ezgl::point2d point_xy = xy_from_latlon(getIntersectionPosition(rawInfo.from));
-        double max_x = point_xy.x;
-        double max_y = point_xy.y;
-        double min_x = max_lat;
-        double min_y = max_lon;
-
-        // Pre-calculate length of each street segments (including curve points)
-        // Determine rectangle bounds of each segment
-        if (rawInfo.numCurvePoints == 0){
-            LatLon point_1 = getIntersectionPosition(rawInfo.from);
-            LatLon point_2 = getIntersectionPosition(rawInfo.to);
-            processedInfo.length = findDistanceBetweenTwoPoints(point_1, point_2);
-
-            ezgl::point2d point_1_xy = xy_from_latlon(point_1);
-            ezgl::point2d point_2_xy = xy_from_latlon(point_2);
-            processedInfo.segmentRectangle = ezgl::rectangle(point_1_xy, point_2_xy);
-        } else{
-            LatLon point_1 = getIntersectionPosition(rawInfo.from);
-            processedInfo.length = 0.0; // Starting length
-            // Iterate through all curve points
-            for (int i = 0; i < rawInfo.numCurvePoints; i++){
-                LatLon point_2 = getStreetSegmentCurvePoint(segment, i);
-                double templength = findDistanceBetweenTwoPoints(point_1, point_2);
-                processedInfo.length += templength;
-                ezgl::point2d point_2_xy = xy_from_latlon(point_2);
-                processedInfo.curvePoints_xy.push_back(point_2_xy);    // Save the xy of curve points (for m2)
-                point_1 = point_2;
-                // Compare to get max min xy of each segment
-                max_x = std::max(point_2_xy.x, max_x);
-                max_y = std::max(point_2_xy.y, max_y);
-                min_x = std::min(point_2_xy.x, min_x);
-                min_y = std::min(point_2_xy.y, min_y);
-            }
-            LatLon point_2 = getIntersectionPosition(rawInfo.to);                   // Destination (to) point
-            processedInfo.length += findDistanceBetweenTwoPoints(point_1, point_2);
-            ezgl::point2d point_2_xy = xy_from_latlon(point_2);
-            max_x = std::max(point_2_xy.x, max_x);
-            max_y = std::max(point_2_xy.y, max_y);
-            min_x = std::min(point_2_xy.x, min_x);
-            min_y = std::min(point_2_xy.y, min_y);
-            
-            // Record the rectangle that bounds segment
-            processedInfo.segmentRectangle = ezgl::rectangle(ezgl::point2d(min_x, min_y),
-                                                             ezgl::point2d(max_x, max_y));
-        }
-
-        // Pre-calculate travel time of each street segments
-        processedInfo.travel_time = processedInfo.length/rawInfo.speedLimit;
-
-        // To record the max speed limit of a street in the city (for A* path finding)
-        if (rawInfo.speedLimit > MAX_SPEED_LIMIT)
-        {
-            MAX_SPEED_LIMIT = rawInfo.speedLimit;
-        }
-
-        // Push processed info into vector
-        Segment_SegmentDetailedInfo.push_back(processedInfo);
-    }
-}
-
-// *******************************************************************
-// Intersections and LatLon
-// *******************************************************************
-void init_intersections(){
-    Intersection_IntersectionInfo.resize(intersectionNum);
-
-    for (IntersectionIdx id = 0; id < intersectionNum; id++)
-    {        
-        // Initialize vector for Intersection (IntersectionIdx - Vector of Segments)
-        std::vector<StreetSegmentIdx> allSegments;
-        for(int segment = 0; segment < getNumIntersectionStreetSegment(id); segment++) {
-            StreetSegmentIdx ss_id = getIntersectionStreetSegment(id, segment);
-            allSegments.push_back(ss_id);
-        }
-        Intersection_AllStreetSegments.push_back(allSegments);
-
-        // Pre-process xy position for all intersections
-        std::string name = getIntersectionName(id);
-        Intersection_IntersectionInfo[id].name = name;
-        Intersection_IntersectionInfo[id].position_xy = xy_from_latlon(getIntersectionPosition(id));
-
-        // Populate data structures to allow searching for intersection by name
-        IntersectionName_IntersectionIdx_no_repeat.insert(std::make_pair(name, id));
-        IntersectionName_IntersectionIdx.insert(std::make_pair(name, id));
-        IntersectionName_lower_IntersectionIdx.insert(std::make_pair(lower_no_space(name), id));
-    }
-}
-
-// *******************************************************************
-// Streets
-// *******************************************************************
-void init_streets()
-{
-    for(int seg_id = 0; seg_id < segmentNum; seg_id++){
-        // Info of current segment
-        StreetSegmentDetailedInfo segmentInfo = Segment_SegmentDetailedInfo[seg_id];
-        StreetIdx street_id = segmentInfo.streetID;
-        // Populate Street_StreetInfo based on streetID
-        if (Street_StreetInfo.find(street_id) == Street_StreetInfo.end())
-        {
-            StreetInfo street_info;
-            street_info.id = street_id;
-            street_info.name = getStreetName(street_id);
-            street_info.length = segmentInfo.length;
-
-            street_info.all_segments.push_back(seg_id);
-            street_info.all_intersections.push_back(Segment_SegmentDetailedInfo[seg_id].from);
-            street_info.all_intersections.push_back(Segment_SegmentDetailedInfo[seg_id].to);
-            Street_StreetInfo.insert(std::make_pair(street_id, street_info));
-        } else 
-        {
-            // Push segment into street info
-            Street_StreetInfo.at(street_id).all_segments.push_back(seg_id);
-            // Push intersections into street info
-            // Intersections will appear duplicates here. Intersections will be sorted and duplicates will be removed in next for loop
-            Street_StreetInfo.at(street_id).all_intersections.push_back(Segment_SegmentDetailedInfo[seg_id].from);
-            Street_StreetInfo.at(street_id).all_intersections.push_back(Segment_SegmentDetailedInfo[seg_id].to);
-
-            // Add segment length to street
-            Street_StreetInfo.at(street_id).length += Segment_SegmentDetailedInfo[seg_id].length;
-        }
-    }
-
-    for (auto& pair : Street_StreetInfo)
-    {
-        // Sort + unique to remove all the duplicating intersections for each streets
-        // Sorting is required for finding union between 2 vectors (to find intersections between 2 streets) later
-        sort(pair.second.all_intersections.begin(), pair.second.all_intersections.end());
-        auto remove_duplicates = unique(pair.second.all_intersections.begin(), pair.second.all_intersections.end());
-        pair.second.all_intersections.erase(remove_duplicates, pair.second.all_intersections.end());
-        
-        // Populate ordered multimap for Streets (StreetName - Street index)
-        // Names as lowercase, no space
-        StreetName_lower_StreetIdx.insert(std::make_pair(lower_no_space(pair.second.name), pair.first));
-    }
-}
-
-// *******************************************************************
-// Features
-// *******************************************************************
+// Feature is done first to set the xy bounds of the city
+// Any call to xy_from_latlon() should only be called after this function 
 void init_features()
 {
     // Find max and min lat, lon of feature points in city
@@ -797,9 +639,185 @@ void init_POI(){
     }
 }
 
+// *******************************************************************
+// Street Segments
+// *******************************************************************
+void init_segments()
+{
+    // Vector of StreetSegmentDetailedInfo (StreetSegmentIdx - StreetSegmentDetailedInfo)
+    for (int segment = 0; segment < segmentNum; segment++)                  // Corresponds to id of all street segments
+    {                 
+        StreetSegmentInfo rawInfo = getStreetSegmentInfo(segment);          // Raw info object   
+        StreetSegmentDetailedInfo processedInfo;                            // Processed info object
+        
+        processedInfo.wayOSMID = rawInfo.wayOSMID;
+        processedInfo.from = rawInfo.from;
+        processedInfo.to = rawInfo.to;
+        processedInfo.oneWay = rawInfo.oneWay;
+        processedInfo.streetID = rawInfo.streetID;
+        processedInfo.numCurvePoints = rawInfo.numCurvePoints;
+        processedInfo.streetName = getStreetName(processedInfo.streetID);       // (get the name of the street that each segment belongs to - for m2)
+        
+        // Find max and min x, y for defining rectangles of each segment
+        ezgl::point2d point_xy = xy_from_latlon(getIntersectionPosition(rawInfo.from));
+        double max_x = point_xy.x;
+        double max_y = point_xy.y;
+        double min_x = max_lat;
+        double min_y = max_lon;
+
+        // Pre-calculate length of each street segments (including curve points)
+        // Determine rectangle bounds of each segment
+        if (rawInfo.numCurvePoints == 0){
+            LatLon point_1 = getIntersectionPosition(rawInfo.from);
+            LatLon point_2 = getIntersectionPosition(rawInfo.to);
+            processedInfo.length = findDistanceBetweenTwoPoints(point_1, point_2);
+
+            ezgl::point2d point_1_xy = xy_from_latlon(point_1);
+            ezgl::point2d point_2_xy = xy_from_latlon(point_2);
+            processedInfo.segmentRectangle = ezgl::rectangle(point_1_xy, point_2_xy);
+        } else{
+            LatLon point_1 = getIntersectionPosition(rawInfo.from);
+            processedInfo.length = 0.0; // Starting length
+            // Iterate through all curve points
+            for (int i = 0; i < rawInfo.numCurvePoints; i++){
+                LatLon point_2 = getStreetSegmentCurvePoint(segment, i);
+                double templength = findDistanceBetweenTwoPoints(point_1, point_2);
+                processedInfo.length += templength;
+                ezgl::point2d point_2_xy = xy_from_latlon(point_2);
+                processedInfo.curvePoints_xy.push_back(point_2_xy);    // Save the xy of curve points (for m2)
+                point_1 = point_2;
+                // Compare to get max min xy of each segment
+                max_x = std::max(point_2_xy.x, max_x);
+                max_y = std::max(point_2_xy.y, max_y);
+                min_x = std::min(point_2_xy.x, min_x);
+                min_y = std::min(point_2_xy.y, min_y);
+            }
+            LatLon point_2 = getIntersectionPosition(rawInfo.to);                   // Destination (to) point
+            processedInfo.length += findDistanceBetweenTwoPoints(point_1, point_2);
+            ezgl::point2d point_2_xy = xy_from_latlon(point_2);
+            max_x = std::max(point_2_xy.x, max_x);
+            max_y = std::max(point_2_xy.y, max_y);
+            min_x = std::min(point_2_xy.x, min_x);
+            min_y = std::min(point_2_xy.y, min_y);
+            
+            // Record the rectangle that bounds segment
+            processedInfo.segmentRectangle = ezgl::rectangle(ezgl::point2d(min_x, min_y),
+                                                             ezgl::point2d(max_x, max_y));
+        }
+
+        // Pre-calculate travel time of each street segments
+        processedInfo.travel_time = processedInfo.length/rawInfo.speedLimit;
+
+        // To record the max speed limit of a street in the city (for A* path finding)
+        if (rawInfo.speedLimit > MAX_SPEED_LIMIT)
+        {
+            MAX_SPEED_LIMIT = rawInfo.speedLimit;
+        }
+
+        // Push processed info into vector
+        Segment_SegmentDetailedInfo.push_back(processedInfo);
+    }
+}
 
 // *******************************************************************
-// OSMNode
+// Streets
+// *******************************************************************
+// Init street must be done after init_segments (to record all segments and intersections within a street)
+void init_streets()
+{
+    for(int seg_id = 0; seg_id < segmentNum; seg_id++){
+        // Info of current segment
+        StreetSegmentDetailedInfo segmentInfo = Segment_SegmentDetailedInfo[seg_id];
+        StreetIdx street_id = segmentInfo.streetID;
+        // Populate Street_StreetInfo based on streetID
+        if (Street_StreetInfo.find(street_id) == Street_StreetInfo.end())
+        {
+            StreetInfo street_info;
+            street_info.id = street_id;
+            street_info.name = getStreetName(street_id);
+            street_info.length = segmentInfo.length;
+
+            street_info.all_segments.push_back(seg_id);
+            street_info.all_intersections.push_back(Segment_SegmentDetailedInfo[seg_id].from);
+            street_info.all_intersections.push_back(Segment_SegmentDetailedInfo[seg_id].to);
+            Street_StreetInfo.insert(std::make_pair(street_id, street_info));
+        } else 
+        {
+            // Push segment into street info
+            Street_StreetInfo.at(street_id).all_segments.push_back(seg_id);
+            // Push intersections into street info
+            // Intersections will appear duplicates here. Intersections will be sorted and duplicates will be removed in next for loop
+            Street_StreetInfo.at(street_id).all_intersections.push_back(Segment_SegmentDetailedInfo[seg_id].from);
+            Street_StreetInfo.at(street_id).all_intersections.push_back(Segment_SegmentDetailedInfo[seg_id].to);
+
+            // Add segment length to street
+            Street_StreetInfo.at(street_id).length += Segment_SegmentDetailedInfo[seg_id].length;
+        }
+    }
+
+    for (auto& pair : Street_StreetInfo)
+    {
+        // Sort + unique to remove all the duplicating intersections for each streets
+        // Sorting is required for finding union between 2 vectors (to find intersections between 2 streets) later
+        sort(pair.second.all_intersections.begin(), pair.second.all_intersections.end());
+        auto remove_duplicates = unique(pair.second.all_intersections.begin(), pair.second.all_intersections.end());
+        pair.second.all_intersections.erase(remove_duplicates, pair.second.all_intersections.end());
+        
+        // Populate ordered multimap for Streets (StreetName - Street index)
+        // Names as lowercase, no space
+        StreetName_lower_StreetIdx.insert(std::make_pair(lower_no_space(pair.second.name), pair.first));
+    }
+}
+
+// *******************************************************************
+// Intersections
+// *******************************************************************
+// Init intersection must be done after init segments, to identify adjacent intersections and the segments to them
+void init_intersections(){
+    Intersection_IntersectionInfo.resize(intersectionNum);
+
+    for (IntersectionIdx id = 0; id < intersectionNum; id++)
+    {     
+        // Pre-process information for all intersections
+        std::string name = getIntersectionName(id);
+        Intersection_IntersectionInfo[id].name = name;
+        Intersection_IntersectionInfo[id].position_xy = xy_from_latlon(getIntersectionPosition(id));
+
+        // Populate vector of all segments connecting to the intersection
+        for(int segment = 0; segment < getNumIntersectionStreetSegment(id); segment++) {
+            StreetSegmentIdx ss_id = getIntersectionStreetSegment(id, segment);
+            Intersection_IntersectionInfo[id].all_segments.push_back(ss_id);
+        }
+
+        // Pre-load all neighbors of an intersection, along with street segments to that neighbor
+        std::vector<IntersectionIdx> neighbors = findAdjacentIntersections(id);
+        for (IntersectionIdx neighbor : neighbors)
+        {
+            std::vector<StreetSegmentIdx> connecting_segments;
+            for (StreetSegmentIdx streetSegment : Intersection_IntersectionInfo[id].all_segments)
+            {
+                IntersectionIdx from = Segment_SegmentDetailedInfo[streetSegment].from;
+                IntersectionIdx to = Segment_SegmentDetailedInfo[streetSegment].to;
+                if (from == id && to == neighbor)
+                {
+                    connecting_segments.push_back(streetSegment);
+                } else if (!Segment_SegmentDetailedInfo[streetSegment].oneWay && from == neighbor && to == id)
+                {
+                    connecting_segments.push_back(streetSegment);
+                }
+            }
+            Intersection_IntersectionInfo[id].neighbors_and_segments.push_back(std::make_pair(neighbor, connecting_segments));
+        }
+
+        // Populate data structures to allow searching for intersection by name
+        IntersectionName_IntersectionIdx_no_repeat.insert(std::make_pair(name, id));
+        IntersectionName_IntersectionIdx.insert(std::make_pair(name, id));
+        IntersectionName_lower_IntersectionIdx.insert(std::make_pair(lower_no_space(name), id));
+    }
+}
+
+// *******************************************************************
+// OSM Data
 // *******************************************************************
 void init_osm_nodes()
 {

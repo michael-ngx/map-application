@@ -160,6 +160,13 @@ extern std::vector<std::vector<StreetSegmentIdx>> Intersection_AllStreetSegments
 struct IntersectionInfo{
     ezgl::point2d position_xy;
     std::string name;
+    // Vector of all segments 
+    std::vector<StreetSegmentIdx> all_segments;
+    // Vector of neighboring IntersectionIdx - SegmentIdx pairs
+    // Neighboring intersections are intersections that the current intersection can travel to,
+    // taking into consideration one-way street and self-connecting intersection (included)
+    // The segment ids are segments that can be taken to travel to the neighboring intersection
+    std::vector<std::pair<IntersectionIdx, std::vector<StreetSegmentIdx>>> neighbors_and_segments;
 };
 
 // Index: Intersection id, Value: Pre-processed Intersection info

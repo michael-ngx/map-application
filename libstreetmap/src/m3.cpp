@@ -115,91 +115,79 @@ std::vector<StreetSegmentIdx> findPathBetweenIntersections (
         // Mark current node as visited
         visited.insert(std::make_pair(current.id, NULL));
 
-        // Generate neighboring nodes and explore
-        std::vector<IntersectionIdx> neighbors = findAdjacentIntersections(current.id);
+        // Intersection Info for current node (to get neighbors and edges)
+        IntersectionInfo intersection = Intersection_IntersectionInfo[current.id];
         // If current node has no neighbors --> skip
-        if (neighbors.empty())
+        if (intersection.neighbors_and_segments.empty())
         {
             continue;
         }
 
-        // Get all segments around current node
-        std::vector<StreetSegmentIdx> streetSegments = findStreetSegmentsOfIntersection(current.id);
         // Explore all neighbors
-        for (IntersectionIdx neighbor : neighbors)
+        for (std::pair<IntersectionIdx, std::vector<StreetSegmentIdx>> pair : intersection.neighbors_and_segments)
         {
             // If neighbor node is visited --> Skip to next neighbor
-            if (visited.find(neighbor) != visited.end())
+            if (visited.find(pair.first) != visited.end())
             {
                 continue;
             }
+
+            // Calculate the h-value of the neighbor node (fixed for each node)
+            double h = findDistanceBetweenTwoPoints(Intersection_IntersectionInfo[pair.first].position_xy,
+                                                    Intersection_IntersectionInfo[dest_id].position_xy) / MAX_SPEED_LIMIT;
+
             // Get the street segments connecting the current node and the neighbor node
             // There may be multiple segments connecting 2 adjacent nodes
-            // NOTE: segments may belong to different streets
-            std::vector<StreetSegmentIdx> connectingStreetSegments;
-            for (StreetSegmentIdx streetSegment : streetSegments)
-            {
-                IntersectionIdx from = Segment_SegmentDetailedInfo[streetSegment].from;
-                IntersectionIdx to = Segment_SegmentDetailedInfo[streetSegment].to;
-                if (from == current.id && to == neighbor)
-                {
-                    connectingStreetSegments.push_back(streetSegment);
-                } else if (!Segment_SegmentDetailedInfo[streetSegment].oneWay && from == neighbor && to == current.id)
-                {
-                    connectingStreetSegments.push_back(streetSegment);
-                }
-            }
+            // Segments may belong to different streets --> Must consider turn penalties
+            std::vector<StreetSegmentIdx> connectingStreetSegments = pair.second;
 
-            // g-value for neighbor = min g-value from the selected min segment
-            // Initialize to first streetSegment in connectingStreetSegments
+            // g-value for neighbor = min g-value (travel time) of a connecting segment
             double g = current.g + Segment_SegmentDetailedInfo[connectingStreetSegments[0]].travel_time;
             if ((current.parent_segment != -1) && 
                 (Segment_SegmentDetailedInfo[current.parent_segment].streetName != Segment_SegmentDetailedInfo[connectingStreetSegments[0]].streetName))
             {
                 g += turn_penalty;
             }
-            // Calculate the h-value of the neighbor node (fixed for each node)
-            double h = findDistanceBetweenTwoPoints(Intersection_IntersectionInfo[neighbor].position_xy,
-                                                    Intersection_IntersectionInfo[dest_id].position_xy) / MAX_SPEED_LIMIT;
             // min_segment for neighbor = segment that leads to min g-value
-            // Initialize to first streetSegment in connectingStreetSegments
             StreetSegmentIdx min_segment = connectingStreetSegments[0];
             
-            
-            for (StreetSegmentIdx streetSegment : connectingStreetSegments)
+            if (connectingStreetSegments.size() != 1)
             {
-                // Calculate the g-value of the neighbor node, based on different street segments
-                // Record the segment with shortest travel time
-                double g_temp = current.g + Segment_SegmentDetailedInfo[streetSegment].travel_time;
-                // Add turn_penalty if choosing the current streetsegment leads to a new street
-                if ((current.parent_segment != -1) && 
-                    (Segment_SegmentDetailedInfo[current.parent_segment].streetName != Segment_SegmentDetailedInfo[streetSegment].streetName))
+                for (StreetSegmentIdx streetSegment : connectingStreetSegments)
                 {
-                    g_temp += turn_penalty;
-                }
-                // Update attirbutes for the neighbor node 
-                if (g_temp < g)
-                {
-                    g = g_temp;
-                    min_segment = streetSegment;
+                    // Calculate the g-value of the neighbor node, based on different street segments
+                    // Record the segment with shortest travel time
+                    double g_temp = current.g + Segment_SegmentDetailedInfo[streetSegment].travel_time;
+                    // Add turn_penalty if choosing the current streetsegment leads to a new street
+                    if ((current.parent_segment != -1) && 
+                        (Segment_SegmentDetailedInfo[current.parent_segment].streetName != Segment_SegmentDetailedInfo[streetSegment].streetName))
+                    {
+                        g_temp += turn_penalty;
+                    }
+                    // Update attirbutes for the neighbor node 
+                    if (g_temp < g)
+                    {
+                        g = g_temp;
+                        min_segment = streetSegment;
+                    }
                 }
             }
 
             // If the neighbor node has been recorded before, set g-value, parent, and parent_segment
             // to the path with least travel time
-            if (record_node.find(neighbor) != record_node.end())
+            if (record_node.find(pair.first) != record_node.end())
             {
-                if (g < record_node[neighbor].g)
+                if (g < record_node[pair.first].g)
                 {
-                    record_node[neighbor].g = g;
-                    record_node[neighbor].parent = current.id;
-                    record_node[neighbor].parent_segment = min_segment;
-                    pq.push(record_node[neighbor]);
+                    record_node[pair.first].g = g;
+                    record_node[pair.first].parent = current.id;
+                    record_node[pair.first].parent_segment = min_segment;
+                    pq.push(record_node[pair.first]);
                 }
             } else
             {
-                Node neighborNode = {neighbor, g, h, current.id, min_segment};
-                record_node[neighbor] = neighborNode;
+                Node neighborNode = {pair.first, g, h, current.id, min_segment};
+                record_node[pair.first] = neighborNode;
                 pq.push(neighborNode);
             }
         }
