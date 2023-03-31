@@ -238,12 +238,11 @@ void subway_off_cbk (GtkButton* /*self*/, ezgl::application* application)
 // Callback function for tutorial button
 void tutorial_cbk(GtkButton* /*self*/, ezgl::application* application)
 {
-    std::string to_be_converted = "Nightmode \n \n";
-    to_be_converted += "Subway Stations: \n \n";
-    to_be_converted += "Subway Lines: \n \n";
-    to_be_converted += "Switch City: \n \n";
-    to_be_converted += "Sort by: \n \n";
-    to_be_converted += "Navigation: \n";
+    std::string to_be_converted = "Nightmode: Click on the sun/moon button to switch between day/night mode\n \n";
+    to_be_converted += "Subway: Switching subway on shows subways lines and stations of the city\n \n";
+    to_be_converted += "Switch City: Switches between cities\n \n";
+    to_be_converted += "Sort by: Filters out specific types of points of interests\n \n";
+    to_be_converted += "Navigation: Enter startpoint and destination to get the optimal path\n";
 
     const char* message = to_be_converted.c_str();
     application->create_popup_message("Tutorial", message);
