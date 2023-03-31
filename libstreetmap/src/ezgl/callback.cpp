@@ -217,6 +217,34 @@ gboolean press_zoom_fit(GtkWidget *, gpointer data)
   return TRUE;
 }
 
+gboolean press_zoom_in(GtkWidget *, gpointer data)
+{
+
+  auto application = static_cast<ezgl::application *>(data);
+
+  std::string main_canvas_id = application->get_main_canvas_id();
+  auto canvas = application->get_canvas(main_canvas_id);
+
+  ezgl::zoom_in(canvas, 5.0 / 3.0);
+
+  return TRUE;
+}
+
+
+gboolean press_zoom_out(GtkWidget *, gpointer data)
+{
+
+  auto application = static_cast<ezgl::application *>(data);
+
+  std::string main_canvas_id = application->get_main_canvas_id();
+  auto canvas = application->get_canvas(main_canvas_id);
+
+  ezgl::zoom_out(canvas, 5.0 / 3.0);
+
+  return TRUE;
+}
+
+
 gboolean press_proceed(GtkWidget *, gpointer data)
 {
   auto ezgl_app = static_cast<ezgl::application *>(data);
