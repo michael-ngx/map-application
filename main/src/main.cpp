@@ -32,7 +32,7 @@ constexpr int BAD_ARGUMENTS_EXIT_CODE = 2;  //Invalid command-line usage
 
 //The default map to load if none is specified
 std::string default_map_path = "/cad2/ece297s/public/maps/toronto_canada.streets.bin";
-
+// std::string default_map_path = "/cad2/ece297s/public/maps/saint-helena.streets.bin";
 // The start routine of your program (main) when you are running your standalone
 // mapper program. This main routine is *never called* when you are running 
 // ece297exercise (the unit tests) -- those tests have their own main routine

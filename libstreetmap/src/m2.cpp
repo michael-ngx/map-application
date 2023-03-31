@@ -33,20 +33,23 @@
 /**********************************************
  * Gtk pointers
  *********************************************/
-GObject *NightModeSwitch;
-GObject *SubwayStationSwitch;
-GObject *SubwayLineSwitch;
-GObject *NavigationSwitch;
+GObject *SubwayButton;
+GObject *SubwayOffButton;
+GObject *TutorialButton;
+GObject *NavigationButton;
+GObject *EndNavigationButton;
+GObject *NightModeButton;
+GObject *DayModeButton;
+
+GObject *FilterComboBox;
+GObject *CityChangeComboBox;
+
 GObject *SearchBar;
 GObject *SearchBarDestination;
-GObject *TutorialButton;
 GtkListStore *list_store;
 GtkTreeIter iter;
 GtkEntryCompletion *completion;
 GtkEntryCompletion *completion_destination;
-GtkSwitch* subway_station_switch;
-GtkSwitch* subway_line_switch;
-GtkSwitch* navigation_switch;
 
 // Check current filter for applying filters
 std::string CURRENT_FILTER = "All";

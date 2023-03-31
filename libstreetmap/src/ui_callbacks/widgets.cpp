@@ -11,10 +11,6 @@ void search_activate_cbk_start (GtkSearchEntry */*self*/, ezgl::application *app
     const gchar *search_text = gtk_entry_get_text(GTK_ENTRY(SearchBar));
     std::string input_1(search_text);
 
-    // Turn off subway station mode when searching/navigating something
-    gtk_switch_set_active(subway_station_switch, false);
-    gtk_switch_set_state(subway_station_switch, false);
-
     // Determine how UI responses based on inputs and whether navigation mode is ON
     if (navigation_mode)
     {
@@ -49,10 +45,6 @@ void search_activate_cbk_dest (GtkSearchEntry */*self*/, ezgl::application* appl
     // Get the text from the second search entry
     const gchar *search_text = gtk_entry_get_text(GTK_ENTRY(SearchBarDestination));
     std::string input_2(search_text);
-
-    // Turn off subway station mode when searching/navigating something
-    gtk_switch_set_active(subway_station_switch, false);
-    gtk_switch_set_state(subway_station_switch, false);
 
     // Determine how UI responses based on inputs and whether navigation mode is ON
     if (navigation_mode)
@@ -112,113 +104,6 @@ void search_changed_cbk_dest (GtkSearchEntry */*self*/, ezgl::application* appli
 }
 
 /*******************************************************************************************************************************
- * SWITCHES
- ********************************************************************************************************************************/
-
-// Callback function for switching ON/OFF night mode
-void night_mode_cbk (GtkSwitch* /*self*/, gboolean state, ezgl::application* application){
-    if(state)
-    {
-        application->update_message("Night mode turned on");
-        night_mode = true;
-        application->refresh_drawing();
-    } else
-    {
-        application->update_message("Night mode turned off");
-        night_mode = false;
-        application->refresh_drawing();
-    }   
-}
-
-// Callback function for switching ON/OFF subway station
-void subway_station_cbk (GtkSwitch* self, gboolean state, ezgl::application* application)
-{
-    if(state)
-    {
-        if (AllSubwayRoutes.size() == 0)
-        {
-            application->create_popup_message("Error","City has no subway!");
-            gtk_switch_set_active(self, false);
-            gtk_switch_set_state(self, false);
-            return;
-        } else
-        {
-            application->update_message("Displaying Subway Stations");
-            subway_station_mode = true;
-            application->refresh_drawing();
-        }
-    } else
-    {
-        application->update_message("Hid Subway Stations");
-        subway_station_mode = false;
-        application->refresh_drawing();
-    }
-}
-// Callback function for switching ON/OFF subway line mode
-void subway_line_cbk (GtkSwitch* self, gboolean state, ezgl::application* application)
-{
-    if(state)
-    {
-        if (AllSubwayRoutes.size() == 0)
-        {
-            application->create_popup_message("Error","City has no subway!");
-            gtk_switch_set_active(self, false);
-            gtk_switch_set_state(self, false);
-            return;
-        } else
-        {
-            application->update_message("Displaying Subway Lines");
-            subway_line_mode = true;
-            application->refresh_drawing();
-        }
-    } else
-    {
-        application->update_message("Hid Subway Lines");
-        subway_line_mode = false;
-        application->refresh_drawing();
-    }   
-}
-
-// Callback function for navigation mode switch
-void navigation_switch_cbk (GtkSwitch* /*self*/, gboolean state, ezgl::application* application)
-{
-    if(state)
-    {
-        application->update_message("Navigation mode turned on");
-        navigation_mode = true;
-        // Unhide second search bar
-        gtk_widget_show(GTK_WIDGET(SearchBarDestination));
-        // Change placeholder of first search bar
-        gtk_entry_set_placeholder_text(GTK_ENTRY(SearchBar), "Choose starting point, or click on the map");
-        // Grab the focus to destination search bar if the content of the first search bar is not empty
-        const gchar *search_text = gtk_entry_get_text(GTK_ENTRY(SearchBar));
-        std::string input_1(search_text);
-        if (!input_1.empty())
-        {
-            gtk_widget_grab_focus(GTK_WIDGET(SearchBarDestination));
-        }
-    } else
-    {
-        application->update_message("Navigation mode turned off");
-        navigation_mode = false;
-        // Unset the destination search fields
-        destination_point_id = -1;
-        destination_point_set = false;
-        // Change placeholder of first search bar
-        gtk_entry_set_placeholder_text(GTK_ENTRY(SearchBar), "Search Intersections");
-        // Clear the content in the second search bar
-        gtk_entry_set_text(GTK_ENTRY(SearchBarDestination), "");
-        // Hide second search bar
-        gtk_widget_hide(GTK_WIDGET(SearchBarDestination));
-        // Clear all destination pins
-        pin_display_dest.clear();
-        // Clear found path
-        found_path.clear();
-        application->refresh_drawing();
-    }
-}
-
-/*******************************************************************************************************************************
  * DROP-DOWN LISTS
  ********************************************************************************************************************************/
 void city_change_cbk (GtkComboBoxText* self, ezgl::application* application)
@@ -254,17 +139,19 @@ void city_change_cbk (GtkComboBoxText* self, ezgl::application* application)
         closeMap();
         loadMap(new_map_path);
 
-        // Clear subway switches if new city doesn't have subways
+        // Clear subway mode if new city doesn't have subways
         if (AllSubwayRoutes.size() == 0)
         {
-            gtk_switch_set_active(subway_station_switch, false);
-            gtk_switch_set_state(subway_station_switch, false);
-            gtk_switch_set_active(subway_line_switch, false);
-            gtk_switch_set_state(subway_line_switch, false);
+            subway_line_mode = false;
+            subway_station_mode = false;
+            // Hides subway off button, if not hidden
+            gtk_widget_hide(GTK_WIDGET(SubwayOffButton));
+            // Unhides subway button
+            gtk_widget_show(GTK_WIDGET(SubwayButton));
+            application->refresh_drawing();
         }
-        // Clear navigation switch
-        gtk_switch_set_active(navigation_switch, false);
-        gtk_switch_set_state(navigation_switch, false);
+        // Clear navigation mode
+        gtk_button_clicked(GTK_BUTTON(EndNavigationButton));
 
         // Clear GtkListStores of old city. Load GtkListStore for new city
         gtk_list_store_clear(list_store);
@@ -317,6 +204,37 @@ void poi_filter_cbk (GtkComboBoxText* self, ezgl::application* application)
 /*******************************************************************************************************************************
  * BUTTONS
  ********************************************************************************************************************************/
+// Callback function for switching ON/OFF subway mode
+void subway_cbk (GtkButton* /*self*/, ezgl::application* application)
+{
+    if (AllSubwayRoutes.size() == 0)
+    {
+        application->create_popup_message("Error","City has no subway!");
+        return;
+    } else
+    {
+        application->update_message("Subway Mode On");
+        subway_line_mode = true;
+        subway_station_mode = true;
+        // Hides itself
+        gtk_widget_hide(GTK_WIDGET(SubwayButton));
+        // Unhides subway off button
+        gtk_widget_show(GTK_WIDGET(SubwayOffButton));
+        application->refresh_drawing();
+    }
+}
+void subway_off_cbk (GtkButton* /*self*/, ezgl::application* application)
+{
+    application->update_message("Subway Mode Off");
+    subway_line_mode = false;
+    subway_station_mode = false;
+    // Hides itself
+    gtk_widget_hide(GTK_WIDGET(SubwayOffButton));
+    // Unhides subway button
+    gtk_widget_show(GTK_WIDGET(SubwayButton));
+    application->refresh_drawing();
+}
+
 // Callback function for tutorial button
 void tutorial_cbk(GtkButton* /*self*/, ezgl::application* application)
 {
@@ -329,6 +247,74 @@ void tutorial_cbk(GtkButton* /*self*/, ezgl::application* application)
 
     const char* message = to_be_converted.c_str();
     application->create_popup_message("Tutorial", message);
+}
+
+// Callback function for navigation button
+void navigation_cbk (GtkButton* /*self*/, ezgl::application* application)
+{
+    application->update_message("Navigation mode turned on");
+    navigation_mode = true;
+    // Unhide second search bar, end-navigation button, and tutorial button
+    gtk_widget_show(GTK_WIDGET(SearchBarDestination));
+    gtk_widget_show(GTK_WIDGET(EndNavigationButton));
+    gtk_widget_show(GTK_WIDGET(TutorialButton));
+    // Hides navigation button
+    gtk_widget_hide(GTK_WIDGET(NavigationButton));
+    // Change placeholder of first search bar
+    gtk_entry_set_placeholder_text(GTK_ENTRY(SearchBar), "Choose starting point, or click on the map");
+    // Grab the focus to destination search bar if the content of the first search bar is not empty
+    const gchar *search_text = gtk_entry_get_text(GTK_ENTRY(SearchBar));
+    std::string input_1(search_text);
+    if (!input_1.empty())
+    {
+        gtk_widget_grab_focus(GTK_WIDGET(SearchBarDestination));
+    }
+}
+
+// Callback function for end navigation button
+void end_navigation_cbk (GtkButton* /*self*/, ezgl::application* application)
+{
+    application->update_message("Navigation mode turned off");
+    navigation_mode = false;
+    // Unset the destination search fields
+    destination_point_id = -1;
+    destination_point_set = false;
+    // Change placeholder of first search bar
+    gtk_entry_set_placeholder_text(GTK_ENTRY(SearchBar), "Search Intersections");
+    // Clear the content in the second search bar
+    gtk_entry_set_text(GTK_ENTRY(SearchBarDestination), "");
+    // Hide second search bar, end-navigation button, and tutorial button
+    gtk_widget_hide(GTK_WIDGET(SearchBarDestination));
+    gtk_widget_hide(GTK_WIDGET(EndNavigationButton));
+    gtk_widget_hide(GTK_WIDGET(TutorialButton));
+    // Unhides navigation button
+    gtk_widget_show(GTK_WIDGET(NavigationButton));
+    // Clear all destination pins
+    pin_display_dest.clear();
+    // Clear found path
+    found_path.clear();
+    application->refresh_drawing();
+}
+
+void night_mode_cbk (GtkButton* /*self*/, ezgl::application* application)
+{
+    application->update_message("Night mode turned on");
+    night_mode = true;
+    application->refresh_drawing();
+    // Hide night mode button
+    gtk_widget_hide(GTK_WIDGET(NightModeButton));
+    // Unhide day mode button
+    gtk_widget_show(GTK_WIDGET(DayModeButton));
+}
+void day_mode_cbk (GtkButton* /*self*/, ezgl::application* application)
+{
+    application->update_message("Night mode turned off");
+    night_mode = false;
+    application->refresh_drawing();
+    // Hide day mode button
+    gtk_widget_hide(GTK_WIDGET(DayModeButton));
+    // Unhide night mode button
+    gtk_widget_show(GTK_WIDGET(NightModeButton));
 }
 
 

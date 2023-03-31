@@ -9,44 +9,46 @@ void initial_setup (ezgl::application *application, bool /*new_window*/)
 {
     // Update the status bar message
     application->update_message("Welcome!");
-    // We will increment row each time we insert a new element.
-    int row = 14;
 
-    // Connects to NightModeSwitch
-    NightModeSwitch = application->get_object("NightModeSwitch");
+    // Connects to Subway button
+    SubwayButton = application->get_object("SubwayButton");
     g_signal_connect(
-        NightModeSwitch, // pointer to the UI widget
-        "state-set", // Signal state of switch being changed
-        G_CALLBACK(night_mode_cbk), // callback function
-        application // passing an application pointer to callback function
-    );  
-
-    // Connects to SubwayStationSwitch
-    SubwayStationSwitch = application->get_object("SubwayStationSwitch");
-    g_signal_connect(
-        SubwayStationSwitch, // pointer to the UI widget
-        "state-set", // Signal state of switch being changed
-        G_CALLBACK(subway_station_cbk), // callback function
-        application // passing an application pointer to callback function
+        SubwayButton,
+        "clicked",
+        G_CALLBACK(subway_cbk),
+        application
     );
 
-    // Connects to SubwayLineSwitch
-    SubwayLineSwitch = application->get_object("SubwayLineSwitch");
+    // Connects to Subway Off button
+    SubwayOffButton = application->get_object("SubwayOffButton");
     g_signal_connect(
-        SubwayLineSwitch, // pointer to the UI widget
-        "state-set", // Signal state of switch being changed
-        G_CALLBACK(subway_line_cbk), // name of callback function
-        application // passing an application pointer to callback function
+        SubwayOffButton,
+        "clicked",
+        G_CALLBACK(subway_off_cbk),
+        application
+    );
+    // Default: Hides Subway Off button
+    gtk_widget_hide(GTK_WIDGET(SubwayOffButton));
+
+    // Connects to Navigation button
+    NavigationButton = application->get_object("NavigationButton");
+    g_signal_connect(
+        NavigationButton,
+        "clicked",
+        G_CALLBACK(navigation_cbk),
+        application
     );
 
-    // Connects to NavigationSwitch
-    NavigationSwitch = application->get_object("NavigationSwitch");
+    // Connects to EndNavigation button
+    EndNavigationButton = application->get_object("EndNavigationButton");
     g_signal_connect(
-        NavigationSwitch, // pointer to the UI widget
-        "state-set", // Signal state of switch being changed
-        G_CALLBACK(navigation_switch_cbk), // name of callback function
-        application // passing an application pointer to callback function
+        EndNavigationButton,
+        "clicked",
+        G_CALLBACK(end_navigation_cbk),
+        application
     );
+    // Default: Hides EndNavigation button
+    gtk_widget_hide(GTK_WIDGET(EndNavigationButton));
 
     // Connects to Tutorial button
     TutorialButton = application->get_object("Tutorial");
@@ -56,31 +58,44 @@ void initial_setup (ezgl::application *application, bool /*new_window*/)
         G_CALLBACK(tutorial_cbk),
         application
     );
-    // Set GtkSwitch pointers
-    subway_station_switch = GTK_SWITCH(SubwayStationSwitch);
-    subway_line_switch = GTK_SWITCH(SubwayLineSwitch);
-    navigation_switch = GTK_SWITCH(NavigationSwitch);
+    // Default: Hides Tutorial button
+    gtk_widget_hide(GTK_WIDGET(TutorialButton));
 
-    // Runtime: Creating drop=down list for filters
-    application->create_label(row++, "Sort by");
-    application->create_combo_box_text(
-        "Select", 
-        row++,
-        poi_filter_cbk,
-        {"All", "Restaurant", "School", "Hospital", "Bar", "Fast Food",
-        "Ice Cream", "Cafe", "University", "Post Office", "Fuel", "Bank", "BBQ"}
+    // Connects to Night Mode button
+    NightModeButton = application->get_object("NightModeButton");
+    g_signal_connect(
+        NightModeButton,
+        "clicked",
+        G_CALLBACK(night_mode_cbk),
+        application
     );
 
-    // Runtime: Creating drop-down list for different cities, connected to city_change_cbk
-    application->create_label(row++, "Switch city:");     
-    application->create_combo_box_text(
-        "CitySelect", 
-        row++,
-        city_change_cbk,
-        {" ", "Toronto", "Beijing", "Cairo", "Cape Town", "Golden Horseshoe", 
-        "Hamilton", "Hong Kong", "Iceland", "Interlaken", "Kyiv",
-        "London", "New Delhi", "New York", "Rio de Janeiro", "Saint Helena",
-        "Singapore", "Sydney", "Tehran", "Tokyo"}
+    // Connects to Day Mode button
+    DayModeButton = application->get_object("DayModeButton");
+    g_signal_connect(
+        DayModeButton,
+        "clicked",
+        G_CALLBACK(day_mode_cbk),
+        application
+    );
+    // Default: Hides Day Mode button
+    gtk_widget_hide(GTK_WIDGET(DayModeButton));
+
+    // Connects to Filters list
+    FilterComboBox = application->get_object("FilterComboBox");
+    g_signal_connect(
+        FilterComboBox,
+        "changed",
+        G_CALLBACK(poi_filter_cbk),
+        application
+    );
+    // Connects to City change List
+    CityChangeComboBox = application->get_object("CityChangeComboBox");
+    g_signal_connect(
+        CityChangeComboBox,
+        "changed",
+        G_CALLBACK(city_change_cbk),
+        application
     );
     
     /***********************************************

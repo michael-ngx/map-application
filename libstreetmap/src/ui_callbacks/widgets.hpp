@@ -14,16 +14,17 @@ void search_activate_cbk_start (GtkSearchEntry */*self*/, ezgl::application *app
 void search_activate_cbk_dest (GtkSearchEntry */*self*/, ezgl::application* application);
 void search_changed_cbk_start (GtkSearchEntry */*self*/, ezgl::application *application);
 void search_changed_cbk_dest (GtkSearchEntry */*self*/, ezgl::application* application);
-// Switches
-void night_mode_cbk (GtkSwitch* self, gboolean state, ezgl::application* application);
-void subway_station_cbk (GtkSwitch* self, gboolean state, ezgl::application* application);
-void subway_line_cbk (GtkSwitch* self, gboolean state, ezgl::application* application);
-void navigation_switch_cbk (GtkSwitch* self, gboolean state, ezgl::application* application);
 // Drop-down lists
 void poi_filter_cbk (GtkComboBoxText* self, ezgl::application* application);
 void city_change_cbk (GtkComboBoxText* self, ezgl::application* application);
 // Buttons
-void tutorial_cbk (GtkButton* self, ezgl::application* application);
+void subway_cbk (GtkButton* /*self*/, ezgl::application* application);
+void subway_off_cbk (GtkButton* /*self*/, ezgl::application* application);
+void tutorial_cbk (GtkButton* /*self*/, ezgl::application* application);
+void navigation_cbk (GtkButton* /*self*/, ezgl::application* application);
+void end_navigation_cbk (GtkButton* /*self*/, ezgl::application* application);
+void night_mode_cbk (GtkButton* /*self*/, ezgl::application* application);
+void day_mode_cbk (GtkButton* /*self*/, ezgl::application* application);
 
 // Callback helper functions
 std::string get_new_map_path (std::string text_string);

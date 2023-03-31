@@ -14,20 +14,23 @@
 // *********************************************************************************************************
 // Global GTK pointers - M2
 // *********************************************************************************************************
-extern GObject *NightModeSwitch;
-extern GObject *SubwayStationSwitch;
-extern GObject *SubwayLineSwitch;
-extern GObject *NavigationSwitch;
+extern GObject *SubwayButton;
+extern GObject *SubwayOffButton;
+extern GObject *TutorialButton;
+extern GObject *NavigationButton;
+extern GObject *EndNavigationButton;
+extern GObject *NightModeButton;
+extern GObject *DayModeButton;
+
+extern GObject *FilterComboBox;
+extern GObject *CityChangeComboBox;
+
 extern GObject *SearchBar;
 extern GObject *SearchBarDestination;
-extern GObject *TutorialButton;
 extern GtkListStore *list_store;
 extern GtkTreeIter iter;
 extern GtkEntryCompletion *completion;
 extern GtkEntryCompletion *completion_destination;
-extern GtkSwitch* subway_station_switch;
-extern GtkSwitch* subway_line_switch;
-extern GtkSwitch* navigation_switch;
 
 // *********************************************************************************************************
 // Global constants
