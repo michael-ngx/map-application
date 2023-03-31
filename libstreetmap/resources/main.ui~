@@ -80,7 +80,19 @@
     <property name="visible">True</property>
     <property name="can-focus">False</property>
     <property name="pixel-size">50</property>
-    <property name="icon-name">view-fullscreen</property>
+    <property name="icon-name">zoom-best-fit</property>
+  </object>
+  <object class="GtkImage" id="zoom-in-image">
+    <property name="visible">True</property>
+    <property name="can-focus">False</property>
+    <property name="pixel-size">50</property>
+    <property name="icon-name">zoom-in</property>
+  </object>
+  <object class="GtkImage" id="zoom-out-image">
+    <property name="visible">True</property>
+    <property name="can-focus">False</property>
+    <property name="pixel-size">50</property>
+    <property name="icon-name">zoom-out</property>
   </object>
   <object class="GtkWindow" id="MainWindow">
     <property name="visible">True</property>
@@ -99,6 +111,133 @@
           </object>
           <packing>
             <property name="index">-1</property>
+          </packing>
+        </child>
+        <child type="overlay">
+          <!-- n-columns=2 n-rows=1 -->
+          <object class="GtkGrid" id="TopRightGrid">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="halign">end</property>
+            <property name="valign">start</property>
+            <property name="margin-right">10</property>
+            <property name="margin-top">20</property>
+            <child>
+              <object class="GtkComboBoxText" id="CityChangeComboBox">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="halign">center</property>
+                <property name="valign">center</property>
+                <property name="active">0</property>
+                <items>
+                  <item translatable="yes">Select City</item>
+                  <item translatable="yes">Toronto</item>
+                  <item translatable="yes">Beijing</item>
+                  <item translatable="yes">Cairo</item>
+                  <item translatable="yes">Cape Town</item>
+                  <item translatable="yes">Golden Horseshoe</item>
+                  <item translatable="yes">Hamilton</item>
+                  <item translatable="yes">Hong Kong</item>
+                  <item translatable="yes">Iceland</item>
+                  <item translatable="yes">Interlaken</item>
+                  <item translatable="yes">Kyiv</item>
+                  <item translatable="yes">London</item>
+                  <item translatable="yes">New Delhi</item>
+                  <item translatable="yes">New York</item>
+                  <item translatable="yes">Rio de Janeiro</item>
+                  <item translatable="yes">Saint Helena</item>
+                  <item translatable="yes">Singapore</item>
+                  <item translatable="yes">Sydney</item>
+                  <item translatable="yes">Tehran</item>
+                  <item translatable="yes">Tokyo</item>
+                </items>
+              </object>
+              <packing>
+                <property name="left-attach">1</property>
+                <property name="top-attach">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkComboBoxText" id="FilterComboBox">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="halign">center</property>
+                <property name="valign">center</property>
+                <property name="active">0</property>
+                <items>
+                  <item translatable="yes">Filters</item>
+                  <item translatable="yes">Restaurant</item>
+                  <item translatable="yes">School</item>
+                  <item translatable="yes">Hospital</item>
+                  <item translatable="yes">Bar</item>
+                  <item translatable="yes">Fast Food</item>
+                  <item translatable="yes">Ice Cream</item>
+                  <item translatable="yes">Cafe</item>
+                  <item translatable="yes">University</item>
+                  <item translatable="yes">Post Office</item>
+                  <item translatable="yes">Fuel</item>
+                  <item translatable="yes">Bank</item>
+                  <item translatable="yes">BBQ</item>
+                </items>
+              </object>
+              <packing>
+                <property name="left-attach">0</property>
+                <property name="top-attach">0</property>
+              </packing>
+            </child>
+          </object>
+        </child>
+        <child type="overlay">
+          <object class="GtkButton" id="SubwayButton">
+            <property name="visible">True</property>
+            <property name="can-focus">True</property>
+            <property name="receives-default">True</property>
+            <property name="halign">end</property>
+            <property name="valign">start</property>
+            <property name="margin-right">270</property>
+            <property name="margin-top">10</property>
+            <property name="image">subway-off-image</property>
+            <property name="relief">none</property>
+            <style>
+              <class name="button-round"/>
+            </style>
+          </object>
+          <packing>
+            <property name="index">1</property>
+          </packing>
+        </child>
+        <child type="overlay">
+          <object class="GtkButton" id="EndNavigationButton">
+            <property name="visible">True</property>
+            <property name="can-focus">True</property>
+            <property name="receives-default">True</property>
+            <property name="halign">start</property>
+            <property name="valign">start</property>
+            <property name="margin-left">310</property>
+            <property name="margin-top">10</property>
+            <property name="image">end-navigation-image</property>
+          </object>
+          <packing>
+            <property name="index">2</property>
+          </packing>
+        </child>
+        <child type="overlay">
+          <object class="GtkButton" id="SubwayOffButton">
+            <property name="visible">True</property>
+            <property name="can-focus">True</property>
+            <property name="receives-default">True</property>
+            <property name="halign">end</property>
+            <property name="valign">start</property>
+            <property name="margin-right">270</property>
+            <property name="margin-top">10</property>
+            <property name="image">subway-image</property>
+            <property name="relief">none</property>
+            <style>
+              <class name="button-round"/>
+            </style>
+          </object>
+          <packing>
+            <property name="index">1</property>
           </packing>
         </child>
         <child type="overlay">
@@ -175,114 +314,78 @@
           </object>
         </child>
         <child type="overlay">
-          <!-- n-columns=2 n-rows=2 -->
-          <object class="GtkGrid" id="TopRightGrid">
+          <!-- n-columns=1 n-rows=3 -->
+          <object class="GtkGrid" id="BottomRightGrid">
             <property name="visible">True</property>
             <property name="can-focus">False</property>
             <property name="halign">end</property>
-            <property name="margin-right">10</property>
-            <property name="margin-top">10</property>
-            <child>
-              <object class="GtkComboBoxText" id="CityChangeComboBox">
-                <property name="visible">True</property>
-                <property name="can-focus">False</property>
-                <property name="halign">center</property>
-                <property name="valign">center</property>
-                <items>
-                  <item translatable="yes"> </item>
-                  <item translatable="yes">Toronto</item>
-                  <item translatable="yes">Beijing</item>
-                  <item translatable="yes">Cairo</item>
-                  <item translatable="yes">Cape Town</item>
-                  <item translatable="yes">Golden Horseshoe</item>
-                  <item translatable="yes">Hamilton</item>
-                  <item translatable="yes">Hong Kong</item>
-                  <item translatable="yes">Iceland</item>
-                  <item translatable="yes">Interlaken</item>
-                  <item translatable="yes">Kyiv</item>
-                  <item translatable="yes">London</item>
-                  <item translatable="yes">New Delhi</item>
-                  <item translatable="yes">New York</item>
-                  <item translatable="yes">Rio de Janeiro</item>
-                  <item translatable="yes">Saint Helena</item>
-                  <item translatable="yes">Singapore</item>
-                  <item translatable="yes">Sydney</item>
-                  <item translatable="yes">Tehran</item>
-                  <item translatable="yes">Tokyo</item>
-                </items>
-              </object>
-              <packing>
-                <property name="left-attach">1</property>
-                <property name="top-attach">1</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkComboBoxText" id="FilterComboBox">
-                <property name="visible">True</property>
-                <property name="can-focus">False</property>
-                <property name="halign">center</property>
-                <property name="valign">center</property>
-                <property name="active">0</property>
-                <items>
-                  <item translatable="yes">All</item>
-                  <item translatable="yes">Restaurant</item>
-                  <item translatable="yes">School</item>
-                  <item translatable="yes">Hospital</item>
-                  <item translatable="yes">Bar</item>
-                  <item translatable="yes">Fast Food</item>
-                  <item translatable="yes">Ice Cream</item>
-                  <item translatable="yes">Cafe</item>
-                  <item translatable="yes">University</item>
-                  <item translatable="yes">Post Office</item>
-                  <item translatable="yes">Fuel</item>
-                  <item translatable="yes">Bank</item>
-                  <item translatable="yes">BBQ</item>
-                </items>
-              </object>
-              <packing>
-                <property name="left-attach">0</property>
-                <property name="top-attach">1</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkLabel">
-                <property name="visible">True</property>
-                <property name="can-focus">False</property>
-              </object>
-              <packing>
-                <property name="left-attach">0</property>
-                <property name="top-attach">0</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkLabel">
-                <property name="visible">True</property>
-                <property name="can-focus">False</property>
-              </object>
-              <packing>
-                <property name="left-attach">1</property>
-                <property name="top-attach">0</property>
-              </packing>
-            </child>
-          </object>
-          <packing>
-            <property name="index">1</property>
-          </packing>
-        </child>
-        <child type="overlay">
-          <object class="GtkButton" id="DayModeButton">
-            <property name="visible">True</property>
-            <property name="can-focus">True</property>
-            <property name="receives-default">True</property>
-            <property name="halign">start</property>
             <property name="valign">end</property>
             <property name="margin-left">10</property>
             <property name="margin-bottom">10</property>
-            <property name="image">night-mode</property>
-            <property name="relief">none</property>
-            <style>
-              <class name="button-round"/>
-            </style>
+            <child>
+              <object class="GtkButton" id="ZoomFitButton">
+                <property name="visible">True</property>
+                <property name="can-focus">True</property>
+                <property name="receives-default">True</property>
+                <property name="halign">end</property>
+                <property name="valign">end</property>
+                <property name="image">zoom-fit-image</property>
+                <property name="relief">none</property>
+                <style>
+                  <class name="button-round"/>
+                </style>
+              </object>
+              <packing>
+                <property name="left-attach">0</property>
+                <property name="top-attach">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkButton" id="ZoomInButton">
+                <property name="visible">True</property>
+                <property name="can-focus">True</property>
+                <property name="receives-default">True</property>
+                <property name="halign">end</property>
+                <property name="valign">end</property>
+                <property name="image">zoom-in-image</property>
+                <property name="relief">none</property>
+                <style>
+                  <class name="button-round"/>
+                </style>
+              </object>
+              <packing>
+                <property name="left-attach">0</property>
+                <property name="top-attach">1</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkButton" id="ZoomOutButton">
+                <property name="visible">True</property>
+                <property name="can-focus">True</property>
+                <property name="receives-default">True</property>
+                <property name="halign">end</property>
+                <property name="valign">end</property>
+                <property name="image">zoom-out-image</property>
+                <property name="relief">none</property>
+                <style>
+                  <class name="button-round"/>
+                </style>
+              </object>
+              <packing>
+                <property name="left-attach">0</property>
+                <property name="top-attach">2</property>
+              </packing>
+            </child>
+          </object>
+        </child>
+        <child type="overlay">
+          <object class="GtkStatusbar" id="StatusBar">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="valign">end</property>
+            <property name="margin-left">70</property>
+            <property name="orientation">vertical</property>
+            <property name="spacing">2</property>
           </object>
           <packing>
             <property name="index">1</property>
@@ -308,87 +411,22 @@
           </packing>
         </child>
         <child type="overlay">
-          <object class="GtkStatusbar" id="StatusBar">
-            <property name="visible">True</property>
-            <property name="can-focus">False</property>
-            <property name="valign">end</property>
-            <property name="margin-left">70</property>
-            <property name="orientation">vertical</property>
-            <property name="spacing">2</property>
-          </object>
-          <packing>
-            <property name="index">1</property>
-          </packing>
-        </child>
-        <child type="overlay">
-          <object class="GtkButton" id="ZoomFitButton">
-            <property name="visible">True</property>
-            <property name="can-focus">True</property>
-            <property name="receives-default">True</property>
-            <property name="halign">end</property>
-            <property name="valign">end</property>
-            <property name="margin-right">10</property>
-            <property name="margin-bottom">10</property>
-            <property name="image">zoom-fit-image</property>
-            <style>
-              <class name="button-round"/>
-            </style>
-          </object>
-          <packing>
-            <property name="index">1</property>
-          </packing>
-        </child>
-        <child type="overlay">
-          <object class="GtkButton" id="EndNavigationButton">
+          <object class="GtkButton" id="DayModeButton">
             <property name="visible">True</property>
             <property name="can-focus">True</property>
             <property name="receives-default">True</property>
             <property name="halign">start</property>
-            <property name="valign">start</property>
-            <property name="margin-left">310</property>
-            <property name="margin-top">10</property>
-            <property name="image">end-navigation-image</property>
+            <property name="valign">end</property>
+            <property name="margin-left">10</property>
+            <property name="margin-bottom">10</property>
+            <property name="image">night-mode</property>
+            <property name="relief">none</property>
+            <style>
+              <class name="button-round"/>
+            </style>
           </object>
           <packing>
             <property name="index">1</property>
-          </packing>
-        </child>
-        <child type="overlay">
-          <object class="GtkButton" id="SubwayOffButton">
-            <property name="visible">True</property>
-            <property name="can-focus">True</property>
-            <property name="receives-default">True</property>
-            <property name="halign">end</property>
-            <property name="valign">start</property>
-            <property name="margin-right">270</property>
-            <property name="margin-top">10</property>
-            <property name="image">subway-image</property>
-            <property name="relief">none</property>
-            <style>
-              <class name="button-round"/>
-            </style>
-          </object>
-          <packing>
-            <property name="index">7</property>
-          </packing>
-        </child>
-        <child type="overlay">
-          <object class="GtkButton" id="SubwayButton">
-            <property name="visible">True</property>
-            <property name="can-focus">True</property>
-            <property name="receives-default">True</property>
-            <property name="halign">end</property>
-            <property name="valign">start</property>
-            <property name="margin-right">270</property>
-            <property name="margin-top">10</property>
-            <property name="image">subway-off-image</property>
-            <property name="relief">none</property>
-            <style>
-              <class name="button-round"/>
-            </style>
-          </object>
-          <packing>
-            <property name="index">8</property>
           </packing>
         </child>
         <child type="overlay">

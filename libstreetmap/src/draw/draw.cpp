@@ -457,6 +457,7 @@ void draw_feature_area (ezgl::renderer *g, FeatureDetailedInfo tempFeatureInfo)
             auto tempPointIdx = tempPoints.begin();
             g->set_color(153, 204, 255);
             g->set_line_width(0);
+            g->set_line_cap(ezgl::line_cap(1));
             for (int count = 0; count < (tempPoints.size() - 1); count++)
             {
                 g->draw_line(*tempPointIdx, *(tempPointIdx + 1));

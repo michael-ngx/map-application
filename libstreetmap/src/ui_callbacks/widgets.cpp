@@ -116,8 +116,8 @@ void city_change_cbk (GtkComboBoxText* self, ezgl::application* application)
     // Get new math path based on input
     std::string new_map_path = get_new_map_path(text_string);
     
-    if (text_string.empty() || text_string == " " || new_map_path == "None")
-    {   // Returning if the combo box is currently empty
+    if (text_string.empty() || text_string == "Select City" || new_map_path == "None")
+    {   // Returning if the combo box is at default
         // Or if the input map is unexpected
         // Or Always check to avoid errors
         return;
@@ -188,12 +188,12 @@ void poi_filter_cbk (GtkComboBoxText* self, ezgl::application* application)
     std::string text_string = text;
     free(text);
     
-    if(!text || text_string == "All")
+    if(!text || text_string == "Filters")
     {  // Returning if the combo box is currently empty/Turning off filter
         filtered = false;
+        CURRENT_FILTER = "Filters";
         application->refresh_drawing();
-        return;
-    } else if (text_string != "All")
+    } else if (text_string != "Filters")
     {
         filtered = true;
         CURRENT_FILTER = text_string;       

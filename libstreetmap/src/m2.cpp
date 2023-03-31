@@ -52,7 +52,7 @@ GtkEntryCompletion *completion;
 GtkEntryCompletion *completion_destination;
 
 // Check current filter for applying filters
-std::string CURRENT_FILTER = "All";
+std::string CURRENT_FILTER = "Filters";
 // Checks if night mode is on
 bool night_mode = false;
 // Checks if filter is on
