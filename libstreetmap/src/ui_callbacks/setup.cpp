@@ -1,5 +1,5 @@
 #include "ui_callbacks/setup.hpp"
-
+#include "draw/utilities.hpp"
 /*******************************************************************************************************************************
  * INITIAL SETUP
  * 
@@ -272,6 +272,15 @@ void act_on_mouse_click (ezgl::application* application, GdkEventButton* /*event
         {
             found_path.clear();
             found_path = findPathBetweenIntersections(std::make_pair(start_point_id, destination_point_id), DEFAULT_TURN_PENALTY);
+            if (found_path.size() == 0)
+            {
+                std::string to_be_converted = "No path found between 2 points";
+                application->create_popup_message("Error", to_be_converted.c_str());
+                return;
+            }
+            
+            // Rezoom the map to view the path
+            view_path(application);
         }
     }
     application->refresh_drawing();

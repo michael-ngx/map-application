@@ -1,4 +1,5 @@
 #include "ui_callbacks/widgets.hpp"
+#include "draw/utilities.hpp"
 
 /*******************************************************************************************************************************
  * SEARCH BARS
@@ -32,6 +33,13 @@ void search_activate_cbk_start (GtkSearchEntry */*self*/, ezgl::application *app
         {
             found_path.clear();
             found_path = findPathBetweenIntersections(std::make_pair(start_point_id, destination_point_id), DEFAULT_TURN_PENALTY);
+            if (found_path.size() == 0)
+            {
+                std::string to_be_converted = "No path found between 2 points";
+                application->create_popup_message("Error", to_be_converted.c_str());
+            }
+            // Rezoom the map to view the path
+            view_path(application);
             application->refresh_drawing();
         }
     } else
@@ -68,6 +76,13 @@ void search_activate_cbk_dest (GtkSearchEntry */*self*/, ezgl::application* appl
         {
             found_path.clear();
             found_path = findPathBetweenIntersections(std::make_pair(start_point_id, destination_point_id), DEFAULT_TURN_PENALTY);
+            if (found_path.size() == 0)
+            {
+                std::string to_be_converted = "No path found between 2 points";
+                application->create_popup_message("Error", to_be_converted.c_str());
+            }
+            // Rezoom the map to view the path
+            view_path(application);
             application->refresh_drawing();
         }
     }

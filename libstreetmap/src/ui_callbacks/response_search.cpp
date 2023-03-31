@@ -67,7 +67,7 @@ bool search_response (std::string input, ezgl::application *application)
         // Move the camera to focus the intersection
         // Center of new location (centered at first intersection found)
         center = Intersection_IntersectionInfo[range.first->second].position_xy;
-        move_camera(center, application);
+        move_camera(center, FIND_ZOOM_WIDTH, application);
         return true;
     }
 
@@ -103,7 +103,7 @@ bool search_response (std::string input, ezgl::application *application)
             center = start_point;
             // Highlight the found intersection on the map
             pin_display_start.push_back(center);
-            move_camera(center, application);
+            move_camera(center, FIND_ZOOM_WIDTH, application);
         } else
         {
             // There are multiple intersections with the chosen name --> display all intersections
@@ -142,7 +142,7 @@ bool search_response (std::string input, ezgl::application *application)
             // Move the camera to focus the intersection
             // Center of new location (centered at first intersection found)
             center = start_point;
-            move_camera(center, application);
+            move_camera(center, FIND_ZOOM_WIDTH, application);
         }
         // Change the content of the search bar to first partials found
         // This should not change the start_point_set to false
@@ -306,7 +306,7 @@ bool search_response (std::string input, ezgl::application *application)
             start_point_id = first_vect[0];
             // Move the camera to focus the intersection
             center = start_point;
-            move_camera(center, application);
+            move_camera(center, FIND_ZOOM_WIDTH, application);
 
             application->update_message("Found intersection!");
         }
@@ -348,7 +348,7 @@ bool search_response (std::string input, ezgl::application *application)
             start_point_id = first_vect[0];
             // Set center of new camera (centered at first intersection found)
             center = start_point;
-            move_camera(center, application);
+            move_camera(center, FIND_ZOOM_WIDTH, application);
 
             application->update_message("Found intersection!");
         }
@@ -376,7 +376,7 @@ bool search_response (std::string input, ezgl::application *application)
 
     //     // Center of new location
     //     center = POI_AllInfo[POIit->second.id].POIPoint;
-    //     move_camera(center,application);
+    //     move_camera(center, FIND_ZOOM_WIDTH, application);
     //     application->update_message("Found food place!");
     // }
 }
