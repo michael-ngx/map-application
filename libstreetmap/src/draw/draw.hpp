@@ -23,7 +23,7 @@ void draw_line_meters (ezgl::renderer *g, ezgl::point2d from_xy,
 int get_street_width_meters (std::string& street_type);
 void draw_name_or_arrow (ezgl::renderer *g, std::string street_name, bool arrow,
                         ezgl::point2d from_xy, ezgl::point2d to_xy);
-void draw_pin (ezgl::renderer* g, ezgl::point2d inter_xy);
+void draw_pin (ezgl::renderer* g, ezgl::point2d inter_xy, std::string pin_type);
 void draw_distance_scale (ezgl::renderer *g, ezgl::rectangle current_window);
 
 #endif /* DRAW_H */ 

@@ -570,10 +570,11 @@ void draw_POIs (ezgl::renderer* g, int regionIdx)
 /************************************************************
 // Draw Pins
 *************************************************************/
-// Display pins (intersection or POI if highlighted)
-void draw_pin (ezgl::renderer* g, ezgl::point2d inter_xy)
+// Display pins
+void draw_pin (ezgl::renderer* g, ezgl::point2d inter_xy, std::string pin_type)
 {
-    ezgl::surface *png_surface = g->load_png("libstreetmap/resources/red_pin.png");
+    std::string to_be_converted = "libstreetmap/resources/" + pin_type + ".png";
+    ezgl::surface *png_surface = g->load_png(to_be_converted.c_str());
     g->draw_surface(png_surface, inter_xy);
     g->free_surface(png_surface);
 }

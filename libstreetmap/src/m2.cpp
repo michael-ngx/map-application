@@ -435,51 +435,49 @@ void draw_main_canvas (ezgl::renderer *g)
         for (int route = 0; route < AllSubwayRoutes.size(); route++)
         {
             // Display subway route
-            if (subway_line_mode)
+            if (AllSubwayRoutes[route].track_points.size() == 0)
             {
-                if (AllSubwayRoutes[route].track_points.size() == 0)
+                continue;
+            }
+            // Set subway line to processed color
+            g->set_color((AllSubwayRoutes[route].colour));
+            for (int way = 0; way < (AllSubwayRoutes[route].track_points.size()); way++)
+            {
+                for (int node = 0; node < AllSubwayRoutes[route].track_points[way].size() - 1; node++)
                 {
-                    continue;
-                }
-                // Set subway line to processed color
-                g->set_color((AllSubwayRoutes[route].colour));
-                for (int way = 0; way < (AllSubwayRoutes[route].track_points.size()); way++)
-                {
-                    for (int node = 0; node < AllSubwayRoutes[route].track_points[way].size() - 1; node++)
-                    {
-                        g->draw_line(AllSubwayRoutes[route].track_points[way][node], 
-                                    AllSubwayRoutes[route].track_points[way][node + 1]);
-                    }
+                    g->draw_line(AllSubwayRoutes[route].track_points[way][node], 
+                                AllSubwayRoutes[route].track_points[way][node + 1]);
                 }
             }
+        }
+        for (int route = 0; route < AllSubwayRoutes.size(); route++)
+        {
             // Display subway stations
-            if (subway_station_mode)        // TODO: Avoid redundant stations
+            // TODO: Avoid redundant stations
+            if (AllSubwayRoutes[route].station_points.size() == 0)
             {
-                if (AllSubwayRoutes[route].station_points.size() == 0)
+                continue;
+            }
+            for (int i = 0; i < AllSubwayRoutes[route].station_points.size() && count; i++)
+            {
+                // Skips if subway is not in visible world
+                if (visible_world.contains(AllSubwayRoutes[route].station_points[i]))
                 {
-                    continue;
-                }
-                for (int i = 0; i < AllSubwayRoutes[route].station_points.size() && count; i++)
-                {
-                    // Skips if subway is not in visible world
-                    if (visible_world.contains(AllSubwayRoutes[route].station_points[i]))
+                    // Draw all if at very low zoom level
+                    if (curr_world_width < ZOOM_LIMIT_4)
                     {
-                        // Draw all if at very low zoom level
-                        if (curr_world_width < ZOOM_LIMIT_4)
+                        draw_pin(g, AllSubwayRoutes[route].station_points[i], "subway_station");
+                    } else
+                    {
+                        for (int j = 0; j < NUM_REGIONS; j++)
                         {
-                            draw_pin(g, AllSubwayRoutes[route].station_points[i]);
-                        } else
-                        {
-                            for (int j = 0; j < NUM_REGIONS; j++)
+                            // Draw 12 stations for high zoom levels
+                            if (available_region[j][2] && visible_regions[j].contains(AllSubwayRoutes[route].station_points[i]))
                             {
-                                // Draw 12 stations for high zoom levels
-                                if (available_region[j][2] && visible_regions[j].contains(AllSubwayRoutes[route].station_points[i]))
-                                {
-                                    available_region[j][2]--;
-                                    draw_pin(g, AllSubwayRoutes[route].station_points[i]);
-                                    count--;
-                                    break;
-                                }
+                                available_region[j][2]--;
+                                draw_pin(g, AllSubwayRoutes[route].station_points[i], "subway_station");
+                                count--;
+                                break;
                             }
                         }
                     }
@@ -583,7 +581,7 @@ void draw_main_canvas (ezgl::renderer *g)
         {
             continue;
         }
-        draw_pin(g, point);
+        draw_pin(g, point, "red_pin");
     }
     for (auto& point : pin_display_dest)
     {
@@ -591,7 +589,7 @@ void draw_main_canvas (ezgl::renderer *g)
         {
             continue;
         }
-        draw_pin(g, point);
+        draw_pin(g, point, "dest_flag");
     }
     
     /********************************************************************************
