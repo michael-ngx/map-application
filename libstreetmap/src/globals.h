@@ -77,6 +77,8 @@ const double FIND_ZOOM_WIDTH = 1000.0;
 
 // Number of screen regions for displaying street names and arrows
 const int NUM_REGIONS = 12;
+// Total number of map grids to initialize data to
+const int NUM_GRIDS = 20;
 
 // All points where pins will be drawn on - Cleared and Modified based on user input
 extern std::vector<ezgl::point2d> pin_display_start;
@@ -113,12 +115,12 @@ POIIdx findClosestPOI(ezgl::point2d my_position);
 std::vector<IntersectionIdx> findIntersectionIdsFromPartialIntersectionName(std::string intersection_prefix);
 
 // *********************************************************************************************************
-// Latlon bounds of the city & conversions
+// Bounds of the city & conversions
 // *********************************************************************************************************
-extern LatLonBounds latlon_bound;
-extern double max_lat, max_lon;
-extern double min_lat, min_lon;
+extern ezgl::point2d world_top_right, world_bottom_left;
 extern double lat_avg;
+extern double world_height, world_width;
+extern double grid_height, grid_width;
 
 ezgl::point2d xy_from_latlon(LatLon latlon);
 LatLon latlon_from_xy(double x, double y);
@@ -202,7 +204,6 @@ struct FeatureDetailedInfo{
     FeatureType featureType;                    // Type of the feature
     TypedOSMID  featureOSMID;                   // OSMID of the feature
     std::vector<ezgl::point2d> featurePoints;   // Coordinates of the feature in point2d
-    ezgl::rectangle featureRectangle;           // Rectangle for checking display
     double featureArea;
 
     double temp_max_lat, temp_max_lon;          // For temporary storage only

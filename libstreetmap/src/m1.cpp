@@ -20,6 +20,7 @@
  */
 #include "m1.h"
 #include "globals.h"
+#include "grid.h"
 #include "OSMDatabaseAPI.h"
 #include "draw/utilities.hpp"
 #include <iostream>
@@ -29,7 +30,7 @@
 #include <bits/stdc++.h>
 #include <cctype>
 
-
+Grid MapGrids[NUM_GRIDS][NUM_GRIDS];
 /*******************************************************************************************************************************
  * GLOBAL VARIABLES AND HELPER FUNCTION DECLARATION
  ********************************************************************************************************************************/
@@ -52,10 +53,10 @@ ezgl::color get_rgb_color(std::string osm_color);
 // *******************************************************************
 // Latlon bounds of current city
 // *******************************************************************
-LatLonBounds latlon_bound;
-double max_lat, max_lon;
-double min_lat, min_lon;
+ezgl::point2d world_top_right, world_bottom_left;
 double lat_avg;
+double world_height, world_width;
+double grid_height, grid_width;
 
 // *******************************************************************
 // Numbers
@@ -499,6 +500,18 @@ void closeMap() {
     OSMID_WayIndex.clear();
     found_path.clear();
 
+    // Clear data structures in grids
+    for (int i = 0; i < NUM_GRIDS; i++)
+    {
+        for (int j = 0; j < NUM_GRIDS; j++)
+        {
+            MapGrids[i][j].Grid_Segments.clear();
+            MapGrids[i][j].Grid_Intersections.clear();
+            MapGrids[i][j].Grid_Features.clear();
+            MapGrids[i][j].Grid_POIs.clear();
+        }
+    }
+
     closeStreetDatabase();
     closeOSMDatabase();
 }
@@ -512,7 +525,7 @@ void m1_init(){
     streetNum = getNumStreets();
     intersectionNum = getNumIntersections();
     featureNum = getNumFeatures();
-    POINum = getNumPointsOfInterest();
+    POINum = getNumPointsOfInterest();    
     // Initialize database
     init_features();
     init_POI();
@@ -533,10 +546,10 @@ void init_features()
 {
     // Find max and min lat, lon of feature points in city
     // Initialize for comparision
-    max_lat = getFeaturePoint(0, 0).latitude();
-    max_lon = getFeaturePoint(0, 0).longitude();
-    min_lat = max_lat;
-    min_lon = max_lon;
+    double max_lat = getFeaturePoint(0, 0).latitude();
+    double max_lon = getFeaturePoint(0, 0).longitude();
+    double min_lat = max_lat;
+    double min_lon = max_lon;
     
     for (int featureIdx = 0; featureIdx < featureNum; featureIdx++)
     {
@@ -576,17 +589,19 @@ void init_features()
     // Already have max min lat lon of the whole world
     // xy_from_latlon conversion function needs max_lat and min_lat
     lat_avg = (max_lat + min_lat) / 2;
-    latlon_bound.max = LatLon(max_lat, max_lon);
-    latlon_bound.min = LatLon(min_lat, min_lon);
+    // Set world values
+    LatLon latlon_top_right = LatLon(max_lat, max_lon);
+    LatLon latlon_bottom_left = LatLon(min_lat, min_lon);
+    world_top_right = xy_from_latlon(latlon_top_right);
+    world_bottom_left = xy_from_latlon(latlon_bottom_left);
+    world_height = world_top_right.y - world_bottom_left.y;
+    grid_height = world_height / NUM_GRIDS;
+    world_width = world_top_right.x - world_bottom_left.x;
+    grid_width = world_width / NUM_GRIDS;
 
-    //Load pre-processed data into Features_AllPoints
     for (int featureIdx = 0; featureIdx < featureNum; featureIdx++)
     {
-        Features_AllInfo[featureIdx].featureRectangle = 
-                    ezgl::rectangle(xy_from_latlon(LatLon(Features_AllInfo[featureIdx].temp_min_lat,
-                                                        Features_AllInfo[featureIdx].temp_min_lon)), 
-                                    xy_from_latlon(LatLon(Features_AllInfo[featureIdx].temp_max_lat,
-                                                        Features_AllInfo[featureIdx].temp_max_lon)));
+        //Load pre-processed data into Features_AllPoints
         for (int pointIdx = 0; pointIdx < getNumFeaturePoints(featureIdx); pointIdx++)
         {
             ezgl::point2d tempPoint = xy_from_latlon(getFeaturePoint(featureIdx, pointIdx));
@@ -594,7 +609,40 @@ void init_features()
         }
         Features_AllInfo[featureIdx].featureArea = findFeatureArea(featureIdx);
     }
+    // Sort the Features_AllInfo based on descending feature areas
     std::sort(Features_AllInfo.begin(), Features_AllInfo.end(), compareFeatureArea);
+
+    for (auto feature : Features_AllInfo)
+    {
+        // Determine which grid(s) the feature belongs
+        ezgl::point2d xy_bottom_left = xy_from_latlon(LatLon(feature.temp_min_lat,
+                                                             feature.temp_min_lon));
+        ezgl::point2d xy_top_right = xy_from_latlon(LatLon(feature.temp_max_lat,
+                                                           feature.temp_max_lon));
+        int col_max = (xy_top_right.x - world_bottom_left.x) / grid_width;
+        int col_min = (xy_bottom_left.x - world_bottom_left.x) / grid_width;
+        int row_max = (xy_top_right.y - world_bottom_left.y) / grid_height;
+        int row_min = (xy_bottom_left.y - world_bottom_left.y) / grid_height;
+        
+        // Put the features into the grids
+        // If feature has bounds at the edge of map, but to grid NUM_GRIDS - 1
+        if (col_max >= NUM_GRIDS)
+        {
+            col_max = NUM_GRIDS - 1;
+        }
+        if (row_max >= NUM_GRIDS)
+        {
+            row_max = NUM_GRIDS - 1;
+        }
+
+        for (int i = row_min; i <= row_max; i++)
+        {
+            for (int j = col_min; j <= col_max; j++)
+            {
+                MapGrids[i][j].Grid_Features.push_back(feature);
+            }
+        }
+    }
 }
 
 //Helper function for sorting feature areas
@@ -638,6 +686,19 @@ void init_POI(){
         {
             POI_AllFood.insert(std::make_pair(tempPOIInfo.POIName + " - " + std::to_string(tempIdx), tempPOIInfo));
         }
+
+        // Add POIs to grids
+        int row = (tempPOIInfo.POIPoint.y - world_bottom_left.y) / grid_height;
+        int col = (tempPOIInfo.POIPoint.x - world_bottom_left.x) / grid_width;
+        if (row >= NUM_GRIDS)
+        {
+            row = NUM_GRIDS - 1;
+        }
+        if (col >= NUM_GRIDS)
+        {
+            col = NUM_GRIDS - 1;
+        }
+        MapGrids[row][col].Grid_POIs.push_back(tempPOIInfo);
     }
 }
 
@@ -660,50 +721,53 @@ void init_segments()
         processedInfo.numCurvePoints = rawInfo.numCurvePoints;
         processedInfo.streetName = getStreetName(processedInfo.streetID);       // (get the name of the street that each segment belongs to - for m2)
         
-        // Find max and min x, y for defining rectangles of each segment
-        ezgl::point2d point_xy = xy_from_latlon(getIntersectionPosition(rawInfo.from));
-        double max_x = point_xy.x;
-        double max_y = point_xy.y;
-        double min_x = point_xy.x;
-        double min_y = point_xy.y;
+        // Find max and min x, y for defining bounds of each segment
+        // Based on bounds, we can add each segments to corresponding grids
+        ezgl::point2d from_xy = xy_from_latlon(getIntersectionPosition(rawInfo.from));
+        double max_x = from_xy.x;
+        double max_y = from_xy.y;
+        double min_x = from_xy.x;
+        double min_y = from_xy.y;
 
         // Pre-calculate length of each street segments (including curve points)
-        // Determine rectangle bounds of each segment
+        // Determine bounds of each segment
         if (rawInfo.numCurvePoints == 0)
         {
-            LatLon point_1 = getIntersectionPosition(rawInfo.from);
-            LatLon point_2 = getIntersectionPosition(rawInfo.to);
-            processedInfo.length = findDistanceBetweenTwoPoints(point_1, point_2);
+            ezgl::point2d to_xy = xy_from_latlon(getIntersectionPosition(rawInfo.to));
+            processedInfo.length = findDistanceBetweenTwoPoints(from_xy, to_xy);
+            max_x = std::max(max_x, to_xy.x);
+            max_y = std::max(max_y, to_xy.y);
+            min_x = std::min(min_x, to_xy.x);
+            min_y = std::min(min_y, to_xy.y);
 
-            ezgl::point2d point_1_xy = xy_from_latlon(point_1);
-            ezgl::point2d point_2_xy = xy_from_latlon(point_2);
-            processedInfo.segmentRectangle = ezgl::rectangle({std::min(point_1_xy.x, point_2_xy.x), std::min(point_1_xy.y, point_2_xy.y)}, 
-                                                             {std::max(point_1_xy.x, point_2_xy.x), std::max(point_1_xy.y, point_2_xy.y)});
+            // Record the rectangle that bounds segment
+            processedInfo.segmentRectangle = ezgl::rectangle({min_x, min_y}, 
+                                                             {max_x, max_y});
         } else
         {
-            LatLon point_1 = getIntersectionPosition(rawInfo.from);
-            processedInfo.length = 0.0; // Starting length
+            // Starting length
+            processedInfo.length = 0.0; 
             // Iterate through all curve points
             for (int i = 0; i < rawInfo.numCurvePoints; i++){
-                LatLon point_2 = getStreetSegmentCurvePoint(segment, i);
-                double templength = findDistanceBetweenTwoPoints(point_1, point_2);
-                processedInfo.length += templength;
-                ezgl::point2d point_2_xy = xy_from_latlon(point_2);
-                processedInfo.curvePoints_xy.push_back(point_2_xy);    // Save the xy of curve points (for m2)
-                point_1 = point_2;
+                ezgl::point2d point_2_xy = xy_from_latlon(getStreetSegmentCurvePoint(segment, i));
+                processedInfo.length += findDistanceBetweenTwoPoints(from_xy, point_2_xy);
+                // Save the xy of curve points
+                processedInfo.curvePoints_xy.push_back(point_2_xy);
                 // Compare to get max min xy of each segment
                 max_x = std::max(point_2_xy.x, max_x);
                 max_y = std::max(point_2_xy.y, max_y);
                 min_x = std::min(point_2_xy.x, min_x);
                 min_y = std::min(point_2_xy.y, min_y);
+                // Proceed to next curve point
+                from_xy = point_2_xy;
             }
-            LatLon point_2 = getIntersectionPosition(rawInfo.to);                   // Destination (to) point
-            processedInfo.length += findDistanceBetweenTwoPoints(point_1, point_2);
-            ezgl::point2d point_2_xy = xy_from_latlon(point_2);
-            max_x = std::max(point_2_xy.x, max_x);
-            max_y = std::max(point_2_xy.y, max_y);
-            min_x = std::min(point_2_xy.x, min_x);
-            min_y = std::min(point_2_xy.y, min_y);
+            ezgl::point2d to_xy = xy_from_latlon(getIntersectionPosition(rawInfo.to));            // Destination (to) point
+            // from_xy is now the last curve point. Need to connect with to_xy
+            processedInfo.length += findDistanceBetweenTwoPoints(from_xy, to_xy);
+            max_x = std::max(to_xy.x, max_x);
+            max_y = std::max(to_xy.y, max_y);
+            min_x = std::min(to_xy.x, min_x);
+            min_y = std::min(to_xy.y, min_y);
             
             // Record the rectangle that bounds segment
             processedInfo.segmentRectangle = ezgl::rectangle(ezgl::point2d(min_x, min_y),
@@ -711,16 +775,39 @@ void init_segments()
         }
 
         // Pre-calculate travel time of each street segments
-        processedInfo.travel_time = processedInfo.length/rawInfo.speedLimit;
-
-        // To record the max speed limit of a street in the city (for A* path finding)
+        // Record the max speed limit of a street in the city (for A* path finding)
+        processedInfo.travel_time = processedInfo.length / rawInfo.speedLimit;
         if (rawInfo.speedLimit > MAX_SPEED_LIMIT)
         {
             MAX_SPEED_LIMIT = rawInfo.speedLimit;
         }
-
         // Push processed info into vector
         Segment_SegmentDetailedInfo.push_back(processedInfo);
+
+        // Determine which grid(s) the segment belongs
+        int col_max = (max_x - world_bottom_left.x) / grid_width;
+        int col_min = (min_x - world_bottom_left.x) / grid_width;
+        int row_max = (max_y - world_bottom_left.y) / grid_height;
+        int row_min = (min_y - world_bottom_left.y) / grid_height;
+
+        // Put the segments into the grids
+        // If feature has bounds at the edge of map, but to grid NUM_GRIDS - 1
+        if (col_max >= NUM_GRIDS)
+        {
+            col_max = NUM_GRIDS - 1;
+        }
+        if (row_max >= NUM_GRIDS)
+        {
+            row_max = NUM_GRIDS - 1;
+        }
+
+        for (int i = row_min; i <= row_max; i++)
+        {
+            for (int j = col_min; j <= col_max; j++)
+            {
+                MapGrids[i][j].Grid_Segments.push_back(processedInfo);
+            }
+        }
     }
 }
 
@@ -746,7 +833,7 @@ void init_streets()
             street_info.all_intersections.push_back(Segment_SegmentDetailedInfo[seg_id].from);
             street_info.all_intersections.push_back(Segment_SegmentDetailedInfo[seg_id].to);
             Street_StreetInfo.insert(std::make_pair(street_id, street_info));
-        } else 
+        } else
         {
             // Push segment into street info
             Street_StreetInfo.at(street_id).all_segments.push_back(seg_id);

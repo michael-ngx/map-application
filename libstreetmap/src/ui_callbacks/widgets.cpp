@@ -188,8 +188,8 @@ void city_change_cbk (GtkComboBoxText* self, ezgl::application* application)
         gtk_entry_set_text(GTK_ENTRY(SearchBarDestination), "");
         
         // Reset the world based on new map
-        ezgl::rectangle new_world(xy_from_latlon(latlon_bound.min),
-                                    xy_from_latlon(latlon_bound.max));
+        ezgl::rectangle new_world(world_bottom_left,
+                                  world_top_right);
        
         application->change_canvas_world_coordinates("MainCanvas", new_world);
         application->refresh_drawing();

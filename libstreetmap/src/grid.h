@@ -11,10 +11,8 @@
 
 struct Grid
 {
-    ezgl::rectangle Grid_Rectangle;
-    std::vector<StreetSegmentDetailedInfo> Gird_Segments;
+    std::vector<StreetSegmentDetailedInfo> Grid_Segments;
     std::vector<IntersectionInfo> Grid_Intersections;
-    std::unordered_map<StreetIdx, StreetInfo> Grid_Streets;
     std::vector<FeatureDetailedInfo> Grid_Features;
     std::vector<POIDetailedInfo> Grid_POIs;
 };

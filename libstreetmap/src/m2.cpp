@@ -20,6 +20,7 @@
  */
 #include "m1.h"
 #include "m2.h"
+#include "grid.h"
 #include "ui_callbacks/widgets.hpp"
 #include "ui_callbacks/setup.hpp"
 #include "draw/draw.hpp"
@@ -138,8 +139,8 @@ void drawMap ()
     ezgl::application application(settings);
 
     // Set initial world rectangle
-    ezgl::rectangle initial_world(xy_from_latlon(latlon_bound.min),
-                                  xy_from_latlon(latlon_bound.max));
+    ezgl::rectangle initial_world(world_bottom_left,
+                                  world_top_right);
     
     // Set some parameters for the main sub-window (MainCanvas), where 
     // visualization graphics are draw. Set the callback function that will be 
@@ -276,13 +277,6 @@ void draw_main_canvas (ezgl::renderer *g)
     for (int j = 0; j < numOfFeatureDisplay; j++)
     {
         FeatureDetailedInfo tempFeatureInfo = Features_AllInfo[j];
-        // Skip if feature is outside of current visible world (not colliding or containing)
-        if (!(check_collides(tempFeatureInfo.featureRectangle, visible_world)
-              || check_contains(tempFeatureInfo.featureRectangle, visible_world)
-              || check_contains(visible_world,tempFeatureInfo.featureRectangle))) 
-        {
-            continue;
-        }
         draw_feature_area(g, tempFeatureInfo);
     }
     
