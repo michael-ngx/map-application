@@ -491,6 +491,7 @@ void closeMap() {
     Features_AllInfo.clear();
     POI_AllInfo.clear();
     POI_AllFood.clear();
+    poi_display.clear();
     OSMID_Nodes_AllTagPairs.clear();
     OSMID_Highway_Type.clear();
     AllSubwayRoutes.clear();

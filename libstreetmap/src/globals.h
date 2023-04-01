@@ -50,8 +50,6 @@ extern bool subway_station_mode;
 extern bool subway_line_mode;
 // Checks if the navigation mode if turned on (to allow navigation) - M2
 extern bool navigation_mode;
-// Checks if the direction mode is turned on (to all directions) - M2
-extern bool direction_mode;
 
 // Distance of closest intersection/POI, calculated in M1 - used in M2
 // Distances are used to determine whether user selected an intersection or a POI
@@ -259,7 +257,7 @@ extern std::unordered_map<OSMID, int> OSMID_WayIndex;
 // A* Path finding
 // *********************************************************************************************************
 // Turn penalty default for map
-const double DEFAULT_TURN_PENALTY = 30;
+const double DEFAULT_TURN_PENALTY = 15;
 
 // Max speed limit of a street in the city
 extern double MAX_SPEED_LIMIT;

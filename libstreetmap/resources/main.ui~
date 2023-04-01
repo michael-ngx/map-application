@@ -53,8 +53,8 @@
   <object class="GtkImage" id="navigation-image">
     <property name="visible">True</property>
     <property name="can-focus">False</property>
+    <property name="pixbuf">nav.png</property>
     <property name="pixel-size">20</property>
-    <property name="icon-name">edit-redo</property>
   </object>
   <object class="GtkImage" id="night-mode">
     <property name="visible">True</property>
@@ -179,95 +179,6 @@
           </object>
         </child>
         <child type="overlay">
-          <object class="GtkButton" id="DayModeButton">
-            <property name="visible">True</property>
-            <property name="can-focus">True</property>
-            <property name="receives-default">True</property>
-            <property name="halign">start</property>
-            <property name="valign">end</property>
-            <property name="margin-left">10</property>
-            <property name="margin-bottom">10</property>
-            <property name="image">night-mode</property>
-            <property name="relief">none</property>
-            <style>
-              <class name="button-round"/>
-            </style>
-          </object>
-          <packing>
-            <property name="index">1</property>
-          </packing>
-        </child>
-        <child type="overlay">
-          <object class="GtkButton" id="NightModeButton">
-            <property name="visible">True</property>
-            <property name="can-focus">True</property>
-            <property name="receives-default">True</property>
-            <property name="halign">start</property>
-            <property name="valign">end</property>
-            <property name="margin-left">10</property>
-            <property name="margin-bottom">10</property>
-            <property name="image">day-image</property>
-            <property name="relief">none</property>
-            <style>
-              <class name="button-round"/>
-            </style>
-          </object>
-          <packing>
-            <property name="index">1</property>
-          </packing>
-        </child>
-        <child type="overlay">
-          <object class="GtkStatusbar" id="StatusBar">
-            <property name="visible">True</property>
-            <property name="can-focus">False</property>
-            <property name="valign">end</property>
-            <property name="margin-left">70</property>
-            <property name="orientation">vertical</property>
-            <property name="spacing">2</property>
-          </object>
-          <packing>
-            <property name="index">1</property>
-          </packing>
-        </child>
-        <child type="overlay">
-          <object class="GtkButton" id="SubwayOffButton">
-            <property name="visible">True</property>
-            <property name="can-focus">True</property>
-            <property name="receives-default">True</property>
-            <property name="halign">end</property>
-            <property name="valign">start</property>
-            <property name="margin-right">270</property>
-            <property name="margin-top">10</property>
-            <property name="image">subway-image</property>
-            <property name="relief">none</property>
-            <style>
-              <class name="button-round"/>
-            </style>
-          </object>
-          <packing>
-            <property name="index">1</property>
-          </packing>
-        </child>
-        <child type="overlay">
-          <object class="GtkButton" id="SubwayButton">
-            <property name="visible">True</property>
-            <property name="can-focus">True</property>
-            <property name="receives-default">True</property>
-            <property name="halign">end</property>
-            <property name="valign">start</property>
-            <property name="margin-right">270</property>
-            <property name="margin-top">10</property>
-            <property name="image">subway-off-image</property>
-            <property name="relief">none</property>
-            <style>
-              <class name="button-round"/>
-            </style>
-          </object>
-          <packing>
-            <property name="index">1</property>
-          </packing>
-        </child>
-        <child type="overlay">
           <!-- n-columns=2 n-rows=3 -->
           <object class="GtkGrid" id="TopLeftGrid">
             <property name="visible">True</property>
@@ -332,6 +243,9 @@
                 <property name="valign">center</property>
                 <property name="margin-top">10</property>
                 <property name="image">navigation-image</property>
+                <style>
+                  <class name="button-round"/>
+                </style>
               </object>
               <packing>
                 <property name="left-attach">1</property>
@@ -344,6 +258,7 @@
                 <property name="visible">True</property>
                 <property name="can-focus">True</property>
                 <property name="receives-default">True</property>
+                <property name="margin-left">10</property>
               </object>
               <packing>
                 <property name="left-attach">0</property>
@@ -431,6 +346,94 @@
           </object>
           <packing>
             <property name="index">2</property>
+          </packing>
+        </child>
+        <child type="overlay">
+          <object class="GtkButton" id="SubwayButton">
+            <property name="visible">True</property>
+            <property name="can-focus">True</property>
+            <property name="receives-default">True</property>
+            <property name="halign">end</property>
+            <property name="valign">start</property>
+            <property name="margin-right">270</property>
+            <property name="margin-top">10</property>
+            <property name="image">subway-off-image</property>
+            <property name="relief">none</property>
+            <style>
+              <class name="button-round"/>
+            </style>
+          </object>
+          <packing>
+            <property name="index">1</property>
+          </packing>
+        </child>
+        <child type="overlay">
+          <object class="GtkButton" id="SubwayOffButton">
+            <property name="visible">True</property>
+            <property name="can-focus">True</property>
+            <property name="receives-default">True</property>
+            <property name="halign">end</property>
+            <property name="valign">start</property>
+            <property name="margin-right">270</property>
+            <property name="margin-top">10</property>
+            <property name="image">subway-image</property>
+            <property name="relief">none</property>
+            <style>
+              <class name="button-round"/>
+            </style>
+          </object>
+          <packing>
+            <property name="index">1</property>
+          </packing>
+        </child>
+        <child type="overlay">
+          <object class="GtkStatusbar" id="StatusBar">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="valign">end</property>
+            <property name="margin-left">70</property>
+            <property name="spacing">2</property>
+          </object>
+          <packing>
+            <property name="index">1</property>
+          </packing>
+        </child>
+        <child type="overlay">
+          <object class="GtkButton" id="NightModeButton">
+            <property name="visible">True</property>
+            <property name="can-focus">True</property>
+            <property name="receives-default">True</property>
+            <property name="halign">start</property>
+            <property name="valign">end</property>
+            <property name="margin-left">10</property>
+            <property name="margin-bottom">10</property>
+            <property name="image">day-image</property>
+            <property name="relief">none</property>
+            <style>
+              <class name="button-round"/>
+            </style>
+          </object>
+          <packing>
+            <property name="index">1</property>
+          </packing>
+        </child>
+        <child type="overlay">
+          <object class="GtkButton" id="DayModeButton">
+            <property name="visible">True</property>
+            <property name="can-focus">True</property>
+            <property name="receives-default">True</property>
+            <property name="halign">start</property>
+            <property name="valign">end</property>
+            <property name="margin-left">10</property>
+            <property name="margin-bottom">10</property>
+            <property name="image">night-mode</property>
+            <property name="relief">none</property>
+            <style>
+              <class name="button-round"/>
+            </style>
+          </object>
+          <packing>
+            <property name="index">1</property>
           </packing>
         </child>
         <child type="overlay">

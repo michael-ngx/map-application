@@ -286,6 +286,7 @@ void act_on_mouse_click (ezgl::application* application, GdkEventButton* /*event
             if (found_path.size() == 0)
             {
                 std::string to_be_converted = "No path found between 2 points";
+                application->refresh_drawing();
                 application->create_popup_message("Error", to_be_converted.c_str());
                 return;
             }

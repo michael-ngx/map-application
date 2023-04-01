@@ -36,7 +36,9 @@ void search_activate_cbk_start (GtkSearchEntry */*self*/, ezgl::application *app
             if (found_path.size() == 0)
             {
                 std::string to_be_converted = "No path found between 2 points";
+                application->refresh_drawing();
                 application->create_popup_message("Error", to_be_converted.c_str());
+                return;
             }
             // Rezoom the map to view the path
             view_path(application);
@@ -79,7 +81,9 @@ void search_activate_cbk_dest (GtkSearchEntry */*self*/, ezgl::application* appl
             if (found_path.size() == 0)
             {
                 std::string to_be_converted = "No path found between 2 points";
+                application->refresh_drawing();                
                 application->create_popup_message("Error", to_be_converted.c_str());
+                return;
             }
             // Rezoom the map to view the path
             view_path(application);

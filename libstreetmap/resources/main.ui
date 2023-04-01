@@ -47,14 +47,14 @@
   <object class="GtkImage" id="help-image">
     <property name="visible">True</property>
     <property name="can-focus">False</property>
+    <property name="pixbuf">help.png</property>
     <property name="pixel-size">20</property>
-    <property name="icon-name">dialog-question</property>
   </object>
   <object class="GtkImage" id="navigation-image">
     <property name="visible">True</property>
     <property name="can-focus">False</property>
+    <property name="pixbuf">nav.png</property>
     <property name="pixel-size">20</property>
-    <property name="icon-name">edit-redo</property>
   </object>
   <object class="GtkImage" id="night-mode">
     <property name="visible">True</property>
@@ -222,7 +222,6 @@
             <property name="can-focus">False</property>
             <property name="valign">end</property>
             <property name="margin-left">70</property>
-            <property name="orientation">vertical</property>
             <property name="spacing">2</property>
           </object>
           <packing>
@@ -344,6 +343,7 @@
                 <property name="visible">True</property>
                 <property name="can-focus">True</property>
                 <property name="receives-default">True</property>
+                <property name="margin-left">10</property>
               </object>
               <packing>
                 <property name="left-attach">0</property>
