@@ -257,12 +257,14 @@ void subway_off_cbk (GtkButton* /*self*/, ezgl::application* application)
 // Callback function for tutorial button
 void tutorial_cbk(GtkButton* /*self*/, ezgl::application* application)
 {
-    std::string to_be_converted = "Nightmode: Click on the sun/moon button to switch between day/night mode\n \n";
-    to_be_converted += "Subway: Switching subway on shows subways lines and stations of the city\n \n";
-    to_be_converted += "Switch City: Switches between cities\n \n";
-    to_be_converted += "Sort by: Filters out specific types of points of interests\n \n";
-    to_be_converted += "Navigation: Enter startpoint and destination to get the optimal path\n";
-
+    std::string to_be_converted = "Select start and destination intersections to get the optimal path. To select intersections:\n \n";
+    to_be_converted += "- Clicking: Select the desired input field (start or destination) and select the intersection on the map.\n \n";
+    to_be_converted += "- Typing: Enter intersection names, then select from the suggested list.\n \n";
+    to_be_converted += "   Else, enter street names that cross through the intersection, separated by a '&'.\n \n";
+    to_be_converted += "   Partially street inputs are automatically matched with first street name found in alphabetical order.\n \n \n \n";
+    to_be_converted += "Note: Due to a lack of data, <unknown> search is not supported.\n \n";
+    to_be_converted += "Please click on the map or select from the suggested list for exact selection \n";
+ 
     const char* message = to_be_converted.c_str();
     application->create_popup_message("Tutorial", message);
 }
