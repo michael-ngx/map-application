@@ -60,7 +60,18 @@ void initial_setup (ezgl::application *application, bool /*new_window*/)
     );
     // Default: Hides Tutorial button
     gtk_widget_hide(GTK_WIDGET(TutorialButton));
-
+    
+     // Connects to Direction button
+    DirectionButton = application->get_object("Direction");
+    g_signal_connect(
+        DirectionButton,
+        "clicked",
+        G_CALLBACK(direction_cbk),
+        application
+    );
+    // Default: Hides Direction button
+    gtk_widget_hide(GTK_WIDGET(DirectionButton));
+    
     // Connects to Night Mode button
     NightModeButton = application->get_object("NightModeButton");
     g_signal_connect(

@@ -263,6 +263,22 @@ void tutorial_cbk(GtkButton* /*self*/, ezgl::application* application)
     application->create_popup_message("Tutorial", message);
 }
 
+// Callback function for direction button
+void direction_cbk(GtkButton* /*self*/, ezgl::application* application)
+{
+    std::string pathDirections;
+    if (found_path.size() == 0)
+    {
+        pathDirections = "Please Enter Two Valid Locations for Direction\n";
+    } else
+    {
+        pathDirections = generate_directions();
+    }
+
+    const char* message = pathDirections.c_str();
+    application->create_popup_message("Direction", message);
+}
+
 // Callback function for navigation button
 void navigation_cbk (GtkButton* /*self*/, ezgl::application* application)
 {
@@ -272,6 +288,7 @@ void navigation_cbk (GtkButton* /*self*/, ezgl::application* application)
     gtk_widget_show(GTK_WIDGET(SearchBarDestination));
     gtk_widget_show(GTK_WIDGET(EndNavigationButton));
     gtk_widget_show(GTK_WIDGET(TutorialButton));
+    gtk_widget_show(GTK_WIDGET(DirectionButton));
     // Hides navigation button
     gtk_widget_hide(GTK_WIDGET(NavigationButton));
     // Change placeholder of first search bar
@@ -301,6 +318,7 @@ void end_navigation_cbk (GtkButton* /*self*/, ezgl::application* application)
     gtk_widget_hide(GTK_WIDGET(SearchBarDestination));
     gtk_widget_hide(GTK_WIDGET(EndNavigationButton));
     gtk_widget_hide(GTK_WIDGET(TutorialButton));
+    gtk_widget_hide(GTK_WIDGET(DirectionButton));
     // Unhides navigation button
     gtk_widget_show(GTK_WIDGET(NavigationButton));
     // Clear all destination pins

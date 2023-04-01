@@ -496,6 +496,7 @@ void closeMap() {
     AllSubwayRoutes.clear();
     OSMID_NodeIndex.clear();
     OSMID_WayIndex.clear();
+    found_path.clear();
 
     closeStreetDatabase();
     closeOSMDatabase();

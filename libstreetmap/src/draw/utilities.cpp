@@ -1,4 +1,7 @@
 #include "draw/utilities.hpp"
+#include "StreetsDatabaseAPI.h"
+#include <cmath>
+
 
 /*******************************************************************************************************************************
  * OTHER HELPER FUNCTIONS
@@ -53,6 +56,109 @@ void view_path (ezgl::application* application)
     ezgl::point2d center = {(min_x + max_x) / 2, (max_y + min_y) / 2};
     move_camera(center, new_width * 2, application);
 }
+
+//Input: vector of street segment index of the optimized path. Output: a string of directions
+std::string generate_directions ()
+{
+    std::string pathDirections;
+    bool continueOnStreet = true;
+    ezgl::point2d pointX1;
+    ezgl::point2d pointX2;
+    ezgl::point2d pointX3;
+    ezgl::point2d pointX4;
+    ezgl::point2d pointFrom;
+    ezgl::point2d pointMiddle;
+    ezgl::point2d pointTo;
+    double deltaXSeg1;
+    double deltaYSeg1;
+    double deltaXSeg2;
+    double deltaYSeg2;
+    double deltaXSeg3;
+    double deltaYSeg3;
+    double direction;
+    
+    for (StreetSegmentIdx tempIndex = 0; tempIndex < found_path.size() - 1; tempIndex++)
+    {
+        StreetSegmentDetailedInfo tempSegInfo = Segment_SegmentDetailedInfo[found_path[tempIndex]];
+        StreetSegmentDetailedInfo nextTempSegInfo = Segment_SegmentDetailedInfo[found_path[tempIndex + 1]];
+        StreetIdx tempSegIdx = tempSegInfo.streetID;
+        StreetIdx nextTempSegIdx = nextTempSegInfo.streetID;
+        pointX1 = Intersection_IntersectionInfo[tempSegInfo.from].position_xy;
+        pointX2 = Intersection_IntersectionInfo[tempSegInfo.to].position_xy;
+        pointX3 = Intersection_IntersectionInfo[nextTempSegInfo.from].position_xy;
+        pointX4 = Intersection_IntersectionInfo[nextTempSegInfo.to].position_xy;
+        if (pointX1 == pointX3)
+        {
+            pointFrom = pointX2;
+            pointMiddle = pointX1;
+            pointTo = pointX4;
+        } else if (pointX1 == pointX4)
+        {
+            pointFrom = pointX2;
+            pointMiddle = pointX1;
+            pointTo = pointX3;
+        } else if (pointX2 == pointX3)
+        {
+            pointFrom = pointX1;
+            pointMiddle = pointX2;
+            pointTo = pointX4;
+        } else if (pointX2 == pointX4)
+        {
+            pointFrom = pointX1;
+            pointMiddle = pointX2;
+            pointTo = pointX3;
+        }
+        deltaXSeg1 = pointMiddle.x - pointFrom.x;
+        deltaYSeg1 = pointMiddle.y - pointFrom.y;
+        deltaXSeg2 = pointTo.x - pointFrom.x;
+        deltaYSeg2 = pointTo.y - pointFrom.y;
+        deltaXSeg3 = pointTo.x - pointMiddle.x;
+        deltaYSeg3 = pointTo.y - pointMiddle.y;
+        direction = deltaXSeg2 * deltaYSeg1 - deltaYSeg2 * deltaXSeg1;
+        
+        if (tempSegIdx == nextTempSegIdx)           //still on the same street
+        {
+            if (tempIndex == 0)
+            {
+                pathDirections += "Get on " + getStreetName(tempSegIdx) + ". \n \n";
+            }
+            if ((pow(deltaXSeg2,2) + pow(deltaYSeg2,2)) < 
+                (pow(deltaXSeg1,2) + pow(deltaYSeg1,2) + pow(deltaXSeg3,2) + pow(deltaYSeg3,2)))
+            {
+                pathDirections += "Make a U-turn. \n \n";
+            } else {
+                if (continueOnStreet)
+                {
+                    pathDirections += "Continue on " + getStreetName(nextTempSegIdx) + ". \n \n";
+                    continueOnStreet = false;
+                }
+            }
+        } else if (tempSegIdx != nextTempSegIdx)    //change of street
+        {
+            continueOnStreet = true;
+            if (tempIndex == 0)
+            {
+                pathDirections += "Get on " + getStreetName(tempSegIdx) + ". \n \n";
+            }
+            if (direction > 0)
+            {
+                pathDirections += "Make a right turn onto " + getStreetName(nextTempSegIdx) + ". \n \n";
+            } else if (direction < 0)
+            {
+                pathDirections += "Make a left turn onto " + getStreetName(nextTempSegIdx) + ". \n \n";
+            } else if (direction == 0)
+            {
+                pathDirections += "Continue onto " + getStreetName(nextTempSegIdx) + ". \n \n";
+            }
+        }
+        if (tempIndex == found_path.size() - 2)
+        {
+            pathDirections += "You will see your destination ahead. \n \n";
+        }
+    }
+    return pathDirections;
+}
+
 
 // Input: original string. Output: string lowercased and space removed
 std::string lower_no_space (std::string input)

@@ -40,6 +40,8 @@ GObject *NavigationButton;
 GObject *EndNavigationButton;
 GObject *NightModeButton;
 GObject *DayModeButton;
+GObject *DirectionButton;
+
 
 GObject *FilterComboBox;
 GObject *CityChangeComboBox;
