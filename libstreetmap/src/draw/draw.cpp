@@ -174,7 +174,6 @@ int get_street_width_pixel (std::string& street_type)
         return 5;
     }
     // Else, determine width based on street type and zoom levels
-    double curr_world_width = visible_world.width();
     if (curr_world_width > ZOOM_LIMIT_0)
     {
         if (street_type == "motorway") 
@@ -485,28 +484,50 @@ void draw_feature_area (ezgl::renderer *g, FeatureDetailedInfo tempFeatureInfo)
     return;
 }
 
-/************************************************************
-// Draw POIs
-*************************************************************/
-void draw_POIs (ezgl::renderer* g, int regionIdx)
+/********************************************************************************
+* Draw Subway Lines
+********************************************************************************/
+void draw_subway_lines (ezgl::renderer* g)
 {
-    int regionSize = poi_display[regionIdx].size();
-    if (!regionSize)
+    g->set_line_width(4);
+    for (int route = 0; route < AllSubwayRoutes.size(); route++)
     {
-        return;                                     // Skip if no POI is in the region
+        // Display subway route
+        if (AllSubwayRoutes[route].track_points.size() == 0)
+        {
+            continue;
+        }
+        // Set subway line to processed color
+        g->set_color((AllSubwayRoutes[route].colour));
+        for (int way = 0; way < (AllSubwayRoutes[route].track_points.size()); way++)
+        {
+            for (int node = 0; node < AllSubwayRoutes[route].track_points[way].size() - 1; node++)
+            {
+                g->draw_line(AllSubwayRoutes[route].track_points[way][node], 
+                            AllSubwayRoutes[route].track_points[way][node + 1]);
+            }
+        }
     }
-    int middlePOIIdx = regionSize / 2;
-    std::string tempPOIName = poi_display[regionIdx][middlePOIIdx].POIName;
+}  
+
+/************************************************************
+* Draw POIs
+*************************************************************/
+void draw_POIs (ezgl::renderer* g, POIDetailedInfo POI)
+{
+    // Store information of current POI
+    std::string tempPOIName = POI.POIName;
+    // Skip if the POI name is too long 
     if (tempPOIName.size() > 50)
     {
-        return;                                     // Skip if the POI name is too long 
+        return;                                     
     }
-
-    // Store POI information in temp variables
-    ezgl::point2d tempDrawPoint = poi_display[regionIdx][middlePOIIdx].POIPoint;
-    std::string tempType = poi_display[regionIdx][middlePOIIdx].POIType;
+    ezgl::point2d tempDrawPoint = POI.POIPoint;
+    std::string tempType = POI.POIType;
+    
 
     // Treat CURRENT_FILTER as lowercase with space as underscore -> current_filter
+    // This is because POIType is stored as lowercase and space as underscore
     std::string current_filter;
     for (auto& c : CURRENT_FILTER){
         if (c == ' ')
@@ -517,7 +538,7 @@ void draw_POIs (ezgl::renderer* g, int regionIdx)
         current_filter.push_back(char(tolower(c))); // Save names as lowercase, no space
     }
 
-    // Skip if something is filtered out
+    // Skip if current POI is filtered out
     if (filtered && tempType != current_filter)
     {
         return;

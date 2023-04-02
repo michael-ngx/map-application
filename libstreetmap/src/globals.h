@@ -9,6 +9,7 @@
 #define GLOBALS_H
 
 #include "ezgl/application.hpp"
+#include "m1.h"
 #include <unordered_map>
 
 // *********************************************************************************************************
@@ -63,6 +64,7 @@ extern double clicked_POI_distance;
 
 // Rectangle for visible world - Updated every frame in M2
 extern ezgl::rectangle visible_world;
+extern double curr_world_width;
 
 // Zoom limits for curr_world_width, in meters
 const float ZOOM_LIMIT_0 = 50000;
@@ -159,7 +161,7 @@ struct StreetSegmentDetailedInfo{
     std::string streetName;
     int numCurvePoints;      // number of curve points between the ends
     std::vector<ezgl::point2d> curvePoints_xy; // Vector of xy for all curvepoints
-    ezgl::rectangle segmentRectangle;       // Rectangle for checking display
+    ezgl::rectangle segmentRectangle;       // Rectangle for checking display & navigation zooming
 };
 // Index: Segment id, Value: Processed information of the segment
 extern std::vector<StreetSegmentDetailedInfo> Segment_SegmentDetailedInfo;
@@ -210,6 +212,7 @@ extern std::multimap<std::string, StreetIdx> StreetName_lower_StreetIdx;
 // *********************************************************************************************************
 //Stores pre-processed information of features
 struct FeatureDetailedInfo{
+    FeatureIdx id;                              // Feature id
     FeatureType featureType;                    // Type of the feature
     TypedOSMID  featureOSMID;                   // OSMID of the feature
     std::vector<ezgl::point2d> featurePoints;   // Coordinates of the feature in point2d

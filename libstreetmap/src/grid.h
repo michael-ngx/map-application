@@ -9,14 +9,20 @@
 
 #include "globals.h"
 
-struct Grid
+class Grid
 {
-    std::vector<StreetSegmentDetailedInfo> Grid_Segments;
-    std::vector<IntersectionInfo> Grid_Intersections;
-    std::vector<FeatureDetailedInfo> Grid_Features;
-    std::vector<POIDetailedInfo> Grid_POIs;
+    public:
+        std::vector<FeatureDetailedInfo> Grid_Features;
+        std::vector<POIDetailedInfo> Grid_POIs;
+        std::vector<StreetSegmentDetailedInfo> Grid_Segments;
+        std::vector<IntersectionInfo> Grid_Intersections;
+
+        void draw_grid_features (ezgl::renderer *g, float factor);
+        void draw_grid_segments (ezgl::renderer *g);
+        void draw_grid_POIs (ezgl::renderer *g);
 };
 
 extern Grid MapGrids[NUM_GRIDS][NUM_GRIDS];
+extern std::vector<bool> check_feature_drawn;
 
 #endif /* GRID_H */

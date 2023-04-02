@@ -170,20 +170,20 @@ double findDistanceBetweenTwoPoints(LatLon point_1, LatLon point_2){
     lon1 = point_1.longitude() * kDegreeToRadian;
     lat2 = point_2.latitude() * kDegreeToRadian;
     lon2 = point_2.longitude() * kDegreeToRadian;
-    latavg = (lat1 + lat2)/2;
+    latavg = (lat1 + lat2) / 2;
     // Convert to cartesian coordinates
     x1 = kEarthRadiusInMeters * lon1 * cos(latavg);
     y1 = kEarthRadiusInMeters * lat1;
     x2 = kEarthRadiusInMeters * lon2 * cos(latavg);
     y2 = kEarthRadiusInMeters * lat2;
     // Find distance between (x1, y1) and (x2, y2)
-    double distance = sqrt(pow((y2-y1),2) + pow((x2-x1),2));
+    double distance = sqrt(pow((y2 - y1), 2) + pow((x2 - x1), 2));
     return distance;
 }
 
 double findDistanceBetweenTwoPoints (ezgl::point2d point_1, ezgl::point2d point_2)
 {
-    return sqrt(pow((point_2.y - point_1.y), 2) + pow((point_2.x - point_1.x),2));
+    return sqrt(pow((point_2.y - point_1.y), 2) + pow((point_2.x - point_1.x), 2));
 }
 
 // Returns the length of the given street segment in meters
@@ -554,6 +554,7 @@ void init_features()
     for (int featureIdx = 0; featureIdx < featureNum; featureIdx++)
     {
         FeatureDetailedInfo tempFeatureInfo;
+        tempFeatureInfo.id = featureIdx;
         tempFeatureInfo.featureType = getFeatureType(featureIdx);
         tempFeatureInfo.featureOSMID = getFeatureOSMID(featureIdx);
 
@@ -680,12 +681,12 @@ void init_POI(){
         POI_AllInfo.push_back(tempPOIInfo);
         
         // If POI is a food place, add to POI_AllFood
-        if (tempPOIInfo.POIType == "bar" || tempPOIInfo.POIType == "beer" || tempPOIInfo.POIType == "cafe" || tempPOIInfo.POIType == "cafe;fast_food" 
-            || tempPOIInfo.POIType == "cater" || tempPOIInfo.POIType == "fast_food" || tempPOIInfo.POIType == "food_court" || tempPOIInfo.POIType == "ice_cream"
-            || tempPOIInfo.POIType == "old_restaurant" || tempPOIInfo.POIType == "pub" || tempPOIInfo.POIType == "restaurant" || tempPOIInfo.POIType == "veterinary")
-        {
-            POI_AllFood.insert(std::make_pair(tempPOIInfo.POIName + " - " + std::to_string(tempIdx), tempPOIInfo));
-        }
+        // if (tempPOIInfo.POIType == "bar" || tempPOIInfo.POIType == "beer" || tempPOIInfo.POIType == "cafe" || tempPOIInfo.POIType == "cafe;fast_food" 
+        //     || tempPOIInfo.POIType == "cater" || tempPOIInfo.POIType == "fast_food" || tempPOIInfo.POIType == "food_court" || tempPOIInfo.POIType == "ice_cream"
+        //     || tempPOIInfo.POIType == "old_restaurant" || tempPOIInfo.POIType == "pub" || tempPOIInfo.POIType == "restaurant" || tempPOIInfo.POIType == "veterinary")
+        // {
+        //     POI_AllFood.insert(std::make_pair(tempPOIInfo.POIName + " - " + std::to_string(tempIdx), tempPOIInfo));
+        // }
 
         // Add POIs to grids
         int row = (tempPOIInfo.POIPoint.y - world_bottom_left.y) / grid_height;
@@ -728,7 +729,7 @@ void init_segments()
         double max_y = from_xy.y;
         double min_x = from_xy.x;
         double min_y = from_xy.y;
-
+        if (segment == 187962 || segment == 49755 || segment == 54042 || segment == 151779 || segment == 267111) std::cout << segment << " " << rawInfo.numCurvePoints << std::endl;
         // Pre-calculate length of each street segments (including curve points)
         // Determine bounds of each segment
         if (rawInfo.numCurvePoints == 0)
@@ -745,6 +746,7 @@ void init_segments()
                                                              {max_x, max_y});
         } else
         {
+            
             // Starting length
             processedInfo.length = 0.0; 
             // Iterate through all curve points
@@ -873,7 +875,8 @@ void init_intersections(){
         // Pre-process information for all intersections
         std::string name = getIntersectionName(id);
         Intersection_IntersectionInfo[id].name = name;
-        Intersection_IntersectionInfo[id].position_xy = xy_from_latlon(getIntersectionPosition(id));
+        ezgl::point2d inter_xy = xy_from_latlon(getIntersectionPosition(id));
+        Intersection_IntersectionInfo[id].position_xy = inter_xy;
 
         // Populate vector of all segments connecting to the intersection
         for(int segment = 0; segment < getNumIntersectionStreetSegment(id); segment++) {
@@ -905,6 +908,19 @@ void init_intersections(){
         IntersectionName_IntersectionIdx_no_repeat.insert(std::make_pair(name, id));
         IntersectionName_IntersectionIdx.insert(std::make_pair(name, id));
         IntersectionName_lower_IntersectionIdx.insert(std::make_pair(lower_no_space(name), id));
+
+        // Add Intersections to grids
+        int row = (inter_xy.y - world_bottom_left.y) / grid_height;
+        int col = (inter_xy.x - world_bottom_left.x) / grid_width;
+        if (row >= NUM_GRIDS)
+        {
+            row = NUM_GRIDS - 1;
+        }
+        if (col >= NUM_GRIDS)
+        {
+            col = NUM_GRIDS - 1;
+        }
+        MapGrids[row][col].Grid_Intersections.push_back(Intersection_IntersectionInfo[id]);
     }
 }
 

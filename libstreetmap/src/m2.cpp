@@ -73,6 +73,11 @@ bool direction_display_on = false;
 
 // Rectangle of current visible world, in meters
 ezgl::rectangle visible_world;
+double curr_world_width;
+
+// Index: Featureidx, value: boolean to check if a feature has been drawn
+std::vector<bool> check_feature_drawn(featureNum);
+
 // Starting point and destination point (Initialized to 0, 0) and id to -1, -1
 ezgl::point2d start_point = ezgl::point2d(0, 0);
 ezgl::point2d destination_point = ezgl::point2d(0, 0);
@@ -179,12 +184,14 @@ void draw_main_canvas (ezgl::renderer *g)
     ********************************************************************************/
     // Check for current zoom level through visible width (in meters) of world
     visible_world = g->get_visible_world();
-    double curr_world_width = visible_world.width();
+    curr_world_width = visible_world.width();
+    // Reset all features to be not drawn
+    check_feature_drawn.assign(featureNum, false);
     // highways to be displayed after all other segments
-    std::vector<SegShortInfo> highway_segments; 
+    // std::vector<SegShortInfo> highway_segments;
     // All segments whose street name or arrows will be displayed
     std::vector<SegShortInfo> seg_names_and_arrows; 
-    // Defining 3x4 or 2x3 regions on the screen based on visible world
+    // Defining 3x4 or 2x3 regions on the screen, based on visible world
     std::vector<ezgl::rectangle> visible_regions;
     // For each region, allow showing 1 name, 1 arrow, and 1 subway station
     std::vector<std::vector<int>> available_region = {{1, 1, 1}, {1, 1, 1}, {1, 1, 1}, {1, 1, 1}, 
@@ -260,229 +267,252 @@ void draw_main_canvas (ezgl::renderer *g)
     }
 
     /********************************************************************************
-    * Draw features. Features are sorted by descending areas in Features_AllInfo
+    * Determine which grids can be drawn
     ********************************************************************************/
+    // Determine bounds of MapGrid to be drawn
+    int col_max = (visible_world.right() - world_bottom_left.x) / grid_width;
+    int col_min = (visible_world.left() - world_bottom_left.x) / grid_width;
+    int row_max = (visible_world.top() - world_bottom_left.y) / grid_height;
+    int row_min = (visible_world.bottom() - world_bottom_left.y) / grid_height;
+    // We will draw contents within the grids (col_min - 1 -> col_max + 1) and (row_min - 1 -> row_max + 1)
+    // +-1 is done to support smooth map movement
+    if (col_max > NUM_GRIDS - 2)
+    {
+        col_max = NUM_GRIDS - 2;
+    }
+    if (row_max > NUM_GRIDS - 2)
+    {
+        row_max = NUM_GRIDS - 2;
+    }
+    if (col_min < 1)
+    {
+        col_min = 1;
+    }
+    if (row_min < 1)
+    {
+        row_min = 1;
+    }
+    // Loop through all grids and draw their contents
+    // Draw features within Grid
+    float factor = 1;
     // Determine number of features to be drawn to screen based on zoom levels
-    int numOfFeatureDisplay = featureNum;
     if (curr_world_width >= ZOOM_LIMIT_0)
     {
-        numOfFeatureDisplay = featureNum * FEATURE_ZOOM_0;
+        factor = FEATURE_ZOOM_0;
     } else if (ZOOM_LIMIT_1 <= curr_world_width && curr_world_width < ZOOM_LIMIT_0)
     {
-        numOfFeatureDisplay = featureNum * FEATURE_ZOOM_1;
+        factor = FEATURE_ZOOM_1;
     } else if (ZOOM_LIMIT_2 <= curr_world_width && curr_world_width < ZOOM_LIMIT_1)
     {
-        numOfFeatureDisplay = featureNum * FEATURE_ZOOM_2;
+        factor = FEATURE_ZOOM_2;
     } else if (ZOOM_LIMIT_3 <= curr_world_width && curr_world_width < ZOOM_LIMIT_2)
     {
-        numOfFeatureDisplay = featureNum * FEATURE_ZOOM_3;
+        factor = FEATURE_ZOOM_3;
     }
-    // Displaying features
-    for (int j = 0; j < numOfFeatureDisplay; j++)
+    for (int i = row_min - 1; i <= row_max + 1; i++)
     {
-        FeatureDetailedInfo tempFeatureInfo = Features_AllInfo[j];
-        draw_feature_area(g, tempFeatureInfo);
+        for (int j = col_min - 1; j <= col_max + 1; j++)
+        {
+            if (MapGrids[i][j].Grid_Features.size())
+            {
+                MapGrids[i][j].draw_grid_features(g, factor);
+            }
+            
+        }
+    }
+
+    // Draw street segments within Grid
+    for (int i = row_min - 1; i <= row_max + 1; i++)
+    {
+        for (int j = col_min - 1; j <= col_max + 1; j++)
+        {
+            if (MapGrids[i][j].Grid_Segments.size())
+            {
+                MapGrids[i][j].draw_grid_segments(g);
+            }
+            
+        }
+    }
+            
+    // Draw POIs within Grid if zoomed in
+    if (curr_world_width < ZOOM_LIMIT_4)
+    {
+        for (int i = row_min - 1; i <= row_max + 1; i++)
+        {
+            for (int j = col_min - 1; j <= col_max + 1; j++)
+            {
+                if (MapGrids[i][j].Grid_POIs.size())
+                {
+                    MapGrids[i][j].draw_grid_POIs(g);
+                }
+                
+            }
+        }
+    }
+    // Draw subway if in subway mode
+    if (subway_line_mode)
+    {
+        draw_subway_lines(g);
     }
     
     /********************************************************************************
     * Draw street segments
     ********************************************************************************/
-    for (StreetIdx street_id = 0; street_id < streetNum; street_id++)
-    {
-        // Get vector of all segments
-        std::vector<StreetSegmentIdx> all_segments = Street_StreetInfo.find(street_id)->second.all_segments;
-        int total_segment_amount = all_segments.size();
+    // for (int seg_id = 0; seg_id < segmentNum; seg_id++)
+    // {   
+    //     // Skip segment if segment is part of found_path (will be drawn later)
+    //     if (std::find(found_path.begin(), found_path.end(), seg_id) != found_path.end())
+    //     {
+    //         continue;
+    //     }
+
+    //     // Get LatLon information of from and to intersections from each segments
+    //     IntersectionIdx from_id = Segment_SegmentDetailedInfo[seg_id].from;
+    //     IntersectionIdx to_id = Segment_SegmentDetailedInfo[seg_id].to;
+    //     ezgl::point2d from_xy = Intersection_IntersectionInfo[from_id].position_xy;
+    //     ezgl::point2d to_xy = Intersection_IntersectionInfo[to_id].position_xy;
+
+    //     // Check the type of street this segment belongs to through wayOSMID
+    //     OSMID wayOSMID = Segment_SegmentDetailedInfo[seg_id].wayOSMID;
+    //     std::string highway_type = OSMID_Highway_Type.at(wayOSMID);
         
-        // Street name of current street
-        std::string street_name = Segment_SegmentDetailedInfo[all_segments[0]].streetName;
+    //     // To store information of current street segment (that will be sent to either highway_segments or seg_names_and_arrows)
+    //     SegShortInfo segment_short_info;
 
-        for (int i = 0; i < total_segment_amount; i++)
-        {
-            StreetSegmentIdx seg_id = all_segments[i];
-
-            // Skip segment if segment rectangle is outside of current visible window
-            ezgl::rectangle segment_rect = Segment_SegmentDetailedInfo[seg_id].segmentRectangle;
-            if (!(check_collides(segment_rect, visible_world)
-                || check_contains(segment_rect, visible_world)
-                || check_contains(visible_world, segment_rect))) 
-            {
-                continue;
-            }
-            // Skip segment if segment is part of found_path (will be drawn later)
-            if (std::find(found_path.begin(), found_path.end(), seg_id) != found_path.end())
-            {
-                continue;
-            }
-
-            // Get LatLon information of from and to intersections from each segments
-            IntersectionIdx from_id = Segment_SegmentDetailedInfo[seg_id].from;
-            IntersectionIdx to_id = Segment_SegmentDetailedInfo[seg_id].to;
-            ezgl::point2d from_xy = Intersection_IntersectionInfo[from_id].position_xy;
-            ezgl::point2d to_xy = Intersection_IntersectionInfo[to_id].position_xy;
-
-            // Check the type of street this segment belongs to through wayOSMID
-            OSMID wayOSMID = Segment_SegmentDetailedInfo[seg_id].wayOSMID;
-            std::string highway_type = OSMID_Highway_Type.at(wayOSMID);
+    //     // Stores highways into vector to be drawn later
+    //     if ((highway_type == "motorway" || highway_type == "motorway_link"))
+    //     {   
+    //         segment_short_info.from_xy = from_xy;
+    //         segment_short_info.to_xy = to_xy;
+    //         segment_short_info.seg_id = seg_id;
+    //         segment_short_info.street_type = highway_type;
+    //         highway_segments.push_back(segment_short_info);
             
-            // To store information of current street segment (that will be sent to either highway_segments or seg_names_and_arrows)
-            SegShortInfo segment_short_info;
+    //         // Highway contributes to name display if appropriate
+    //         if (curr_world_width < ZOOM_LIMIT_2 && Segment_SegmentDetailedInfo[seg_id].streetName != "<unknown>" 
+    //             && highway_type == "motorway" )
+    //         {
+    //             segment_short_info.street_name = Segment_SegmentDetailedInfo[seg_id].streetName;
+    //             segment_short_info.arrow = Segment_SegmentDetailedInfo[seg_id].oneWay;
+    //             seg_names_and_arrows.push_back(segment_short_info);
+    //         }
+    //         continue;
+    //     }
 
-            // Stores highways into vector to be drawn later
-            if ((highway_type == "motorway" || highway_type == "motorway_link"))
-            {   
-                segment_short_info.from_xy = from_xy;
-                segment_short_info.to_xy = to_xy;
-                segment_short_info.seg_id = seg_id;
-                segment_short_info.street_type = highway_type;
-                highway_segments.push_back(segment_short_info);
-                
-                // Highway contributes to name display if appropriate
-                if (curr_world_width < ZOOM_LIMIT_2 && street_name != "<unknown>" 
-                    && highway_type == "motorway" && (i != 0) && (i % 2 == 0))
-                {
-                    segment_short_info.street_name = street_name;
-                    segment_short_info.arrow = Segment_SegmentDetailedInfo[seg_id].oneWay;
-                    seg_names_and_arrows.push_back(segment_short_info);
-                }
-                continue;
-            }
+    //     // Draws different amount of data based on different zoom levels
+    //     if (curr_world_width >= ZOOM_LIMIT_0)
+    //     {
+    //         if (highway_type == "primary")
+    //         {
+    //             draw_street_segment_pixel(g, seg_id, from_xy, to_xy, highway_type);
+    //         }
+    //     } else if (ZOOM_LIMIT_1 <= curr_world_width && curr_world_width < ZOOM_LIMIT_0)
+    //     {
+    //         if (highway_type == "trunk" || highway_type == "primary" || highway_type == "secondary")
+    //         {   
+    //             draw_street_segment_pixel(g, seg_id, from_xy, to_xy, highway_type);
+    //         }
+    //     } else if (ZOOM_LIMIT_2 <= curr_world_width && curr_world_width < ZOOM_LIMIT_1)
+    //     {
+    //         if (highway_type == "trunk" || highway_type == "primary" || highway_type == "secondary" || highway_type == "tertiary")
+    //         {
+    //             draw_street_segment_pixel(g, seg_id, from_xy, to_xy, highway_type);
+    //         }
+    //     } else // Displaying street names and arrows start here
+    //     {                
+    //         // Display immediately based on street type and zoom levels
+    //         // Only display all types of street (except for highway for later) when < ZOOM_LIMIT_3
+    //         if (ZOOM_LIMIT_3 <= curr_world_width && curr_world_width < ZOOM_LIMIT_2)
+    //         {
+    //             if (highway_type == "trunk" || highway_type == "primary"
+    //                 || highway_type == "secondary" || highway_type == "tertiary" 
+    //                 || highway_type == "unclassified" || highway_type == "residential")
+    //             {
+    //                 draw_street_segment_meters(g, seg_id, from_xy, to_xy, highway_type);
+    //             }
+    //         } else if (curr_world_width < ZOOM_LIMIT_3 && highway_type != "motorway" && highway_type != "motorway_link")
+    //         {
+    //             draw_street_segment_meters(g, seg_id, from_xy, to_xy, highway_type);
+    //         }
 
-            // Draws different amount of data based on different zoom levels
-            if (curr_world_width >= ZOOM_LIMIT_0)
-            {
-                if (highway_type == "primary")
-                {
-                    draw_street_segment_pixel(g, seg_id, from_xy, to_xy, highway_type);
-                }
-            } else if (ZOOM_LIMIT_1 <= curr_world_width && curr_world_width < ZOOM_LIMIT_0)
-            {
-                if (highway_type == "trunk" || highway_type == "primary" || highway_type == "secondary")
-                {   
-                    draw_street_segment_pixel(g, seg_id, from_xy, to_xy, highway_type);
-                }
-            } else if (ZOOM_LIMIT_2 <= curr_world_width && curr_world_width < ZOOM_LIMIT_1)
-            {
-                if (highway_type == "trunk" || highway_type == "primary" || highway_type == "secondary" || highway_type == "tertiary")
-                {
-                    draw_street_segment_pixel(g, seg_id, from_xy, to_xy, highway_type);
-                }
-            } else // Displaying street names and arrows start here
-            {                
-                // Display immediately based on street type and zoom levels
-                // Only display all types of street (except for highway for later) when < ZOOM_LIMIT_3
-                if (ZOOM_LIMIT_3 <= curr_world_width && curr_world_width < ZOOM_LIMIT_2)
-                {
-                    if (highway_type == "trunk" || highway_type == "primary"
-                        || highway_type == "secondary" || highway_type == "tertiary" 
-                        || highway_type == "unclassified" || highway_type == "residential")
-                    {
-                        draw_street_segment_meters(g, seg_id, from_xy, to_xy, highway_type);
-                    }
-                } else if (curr_world_width < ZOOM_LIMIT_3 && highway_type != "motorway" && highway_type != "motorway_link")
-                {
-                    draw_street_segment_meters(g, seg_id, from_xy, to_xy, highway_type);
-                }
+    //         // Get street names and position of segments chosen to display name/arrow
+    //         // Only display names for "main" streets
+    //         if ((ZOOM_LIMIT_3 <= curr_world_width && curr_world_width < ZOOM_LIMIT_2
+    //             && Segment_SegmentDetailedInfo[seg_id].streetName != "<unknown>"
+    //             && (highway_type == "primary" || highway_type == "secondary"))
+    //             ||
+    //             (curr_world_width < ZOOM_LIMIT_3
+    //             && Segment_SegmentDetailedInfo[seg_id].streetName != "<unknown>"
+    //             && (highway_type == "primary" || highway_type == "secondary"
+    //                 || highway_type == "tertiary" || highway_type == "residential")))
+    //         {
+    //             if (Segment_SegmentDetailedInfo[seg_id].length < 100) 
+    //             {
+    //                 continue;        // Skip segments that are too short
+    //             }
+    //             segment_short_info.from_xy = from_xy;
+    //             segment_short_info.to_xy = to_xy;
+    //             segment_short_info.street_name = Segment_SegmentDetailedInfo[seg_id].streetName;
+    //             // Separate between name-displaying segments and arrow-displaying segments
+    //             segment_short_info.arrow = Segment_SegmentDetailedInfo[seg_id].oneWay;
+    //             seg_names_and_arrows.push_back(segment_short_info);
+    //         }
+    //     }
+    // }
 
-                // Get street names and position of segments chosen to display name/arrow
-                // Only display names for "main" streets
-                if ((ZOOM_LIMIT_3 <= curr_world_width && curr_world_width < ZOOM_LIMIT_2
-                    && street_name != "<unknown>" && (i != 0) && (i % 2 == 0)
-                    && (highway_type == "primary" || highway_type == "secondary"))
-                    ||
-                    (curr_world_width < ZOOM_LIMIT_3
-                    && street_name != "<unknown>" && (i != 0) && (i % 2 == 0)
-                    && (highway_type == "primary" || highway_type == "secondary"
-                       || highway_type == "tertiary" || highway_type == "residential")))
-                {
-                    if (Segment_SegmentDetailedInfo[seg_id].length < 100) 
-                    {
-                        continue;        // Skip segments that are too short
-                    }
-                    segment_short_info.from_xy = from_xy;
-                    segment_short_info.to_xy = to_xy;
-                    segment_short_info.street_name = street_name;
-                    // Separate between name-displaying segments and arrow-displaying segments
-                    segment_short_info.arrow = Segment_SegmentDetailedInfo[seg_id].oneWay;
-                    seg_names_and_arrows.push_back(segment_short_info);
-                }
-            }
-        }
-    }
+    // // Draw motorway and motorway-link (highways) above other streets
+    // for (int i = 0; i < highway_segments.size(); i++)
+    // {
+    //     SegShortInfo segInfo = highway_segments[i];
+    //     if (curr_world_width >= ZOOM_LIMIT_2 && segInfo.street_type == "motorway")
+    //     {
+    //         draw_street_segment_pixel(g, segInfo.seg_id, segInfo.from_xy, segInfo.to_xy, "motorway");
+    //     } else if (curr_world_width < ZOOM_LIMIT_2)
+    //     {
+    //         draw_street_segment_meters(g, segInfo.seg_id, segInfo.from_xy, segInfo.to_xy, "motorway");
+    //     }
+    // }
 
-    // Draw motorway and motorway-link (highways) above other streets
-    for (int i = 0; i < highway_segments.size(); i++)
-    {
-        SegShortInfo segInfo = highway_segments[i];
-        if (curr_world_width >= ZOOM_LIMIT_2 && segInfo.street_type == "motorway")
-        {
-            draw_street_segment_pixel(g, segInfo.seg_id, segInfo.from_xy, segInfo.to_xy, "motorway");
-        } else if (curr_world_width < ZOOM_LIMIT_2)
-        {
-            draw_street_segment_meters(g, segInfo.seg_id, segInfo.from_xy, segInfo.to_xy, "motorway");
-        }
-    }
-
-    /********************************************************************************
-    * Draw Subways
-    ********************************************************************************/
-    // Display subway lines
-    if (subway_line_mode || subway_station_mode)
-    {
-        g->set_line_width(4);
-        int count = NUM_REGIONS;
-        for (int route = 0; route < AllSubwayRoutes.size(); route++)
-        {
-            // Display subway route
-            if (AllSubwayRoutes[route].track_points.size() == 0)
-            {
-                continue;
-            }
-            // Set subway line to processed color
-            g->set_color((AllSubwayRoutes[route].colour));
-            for (int way = 0; way < (AllSubwayRoutes[route].track_points.size()); way++)
-            {
-                for (int node = 0; node < AllSubwayRoutes[route].track_points[way].size() - 1; node++)
-                {
-                    g->draw_line(AllSubwayRoutes[route].track_points[way][node], 
-                                AllSubwayRoutes[route].track_points[way][node + 1]);
-                }
-            }
-        }
-        for (int route = 0; route < AllSubwayRoutes.size(); route++)
-        {
-            // Display subway stations
-            // TODO: Avoid redundant stations
-            if (AllSubwayRoutes[route].station_points.size() == 0)
-            {
-                continue;
-            }
-            for (int i = 0; i < AllSubwayRoutes[route].station_points.size() && count; i++)
-            {
-                // Skips if subway is not in visible world
-                if (visible_world.contains(AllSubwayRoutes[route].station_points[i]))
-                {
-                    // Draw all if at very low zoom level
-                    if (curr_world_width < ZOOM_LIMIT_4)
-                    {
-                        draw_pin(g, AllSubwayRoutes[route].station_points[i], "subway_station");
-                    } else
-                    {
-                        for (int j = 0; j < NUM_REGIONS; j++)
-                        {
-                            // Draw 12 stations for high zoom levels
-                            if (available_region[j][2] && visible_regions[j].contains(AllSubwayRoutes[route].station_points[i]))
-                            {
-                                available_region[j][2]--;
-                                draw_pin(g, AllSubwayRoutes[route].station_points[i], "subway_station");
-                                count--;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
+    
+    // Display subway station
+//    if (subway_station_mode)
+//    {
+//        int count = NUM_REGIONS;
+//        for (int route = 0; route < AllSubwayRoutes.size(); route++)
+//        {
+//            // Display subway stations
+//            // TODO: Avoid redundant stations
+//            if (AllSubwayRoutes[route].station_points.size() == 0)
+//            {
+//                continue;
+//            }
+//            for (int i = 0; i < AllSubwayRoutes[route].station_points.size() && count; i++)
+//            {
+//                // Skips if subway is not in visible world
+//                if (visible_world.contains(AllSubwayRoutes[route].station_points[i]))
+//                {
+//                    // Draw all if at very low zoom level
+//                    if (curr_world_width < ZOOM_LIMIT_4)
+//                    {
+//                        draw_pin(g, AllSubwayRoutes[route].station_points[i], "subway_station");
+//                    } else
+//                    {
+//                        for (int j = 0; j < NUM_REGIONS; j++)
+//                        {
+//                            // Draw 12 stations for high zoom levels
+//                            if (available_region[j][2] && visible_regions[j].contains(AllSubwayRoutes[route].station_points[i]))
+//                            {
+//                                available_region[j][2]--;
+//                                draw_pin(g, AllSubwayRoutes[route].station_points[i], "subway_station");
+//                                count--;
+//                                break;
+//                            }
+//                        }
+//                    }
+//                }
+//            }
+//        }
+    // }
 
     /********************************************************************************
     * Draw result path of navigation mode
@@ -595,54 +625,16 @@ void draw_main_canvas (ezgl::renderer *g)
             }
         }
     }
-    
-    /********************************************************************************
-    * Draw POIs and Icons
-    ********************************************************************************/
-    poi_display.clear();
-    poi_display.resize(NUM_REGIONS);
-    // Get POI names and position chosen to display
-    for (int tempIdx = 0; tempIdx < POINum; tempIdx++)
-    {
-        POIDetailedInfo tempPOI = POI_AllInfo[tempIdx];
-        if (curr_world_width < ZOOM_LIMIT_4)
-        {
-            for (int regionIdx = 0; regionIdx < NUM_REGIONS; regionIdx++)
-            {
-                if (visible_regions[regionIdx].contains(tempPOI.POIPoint))
-                {
-                    poi_display[regionIdx].push_back(tempPOI);
-                    break;
-                }
-            }
-        }
-    }
-    // Display the selected POIs and Icons
-    if (curr_world_width < ZOOM_LIMIT_4)
-    {
-        for (int regionIdx = 0; regionIdx < NUM_REGIONS; regionIdx++)
-        {
-            draw_POIs(g, regionIdx);
-        }
-    }
 
     /********************************************************************************
     * Draw pins for currently selected Intersections/POIs
     ********************************************************************************/
     for (auto& point : pin_display_start)
     {
-        if (!visible_world.contains(point))
-        {
-            continue;
-        }
         draw_pin(g, point, "red_pin");
     }
     for (auto& point : pin_display_dest)
     {
-        if (!visible_world.contains(point))
-        {
-            continue;
-        }
         draw_pin(g, point, "dest_flag");
     }
     
