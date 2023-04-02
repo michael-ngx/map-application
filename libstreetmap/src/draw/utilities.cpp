@@ -42,20 +42,29 @@ void move_camera (ezgl::point2d center, double new_width, ezgl::application* app
 
 void view_path (ezgl::application* application, double camera_level)
 {
-    double max_y = Segment_SegmentDetailedInfo[found_path[0]].segmentRectangle.top();
-    double min_y = Segment_SegmentDetailedInfo[found_path[0]].segmentRectangle.bottom();
-    double max_x = Segment_SegmentDetailedInfo[found_path[0]].segmentRectangle.right();
-    double min_x = Segment_SegmentDetailedInfo[found_path[0]].segmentRectangle.left();
-    for(auto i : found_path)
+    
+    if (found_path.size() == 0)
     {
-        max_y = std::max(max_y, Segment_SegmentDetailedInfo[i].segmentRectangle.top());
-        min_y = std::min(min_y, Segment_SegmentDetailedInfo[i].segmentRectangle.bottom());
-        max_x = std::max(max_x, Segment_SegmentDetailedInfo[i].segmentRectangle.right());
-        min_x = std::min(min_x, Segment_SegmentDetailedInfo[i].segmentRectangle.left());
+        std::string pathDirections = "Please Enter Two Valid Locations for Direction\n";
+        const char* message = pathDirections.c_str();
+        gtk_text_buffer_set_text(DirectionTextBuffer, message, -1);
+    } else
+    {
+        double max_y = Segment_SegmentDetailedInfo[found_path[0]].segmentRectangle.top();
+        double min_y = Segment_SegmentDetailedInfo[found_path[0]].segmentRectangle.bottom();
+        double max_x = Segment_SegmentDetailedInfo[found_path[0]].segmentRectangle.right();
+        double min_x = Segment_SegmentDetailedInfo[found_path[0]].segmentRectangle.left();
+        for(auto i : found_path)
+        {
+            max_y = std::max(max_y, Segment_SegmentDetailedInfo[i].segmentRectangle.top());
+            min_y = std::min(min_y, Segment_SegmentDetailedInfo[i].segmentRectangle.bottom());
+            max_x = std::max(max_x, Segment_SegmentDetailedInfo[i].segmentRectangle.right());
+            min_x = std::min(min_x, Segment_SegmentDetailedInfo[i].segmentRectangle.left());
+        }
+        double new_width = std::max((max_y - min_y), (max_x - min_x));
+        ezgl::point2d center = {(min_x + max_x) / 2, (max_y + min_y) / 2};
+        move_camera(center, new_width * camera_level, application);
     }
-    double new_width = std::max((max_y - min_y), (max_x - min_x));
-    ezgl::point2d center = {(min_x + max_x) / 2, (max_y + min_y) / 2};
-    move_camera(center, new_width * camera_level, application);
 }
 
 //Input: vector of street segment index of the optimized path. Output: a string of directions
