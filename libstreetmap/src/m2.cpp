@@ -41,7 +41,9 @@ GObject *EndNavigationButton;
 GObject *NightModeButton;
 GObject *DayModeButton;
 GObject *DirectionButton;
-
+GObject *DirectionDisplay;
+GObject *DirectionWindow;
+GtkTextBuffer *DirectionTextBuffer;
 
 GObject *FilterComboBox;
 GObject *CityChangeComboBox;
@@ -65,6 +67,8 @@ bool subway_station_mode = false;
 bool subway_line_mode = false;
 // Checks if the navigation mode if turned on (to allow navigation)
 bool navigation_mode = false;
+// Checks if the direction display is on
+bool direction_display_on = false;
 
 // Rectangle of current visible world, in meters
 ezgl::rectangle visible_world;

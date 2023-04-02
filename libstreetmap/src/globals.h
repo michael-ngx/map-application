@@ -22,6 +22,9 @@ extern GObject *EndNavigationButton;
 extern GObject *NightModeButton;
 extern GObject *DayModeButton;
 extern GObject *DirectionButton;
+extern GObject *DirectionDisplay;
+extern GObject *DirectionWindow;
+extern GtkTextBuffer *DirectionTextBuffer;
 
 extern GObject *FilterComboBox;
 extern GObject *CityChangeComboBox;
@@ -50,6 +53,8 @@ extern bool subway_station_mode;
 extern bool subway_line_mode;
 // Checks if the navigation mode if turned on (to allow navigation) - M2
 extern bool navigation_mode;
+// Checks if the direction display is on
+extern bool direction_display_on;
 
 // Distance of closest intersection/POI, calculated in M1 - used in M2
 // Distances are used to determine whether user selected an intersection or a POI
