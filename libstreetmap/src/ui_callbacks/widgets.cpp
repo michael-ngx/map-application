@@ -42,7 +42,7 @@ void search_activate_cbk_start (GtkSearchEntry */*self*/, ezgl::application *app
                 return;
             }
             // Rezoom the map to view the path
-            view_path(application);
+            view_path(application, 2);
             application->refresh_drawing();
         }
     } else
@@ -87,7 +87,7 @@ void search_activate_cbk_dest (GtkSearchEntry */*self*/, ezgl::application* appl
                 return;
             }
             // Rezoom the map to view the path
-            view_path(application);
+            view_path(application, 2);
             application->refresh_drawing();
         }
     }
@@ -271,17 +271,20 @@ void tutorial_cbk(GtkButton* /*self*/, ezgl::application* application)
 }
 
 // Callback function for direction button
-void direction_cbk(GtkButton* /*self*/)
+void direction_cbk(GtkButton* /*self*/, ezgl::application* application)
 {
     if (!direction_display_on)
     {
         generate_directions();
         gtk_widget_show(GTK_WIDGET(DirectionDisplay));
         gtk_widget_show(GTK_WIDGET(DirectionWindow));
+        view_path(application, 2.5);
         direction_display_on = true;
+
     } else {
         gtk_widget_hide(GTK_WIDGET(DirectionDisplay));
         gtk_widget_hide(GTK_WIDGET(DirectionWindow));
+        view_path(application, 2);
         direction_display_on = false;
     }
 }

@@ -21,7 +21,7 @@ void city_change_cbk (GtkComboBoxText* self, ezgl::application* application);
 void subway_cbk (GtkButton* /*self*/, ezgl::application* application);
 void subway_off_cbk (GtkButton* /*self*/, ezgl::application* application);
 void tutorial_cbk (GtkButton* /*self*/, ezgl::application* application);
-void direction_cbk (GtkButton* /*self*/);
+void direction_cbk (GtkButton* /*self*/, ezgl::application* application);
 void navigation_cbk (GtkButton* /*self*/, ezgl::application* application);
 void end_navigation_cbk (GtkButton* /*self*/, ezgl::application* application);
 void night_mode_cbk (GtkButton* /*self*/, ezgl::application* application);

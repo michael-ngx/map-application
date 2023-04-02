@@ -304,7 +304,7 @@ void act_on_mouse_click (ezgl::application* application, GdkEventButton* /*event
             generate_directions();
             
             // Rezoom the map to view the path
-            view_path(application);
+            view_path(application, 2);
         }
     }
     application->refresh_drawing();
