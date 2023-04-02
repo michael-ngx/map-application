@@ -312,7 +312,6 @@ void direction_cbk(GtkButton* /*self*/, ezgl::application* application)
     } else {
         gtk_widget_hide(GTK_WIDGET(DirectionDisplay));
         gtk_widget_hide(GTK_WIDGET(DirectionWindow));
-        view_path(application, CAMERALVL_LARGE);
         direction_display_on = false;
     }
 }
