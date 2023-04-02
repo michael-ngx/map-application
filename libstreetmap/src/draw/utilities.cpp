@@ -138,6 +138,7 @@ void generate_directions ()
                      pow(pow(deltaXSeg3,2) + pow(deltaYSeg3,2),0.5))) < M_PI_4)
                 {
                     pathDirections += "Make a U-turn.\n";
+                    continueOnStreet = true;
                 } else {
                     if (continueOnStreet)
                     {
