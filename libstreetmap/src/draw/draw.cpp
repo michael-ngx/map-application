@@ -5,11 +5,20 @@
 *************************************************************/
 // Draw street segments with pixels (for far zoom levels)
 void draw_street_segment_pixel (ezgl::renderer *g, StreetSegmentIdx seg_id, 
-                          ezgl::point2d from_xy, ezgl::point2d to_xy, 
-                          std::string street_type)
+                                ezgl::point2d from_xy, ezgl::point2d to_xy, 
+                                std::string street_type)
 {
-    // Set colors and line width according to street type
-    if (street_type == "motorway" || street_type == "motorway_link")
+    // Set colors according to street type
+    if (street_type == "path")
+    {
+        if (!night_mode)
+        {
+            g->set_color(ezgl::DARK_SLATE_BLUE);
+        } else
+        {
+            g->set_color(ezgl::RED);
+        }
+    } else if (street_type == "motorway" || street_type == "motorway_link")
     {
         if (!night_mode)
         {
@@ -28,20 +37,9 @@ void draw_street_segment_pixel (ezgl::renderer *g, StreetSegmentIdx seg_id,
             g->set_color(96, 96, 96);
         }
     }
-    if (street_type == "path")
-    {
-        if (night_mode)
-        {
-            g->set_color(ezgl::RED);
-        } else
-        {
-            g->set_color(ezgl::DARK_SLATE_BLUE);
-        }
-    }
     // Set line width based on current zoom level and street type    
     int line_width = get_street_width_pixel(street_type); 
     g->set_line_width(line_width);
-
     // Round street ends
     g->set_line_cap(ezgl::line_cap(1));
     // Draw street segments including curvepoints
@@ -65,16 +63,25 @@ void draw_street_segment_meters (ezgl::renderer *g, StreetSegmentIdx seg_id,
                                 std::string street_type)
 {
     // Set colors according to street type
-    if (street_type == "motorway" || street_type == "motorway_link")
+    if (street_type == "path")
+    {
+        if (!night_mode)
+        {
+            g->set_color(ezgl::DARK_SLATE_BLUE);
+        } else
+        {
+            g->set_color(ezgl::RED);
+        }
+    } else if (street_type == "motorway" || street_type == "motorway_link")
     {
         if (!night_mode)
         {
             g->set_color(255, 212, 124);
         } else
         {
-            g->set_color(58, 128, 181);    
+            g->set_color(58, 128, 181);
         }
-    } else
+    } else 
     {
         if (!night_mode)
         {
@@ -82,16 +89,6 @@ void draw_street_segment_meters (ezgl::renderer *g, StreetSegmentIdx seg_id,
         } else
         {
             g->set_color(96, 96, 96);
-        }
-    }
-    if (street_type == "path")
-    {
-        if (night_mode)
-        {
-            g->set_color(ezgl::RED);
-        } else
-        {
-            g->set_color(ezgl::DARK_SLATE_BLUE);
         }
     }
     // Set street width (in meters) based on current zoom level and street type 
@@ -263,7 +260,7 @@ int get_street_width_meters (std::string& street_type)
 // Draw street names
 *************************************************************/
 // Draws text on street segments
-void draw_name_or_arrow (ezgl::renderer *g, std::string street_name, bool arrow,
+void draw_name_and_arrow (ezgl::renderer *g, std::string street_name, bool one_way,
                         ezgl::point2d from_xy, ezgl::point2d to_xy, bool on_path)
 {
     // Calculate text rotation based on segment slope                   // TODO: Curved segments!
@@ -271,10 +268,10 @@ void draw_name_or_arrow (ezgl::renderer *g, std::string street_name, bool arrow,
     double angle_degree;
     if (from_xy.x == to_xy.x)
     {
-        if (from_xy.y > to_xy.y && arrow)
+        if (from_xy.y > to_xy.y)
         {
             angle_degree = 270;
-        } else if (from_xy.y == to_xy.y && arrow)
+        } else if (from_xy.y == to_xy.y)
         {
             return;
         } else 
@@ -287,16 +284,22 @@ void draw_name_or_arrow (ezgl::renderer *g, std::string street_name, bool arrow,
         if (slope >= 0)
         {
             angle_degree = atan2(abs(to_xy.y - from_xy.y), abs(to_xy.x - from_xy.x)) / kDegreeToRadian;   // 1,0 to 0,1
-            if (arrow && from_xy.y > to_xy.y) 
+            if (one_way && from_xy.y > to_xy.y) 
             {
-                angle_degree = angle_degree + 180;    // 0,1 to 1,0
+                street_name = "<-" + street_name;
+            } else if (one_way)
+            {
+                street_name = street_name + "->";
             }
         } else
         {
             angle_degree = 360 - atan2(abs(to_xy.y - from_xy.y), abs(to_xy.x - from_xy.x)) / kDegreeToRadian; // 1,1 to 0,0
-            if (arrow && from_xy.y < to_xy.y)
+            if (one_way && from_xy.y < to_xy.y)
             {
-                angle_degree = angle_degree - 180;    // 0,0 to 1,1
+                street_name = "<- " + street_name;
+            } else if (one_way)
+            {
+                street_name = street_name + " ->";
             }
         }
     }
@@ -324,13 +327,7 @@ void draw_name_or_arrow (ezgl::renderer *g, std::string street_name, bool arrow,
         }
     }
     g->set_font_size(12);
-    if (arrow)
-    {    
-        g->draw_text(mid_xy, "->");
-    } else 
-    {
-        g->draw_text(mid_xy, street_name);
-    }
+    g->draw_text(mid_xy, street_name);
 }
 
 /************************************************************

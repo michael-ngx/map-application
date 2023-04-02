@@ -462,7 +462,9 @@ void closeMap() {
     {
         for (int j = 0; j < NUM_GRIDS; j++)
         {
-            MapGrids[i][j].Grid_Segments.clear();
+            MapGrids[i][j].Grid_Non_Motorway_Segments.clear();
+            MapGrids[i][j].Grid_Motorway_Segments.clear();
+            MapGrids[i][j].Grid_Names_And_Arrows_Segments.clear();
             MapGrids[i][j].Grid_Intersections.clear();
             MapGrids[i][j].Grid_Features.clear();
             MapGrids[i][j].Grid_POIs.clear();
@@ -486,11 +488,11 @@ void m1_init(){
     // Initialize database
     init_features();
     init_POI();
+    init_osm_ways();
     init_segments();
     init_streets();
     init_intersections();
     init_osm_nodes();
-    init_osm_ways();
     init_osm_relations_subways();
 }
 
@@ -663,6 +665,7 @@ void init_POI(){
 // *******************************************************************
 // Street Segments
 // *******************************************************************
+// init_segments() must be done after init_osm_ways(), to record street type for each segments
 void init_segments()
 {
     // Vector of StreetSegmentDetailedInfo (StreetSegmentIdx - StreetSegmentDetailedInfo)
@@ -671,7 +674,9 @@ void init_segments()
         StreetSegmentInfo rawInfo = getStreetSegmentInfo(segment);          // Raw info object   
         StreetSegmentDetailedInfo processedInfo;                            // Processed info object
         
+        processedInfo.id = segment;
         processedInfo.wayOSMID = rawInfo.wayOSMID;
+        processedInfo.highway_type = OSMID_Highway_Type.at(rawInfo.wayOSMID);
         processedInfo.from = rawInfo.from;
         processedInfo.to = rawInfo.to;
         processedInfo.oneWay = rawInfo.oneWay;
@@ -685,6 +690,8 @@ void init_segments()
         LatLon to_latlon = getIntersectionPosition(rawInfo.to);
         ezgl::point2d from_xy = xy_from_latlon(point_1_latlon);
         ezgl::point2d to_xy = xy_from_latlon(to_latlon);
+        processedInfo.from_xy = from_xy;
+        processedInfo.to_xy = to_xy;
         // Compare to get max min xy of each segment
         double max_x = std::max(to_xy.x, from_xy.x);
         double max_y = std::max(to_xy.y, from_xy.y);
@@ -755,7 +762,20 @@ void init_segments()
         {
             for (int j = col_min; j <= col_max; j++)
             {
-                MapGrids[i][j].Grid_Segments.push_back(processedInfo);
+                if (processedInfo.highway_type == "motorway" || processedInfo.highway_type == "motorway_link")
+                {
+                    MapGrids[i][j].Grid_Motorway_Segments.push_back(processedInfo);
+                } else
+                {
+                    MapGrids[i][j].Grid_Non_Motorway_Segments.push_back(processedInfo);
+                }
+
+                if (processedInfo.streetName != "<unknown>" && processedInfo.length > 100
+                    && (processedInfo.highway_type == "primary" || processedInfo.highway_type == "secondary"
+                        || processedInfo.highway_type == "tertiary" || processedInfo.highway_type == "residential"))
+                {
+                    MapGrids[i][j].Grid_Names_And_Arrows_Segments.push_back(processedInfo);
+                }
             }
         }
     }
@@ -764,10 +784,11 @@ void init_segments()
 // *******************************************************************
 // Streets
 // *******************************************************************
-// Init street must be done after init_segments (to record all segments and intersections within a street)
+// init_streets() must be done after init_segments() (to record all segments and intersections within a street)
 void init_streets()
 {
-    for(int seg_id = 0; seg_id < segmentNum; seg_id++){
+    for(int seg_id = 0; seg_id < segmentNum; seg_id++)
+    {
         // Info of current segment
         StreetSegmentDetailedInfo segmentInfo = Segment_SegmentDetailedInfo[seg_id];
         StreetIdx street_id = segmentInfo.streetID;
@@ -814,7 +835,7 @@ void init_streets()
 // *******************************************************************
 // Intersections
 // *******************************************************************
-// Init intersection must be done after init segments, to identify adjacent intersections and the segments to them
+// init_intersections() must be done after init_segments(), to identify adjacent intersections and the segments to them
 void init_intersections(){
     Intersection_IntersectionInfo.resize(intersectionNum);
 
@@ -898,7 +919,8 @@ void init_osm_nodes()
     }
 }
 
-// Pre-load data for OSMWays - Only consider OSMIDs having a tag of highway, record highway type
+// Pre-load data for OSMWays - Only consider OSMIDs having a tag of "highway", record highway type (street type)
+// This function must be called before init_segments() to record street segment type
 void init_osm_ways()
 {
     for (int way = 0; way < getNumberOfWays(); ++way)

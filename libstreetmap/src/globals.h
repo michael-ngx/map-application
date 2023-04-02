@@ -65,6 +65,7 @@ extern double clicked_POI_distance;
 // Rectangle for visible world - Updated every frame in M2
 extern ezgl::rectangle visible_world;
 extern double curr_world_width;
+extern double curr_world_height;
 
 // Zoom limits for curr_world_width, in meters
 const float ZOOM_LIMIT_0 = 50000;
@@ -88,6 +89,9 @@ const double FIND_ZOOM_WIDTH = 1000.0;
 
 // Number of screen regions for displaying street names and arrows
 const int NUM_REGIONS = 12;
+extern int count_names;
+extern int count_arrows;
+
 // Total number of map grids to initialize data to
 const int NUM_GRIDS = 20;
 
@@ -143,10 +147,14 @@ extern int POINum;
 // Street Segments
 // ********************************************************************************************************
 // Pre-processed information of each street segment
-struct StreetSegmentDetailedInfo{
+struct StreetSegmentDetailedInfo
+{
+    StreetSegmentIdx id;        // id of the segment
     OSMID wayOSMID;             // OSM ID of the source way
                                 // NOTE: Multiple segments may match a single OSM way ID
+    std::string highway_type;   // Street type of street segment
     IntersectionIdx from, to;   // Intersection ID this segment runs from/to
+    ezgl::point2d from_xy, to_xy;
     bool oneWay;
     double length;
     double travel_time;         // Travel time, in seconds
@@ -164,7 +172,8 @@ extern std::vector<StreetSegmentDetailedInfo> Segment_SegmentDetailedInfo;
 // Intersections
 // *******************************************************************
 // Struct for preprocessed information of Intersections
-struct IntersectionInfo{
+struct IntersectionInfo
+{
     ezgl::point2d position_xy;
     LatLon position_latlon;
     std::string name;
