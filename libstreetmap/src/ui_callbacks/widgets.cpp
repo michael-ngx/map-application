@@ -286,7 +286,9 @@ void tutorial_cbk(GtkButton* /*self*/, ezgl::application* application)
     to_be_converted += "- Clicking: Select the desired input field (start or destination) and select the intersection on the map.\n \n";
     to_be_converted += "- Typing: Enter intersection names, then select from the suggested list.\n \n";
     to_be_converted += "   Else, enter street names that cross through the intersection, separated by a '&'.\n \n";
-    to_be_converted += "   Partially street inputs are automatically matched with first street name found in alphabetical order.\n \n \n \n";
+    to_be_converted += "   Partially street inputs are automatically matched with first street name found in alphabetical order.\n \n";
+    to_be_converted += "   Press 'enter' or click on the Search icon on either search bar to start the navigation.\n \n";
+    to_be_converted += "   If both search bars are filled, navigation will be started automatically.\n \n \n \n";
     to_be_converted += "- To use directions: Click on the directions to show instructions on how to get to the destination.\n \n";
     to_be_converted += "   Click again to hide the direction instructions.\n \n \n \n";
     to_be_converted += "Note: Due to a lack of data, <unknown> search is not supported.\n \n";
