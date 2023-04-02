@@ -311,7 +311,7 @@ void act_on_mouse_click (ezgl::application* application, GdkEventButton* /*event
             else
             {
                 view_path(application, CAMERALVL_LARGE); 
-            }               
+            }
         }
     }
     application->refresh_drawing();
