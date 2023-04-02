@@ -212,6 +212,8 @@ void city_change_cbk (GtkComboBoxText* self, ezgl::application* application)
         // Announce to user
         application->update_message("Loaded new map!");
     }
+    //make sure that direction is turned off after city switch
+    direction_display_on = false;
 }
 
 // Callback function for selecting filter type
