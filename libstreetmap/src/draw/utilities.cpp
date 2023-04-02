@@ -40,7 +40,7 @@ void move_camera (ezgl::point2d center, double new_width, ezgl::application* app
     application->refresh_drawing();
 }
 
-void view_path (ezgl::application* application)
+void view_path (ezgl::application* application, double camera_level)
 {
     double max_y = Segment_SegmentDetailedInfo[found_path[0]].segmentRectangle.top();
     double min_y = Segment_SegmentDetailedInfo[found_path[0]].segmentRectangle.bottom();
@@ -55,7 +55,7 @@ void view_path (ezgl::application* application)
     }
     double new_width = std::max((max_y - min_y), (max_x - min_x));
     ezgl::point2d center = {(min_x + max_x) / 2, (max_y + min_y) / 2};
-    move_camera(center, new_width * 2, application);
+    move_camera(center, new_width * camera_level, application);
 }
 
 //Input: vector of street segment index of the optimized path. Output: a string of directions
