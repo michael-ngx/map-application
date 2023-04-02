@@ -1,5 +1,6 @@
 #include "draw/utilities.hpp"
 #include "StreetsDatabaseAPI.h"
+#include <math.h>
 #include <cmath>
 
 
@@ -58,7 +59,7 @@ void view_path (ezgl::application* application)
 }
 
 //Input: vector of street segment index of the optimized path. Output: a string of directions
-std::string generate_directions ()
+void generate_directions ()
 {
     std::string pathDirections;
     bool continueOnStreet = true;
@@ -77,86 +78,118 @@ std::string generate_directions ()
     double deltaYSeg3;
     double direction;
     
-    for (StreetSegmentIdx tempIndex = 0; tempIndex < found_path.size() - 1; tempIndex++)
+    if (found_path.size() == 0)
     {
-        StreetSegmentDetailedInfo tempSegInfo = Segment_SegmentDetailedInfo[found_path[tempIndex]];
-        StreetSegmentDetailedInfo nextTempSegInfo = Segment_SegmentDetailedInfo[found_path[tempIndex + 1]];
-        StreetIdx tempSegIdx = tempSegInfo.streetID;
-        StreetIdx nextTempSegIdx = nextTempSegInfo.streetID;
-        pointX1 = Intersection_IntersectionInfo[tempSegInfo.from].position_xy;
-        pointX2 = Intersection_IntersectionInfo[tempSegInfo.to].position_xy;
-        pointX3 = Intersection_IntersectionInfo[nextTempSegInfo.from].position_xy;
-        pointX4 = Intersection_IntersectionInfo[nextTempSegInfo.to].position_xy;
-        if (pointX1 == pointX3)
+        pathDirections = "Please Enter Two Valid Locations for Direction\n";
+    } else if (found_path.size() == 1)
+    {
+        pathDirections = "Your Destination is right Ahead\n";
+    } else
+    {
+        for (StreetSegmentIdx tempIndex = 0; tempIndex < found_path.size() - 1; tempIndex++)
         {
-            pointFrom = pointX2;
-            pointMiddle = pointX1;
-            pointTo = pointX4;
-        } else if (pointX1 == pointX4)
-        {
-            pointFrom = pointX2;
-            pointMiddle = pointX1;
-            pointTo = pointX3;
-        } else if (pointX2 == pointX3)
-        {
-            pointFrom = pointX1;
-            pointMiddle = pointX2;
-            pointTo = pointX4;
-        } else if (pointX2 == pointX4)
-        {
-            pointFrom = pointX1;
-            pointMiddle = pointX2;
-            pointTo = pointX3;
-        }
-        deltaXSeg1 = pointMiddle.x - pointFrom.x;
-        deltaYSeg1 = pointMiddle.y - pointFrom.y;
-        deltaXSeg2 = pointTo.x - pointFrom.x;
-        deltaYSeg2 = pointTo.y - pointFrom.y;
-        deltaXSeg3 = pointTo.x - pointMiddle.x;
-        deltaYSeg3 = pointTo.y - pointMiddle.y;
-        direction = deltaXSeg2 * deltaYSeg1 - deltaYSeg2 * deltaXSeg1;
-        
-        if (tempSegIdx == nextTempSegIdx)           //still on the same street
-        {
-            if (tempIndex == 0)
+            StreetSegmentDetailedInfo tempSegInfo = Segment_SegmentDetailedInfo[found_path[tempIndex]];
+            StreetSegmentDetailedInfo nextTempSegInfo = Segment_SegmentDetailedInfo[found_path[tempIndex + 1]];
+            StreetIdx tempSegIdx = tempSegInfo.streetID;
+            StreetIdx nextTempSegIdx = nextTempSegInfo.streetID;
+            pointX1 = Intersection_IntersectionInfo[tempSegInfo.from].position_xy;
+            pointX2 = Intersection_IntersectionInfo[tempSegInfo.to].position_xy;
+            pointX3 = Intersection_IntersectionInfo[nextTempSegInfo.from].position_xy;
+            pointX4 = Intersection_IntersectionInfo[nextTempSegInfo.to].position_xy;
+            if (pointX1 == pointX3)
             {
-                pathDirections += "Get on " + getStreetName(tempSegIdx) + ". \n \n";
+                pointFrom = pointX2;
+                pointMiddle = pointX1;
+                pointTo = pointX4;
+            } else if (pointX1 == pointX4)
+            {
+                pointFrom = pointX2;
+                pointMiddle = pointX1;
+                pointTo = pointX3;
+            } else if (pointX2 == pointX3)
+            {
+                pointFrom = pointX1;
+                pointMiddle = pointX2;
+                pointTo = pointX4;
+            } else if (pointX2 == pointX4)
+            {
+                pointFrom = pointX1;
+                pointMiddle = pointX2;
+                pointTo = pointX3;
             }
-            if ((pow(deltaXSeg2,2) + pow(deltaYSeg2,2)) < 
-                (pow(deltaXSeg1,2) + pow(deltaYSeg1,2) + pow(deltaXSeg3,2) + pow(deltaYSeg3,2)))
+            deltaXSeg1 = pointMiddle.x - pointFrom.x;
+            deltaYSeg1 = pointMiddle.y - pointFrom.y;
+            deltaXSeg2 = pointTo.x - pointFrom.x;
+            deltaYSeg2 = pointTo.y - pointFrom.y;
+            deltaXSeg3 = pointTo.x - pointMiddle.x;
+            deltaYSeg3 = pointTo.y - pointMiddle.y;
+            direction = deltaXSeg2 * deltaYSeg1 - deltaYSeg2 * deltaXSeg1;
+
+            if (tempSegIdx == nextTempSegIdx)           //still on the same street
             {
-                pathDirections += "Make a U-turn. \n \n";
-            } else {
-                if (continueOnStreet)
+                if (tempIndex == 0)
                 {
-                    pathDirections += "Continue on " + getStreetName(nextTempSegIdx) + ". \n \n";
-                    continueOnStreet = false;
+                    pathDirections += "Get on " + getStreetName(tempSegIdx) + ".\n";
+                }
+                //use the law of cosine to see if the turn is a u-turn
+                if (acos((pow(deltaXSeg1,2) + pow(deltaYSeg1,2) + pow(deltaXSeg3,2) + 
+                     pow(deltaYSeg3,2) - pow(deltaXSeg2,2) - pow(deltaYSeg2,2)) / 
+                     (2 * pow(pow(deltaXSeg1,2) + pow(deltaYSeg1,2),0.5) * 
+                     pow(pow(deltaXSeg3,2) + pow(deltaYSeg3,2),0.5))) < M_PI_4)
+                {
+                    pathDirections += "Make a U-turn.\n";
+                } else {
+                    if (continueOnStreet)
+                    {
+                        pathDirections += "Continue on " + getStreetName(nextTempSegIdx) + ".\n";
+                        continueOnStreet = false;
+                    }
+                }
+            } else if (tempSegIdx != nextTempSegIdx)    //change of street
+            {
+                continueOnStreet = true;
+                if (tempIndex == 0)
+                {
+                    pathDirections += "Get on " + getStreetName(tempSegIdx) + ".\n";
+                }
+                if (direction > 0)
+                {
+                    if (acos((pow(deltaXSeg1,2) + pow(deltaYSeg1,2) + pow(deltaXSeg3,2) + 
+                     pow(deltaYSeg3,2) - pow(deltaXSeg2,2) - pow(deltaYSeg2,2)) / 
+                     (2 * pow(pow(deltaXSeg1,2) + pow(deltaYSeg1,2),0.5) * 
+                     pow(pow(deltaXSeg3,2) + pow(deltaYSeg3,2),0.5))) > (M_PI_4 * 3))
+                    {
+                        pathDirections += "Make a slight right turn onto " + getStreetName(nextTempSegIdx) + ".\n";
+                    } else
+                    {
+                        pathDirections += "Make a right turn onto " + getStreetName(nextTempSegIdx) + ".\n";
+                    }
+                } else if (direction < 0)
+                {
+                    if (acos((pow(deltaXSeg1,2) + pow(deltaYSeg1,2) + pow(deltaXSeg3,2) + 
+                     pow(deltaYSeg3,2) - pow(deltaXSeg2,2) - pow(deltaYSeg2,2)) / 
+                     (2 * pow(pow(deltaXSeg1,2) + pow(deltaYSeg1,2),0.5) * 
+                     pow(pow(deltaXSeg3,2) + pow(deltaYSeg3,2),0.5))) > (M_PI_4 * 3))
+                    {
+                        pathDirections += "Make a slight left turn onto " + getStreetName(nextTempSegIdx) + ".\n";
+                    } else
+                    {
+                        pathDirections += "Make a left turn onto " + getStreetName(nextTempSegIdx) + ".\n";
+                    }
+                } else if (direction == 0)
+                {
+                    pathDirections += "Continue onto " + getStreetName(nextTempSegIdx) + ".\n";
                 }
             }
-        } else if (tempSegIdx != nextTempSegIdx)    //change of street
-        {
-            continueOnStreet = true;
-            if (tempIndex == 0)
+            if (tempIndex == found_path.size() - 2)
             {
-                pathDirections += "Get on " + getStreetName(tempSegIdx) + ". \n \n";
+                pathDirections += "You will see your destination ahead.\n";
             }
-            if (direction > 0)
-            {
-                pathDirections += "Make a right turn onto " + getStreetName(nextTempSegIdx) + ". \n \n";
-            } else if (direction < 0)
-            {
-                pathDirections += "Make a left turn onto " + getStreetName(nextTempSegIdx) + ". \n \n";
-            } else if (direction == 0)
-            {
-                pathDirections += "Continue onto " + getStreetName(nextTempSegIdx) + ". \n \n";
-            }
-        }
-        if (tempIndex == found_path.size() - 2)
-        {
-            pathDirections += "You will see your destination ahead. \n \n";
         }
     }
-    return pathDirections;
+
+    const char* message = pathDirections.c_str();
+    gtk_text_buffer_set_text(DirectionTextBuffer, message, -1);
 }
 
 

@@ -14,7 +14,7 @@
 void move_camera (ezgl::point2d center, double new_width, ezgl::application* application);
 void view_path (ezgl::application* application);
 //Generate a string of Directions for display
-std::string generate_directions ();
+void generate_directions ();
 bool check_collides (ezgl::rectangle rec_1, ezgl::rectangle rec_2);
 bool check_contains (ezgl::rectangle rec_1, ezgl::rectangle rec_2);
 std::string lower_no_space (std::string input);

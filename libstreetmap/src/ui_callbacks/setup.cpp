@@ -72,6 +72,15 @@ void initial_setup (ezgl::application *application, bool /*new_window*/)
     // Default: Hides Direction button
     gtk_widget_hide(GTK_WIDGET(DirectionButton));
     
+    // Default: Hides Direction Display
+    DirectionWindow = application->get_object("DirectionWindow");
+    DirectionDisplay = application->get_object("DirectionTextDisplay");
+    gtk_widget_set_size_request(GTK_WIDGET(DirectionWindow), 325, 600);
+    gtk_widget_set_size_request(GTK_WIDGET(DirectionDisplay), 325, 600);
+    DirectionTextBuffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(DirectionDisplay));
+    gtk_widget_hide(GTK_WIDGET(DirectionDisplay));
+    gtk_widget_hide(GTK_WIDGET(DirectionWindow));
+    
     // Connects to Night Mode button
     NightModeButton = application->get_object("NightModeButton");
     g_signal_connect(
@@ -290,6 +299,9 @@ void act_on_mouse_click (ezgl::application* application, GdkEventButton* /*event
                 application->create_popup_message("Error", to_be_converted.c_str());
                 return;
             }
+            
+            //Generate Direction Text for display
+            generate_directions();
             
             // Rezoom the map to view the path
             view_path(application);

@@ -508,8 +508,8 @@ void draw_POIs (ezgl::renderer* g, int regionIdx)
 
     // Drawing the icon
     g->set_text_rotation(0); 
-    g->set_color(0, 0, 0, 50);
-    g->format_font("Emoji", ezgl::font_slant::normal, ezgl::font_weight::normal, 20);
+    g->set_color(0, 0, 0);
+    g->format_font("Emoji", ezgl::font_slant::normal, ezgl::font_weight::normal, 25);
     std::string icon = "\U00002B50";
     if (tempType == "fast_food")
     {
@@ -556,7 +556,7 @@ void draw_POIs (ezgl::renderer* g, int regionIdx)
     
     // Drawing the POI name
     g->format_font("monospace", ezgl::font_slant::normal, ezgl::font_weight::normal, 12);
-    tempDrawPoint.y = tempDrawPoint.y + 6;          // Move the POI text up  from Icons
+    tempDrawPoint.y = tempDrawPoint.y + 8;          // Move the POI text up  from Icons
     if (!night_mode)
     {
         g->set_color(51,102,0);
