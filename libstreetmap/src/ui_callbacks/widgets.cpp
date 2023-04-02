@@ -42,7 +42,14 @@ void search_activate_cbk_start (GtkSearchEntry */*self*/, ezgl::application *app
                 return;
             }
             // Rezoom the map to view the path
-            view_path(application, 2);
+            if(direction_display_on)
+            {
+                view_path(application, CAMERALVL_SMALL);
+            }              
+            else
+            {
+                view_path(application, CAMERALVL_LARGE); 
+            } 
             application->refresh_drawing();
         }
     } else
@@ -87,7 +94,14 @@ void search_activate_cbk_dest (GtkSearchEntry */*self*/, ezgl::application* appl
                 return;
             }
             // Rezoom the map to view the path
-            view_path(application, 2);
+            if(direction_display_on)
+            {
+                view_path(application, CAMERALVL_SMALL);
+            }              
+            else
+            {
+                view_path(application, CAMERALVL_LARGE); 
+            } 
             application->refresh_drawing();
         }
     }
@@ -263,6 +277,8 @@ void tutorial_cbk(GtkButton* /*self*/, ezgl::application* application)
     to_be_converted += "- Typing: Enter intersection names, then select from the suggested list.\n \n";
     to_be_converted += "   Else, enter street names that cross through the intersection, separated by a '&'.\n \n";
     to_be_converted += "   Partially street inputs are automatically matched with first street name found in alphabetical order.\n \n \n \n";
+    to_be_converted += "- To use directions: Click on the directions to show instructions on how to get to the destination.\n \n";
+    to_be_converted += "   Click again to hide the direction instructions.\n \n \n \n";
     to_be_converted += "Note: Due to a lack of data, <unknown> search is not supported.\n \n";
     to_be_converted += "Please click on the map or select from the suggested list for exact selection \n";
  
@@ -278,13 +294,13 @@ void direction_cbk(GtkButton* /*self*/, ezgl::application* application)
         generate_directions();
         gtk_widget_show(GTK_WIDGET(DirectionDisplay));
         gtk_widget_show(GTK_WIDGET(DirectionWindow));
-        view_path(application, 2.5);
+        view_path(application, CAMERALVL_SMALL);
         direction_display_on = true;
 
     } else {
         gtk_widget_hide(GTK_WIDGET(DirectionDisplay));
         gtk_widget_hide(GTK_WIDGET(DirectionWindow));
-        view_path(application, 2);
+        view_path(application, CAMERALVL_LARGE);
         direction_display_on = false;
     }
 }

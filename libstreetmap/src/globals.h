@@ -77,6 +77,10 @@ const float FEATURE_ZOOM_1 = 0.01;
 const float FEATURE_ZOOM_2 = 0.05;
 const float FEATURE_ZOOM_3 = 0.1;
 
+// Camera zoom levels
+const double CAMERALVL_SMALL = 2.5;
+const double CAMERALVL_LARGE = 2;
+
 // Width of new world to be zoomed to after searching
 const double FIND_ZOOM_WIDTH = 1000.0;
 
