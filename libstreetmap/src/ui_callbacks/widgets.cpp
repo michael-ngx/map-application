@@ -37,6 +37,8 @@ void search_activate_cbk_start (GtkSearchEntry */*self*/, ezgl::application *app
             if (found_path.size() == 0)
             {
                 std::string to_be_converted = "No path found between 2 points";
+                gtk_widget_hide(GTK_WIDGET(DirectionWindow)); 
+                direction_display_on = false;
                 application->refresh_drawing();
                 application->create_popup_message("Error", to_be_converted.c_str());
                 return;
@@ -89,7 +91,9 @@ void search_activate_cbk_dest (GtkSearchEntry */*self*/, ezgl::application* appl
             if (found_path.size() == 0)
             {
                 std::string to_be_converted = "No path found between 2 points";
-                application->refresh_drawing();                
+                gtk_widget_hide(GTK_WIDGET(DirectionWindow)); 
+                direction_display_on = false;
+                application->refresh_drawing();   
                 application->create_popup_message("Error", to_be_converted.c_str());
                 return;
             }
@@ -120,6 +124,8 @@ void search_changed_cbk_start (GtkSearchEntry */*self*/, ezgl::application *appl
         start_point_set = false;
         pin_display_start.clear();
         found_path.clear();
+        gtk_widget_hide(GTK_WIDGET(DirectionWindow));
+        direction_display_on = false;
         application->refresh_drawing();
     }
 }
@@ -133,6 +139,8 @@ void search_changed_cbk_dest (GtkSearchEntry */*self*/, ezgl::application* appli
         destination_point_set = false;
         pin_display_dest.clear();
         found_path.clear();
+        gtk_widget_hide(GTK_WIDGET(DirectionWindow)); 
+        direction_display_on = false;
         application->refresh_drawing();
     }
 }
@@ -298,7 +306,6 @@ void direction_cbk(GtkButton* /*self*/, ezgl::application* application)
         gtk_widget_show(GTK_WIDGET(DirectionWindow));
         view_path(application, CAMERALVL_SMALL);
         direction_display_on = true;
-
     } else {
         gtk_widget_hide(GTK_WIDGET(DirectionDisplay));
         gtk_widget_hide(GTK_WIDGET(DirectionWindow));

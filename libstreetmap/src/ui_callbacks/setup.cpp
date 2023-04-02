@@ -294,6 +294,8 @@ void act_on_mouse_click (ezgl::application* application, GdkEventButton* /*event
             found_path = findPathBetweenIntersections(std::make_pair(start_point_id, destination_point_id), DEFAULT_TURN_PENALTY);
             if (found_path.size() == 0)
             {
+                gtk_widget_hide(GTK_WIDGET(DirectionWindow)); 
+                direction_display_on = false;
                 std::string to_be_converted = "No path found between 2 points";
                 application->refresh_drawing();
                 application->create_popup_message("Error", to_be_converted.c_str());
