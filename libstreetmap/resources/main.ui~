@@ -267,7 +267,6 @@
               <object class="GtkScrolledWindow" id="DirectionWindow">
                 <property name="visible">True</property>
                 <property name="can-focus">True</property>
-                <property name="margin-bottom">71</property>
                 <property name="shadow-type">in</property>
                 <child>
                   <object class="GtkViewport">
