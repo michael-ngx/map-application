@@ -487,20 +487,76 @@ void draw_main_canvas (ezgl::renderer *g)
     /********************************************************************************
     * Draw result path of navigation mode
     ********************************************************************************/
-    for (auto seg_id : found_path)
+    // To check travel direction on street segment
+    IntersectionIdx check_start = start_point_id;
+    // Vector to store information needed fraw drawing street names
+    std::vector<SegShortInfo> path_street_names;
+    for (int i = 0; i < found_path.size(); i++)
     {
-        IntersectionIdx from_id = Segment_SegmentDetailedInfo[seg_id].from;
-        IntersectionIdx to_id = Segment_SegmentDetailedInfo[seg_id].to;
+        IntersectionIdx from_id = Segment_SegmentDetailedInfo[found_path[i]].from;
+        IntersectionIdx to_id = Segment_SegmentDetailedInfo[found_path[i]].to;
         ezgl::point2d from_xy = Intersection_IntersectionInfo[from_id].position_xy;
         ezgl::point2d to_xy = Intersection_IntersectionInfo[to_id].position_xy;
 
         if (ZOOM_LIMIT_2 <= curr_world_width)
         {
-            draw_street_segment_pixel(g, seg_id, from_xy, to_xy, "path");
+            draw_street_segment_pixel(g, found_path[i], from_xy, to_xy, "path");
         } else
         {
-            draw_street_segment_meters(g, seg_id, from_xy, to_xy, "path");
+            draw_street_segment_meters(g, found_path[i], from_xy, to_xy, "path");
         }
+
+        // Start displaying arrows and names when zoomed in
+        if (curr_world_width <= ZOOM_LIMIT_3)
+        {
+            // Get the intersections along the path
+            // Travelling from -> to on the segment
+            if (from_id == check_start)
+            {
+                // Draw arrows
+                if (i % 6 == 0)
+                {
+                    draw_name_or_arrow(g, Segment_SegmentDetailedInfo[found_path[i]].streetName, true,
+                                        from_xy, to_xy, true);
+                }
+                // Save information to draw street name on found path
+                else if (i % 6 == 3)
+                {
+                    SegShortInfo short_info;
+                    short_info.street_name = Segment_SegmentDetailedInfo[found_path[i]].streetName;
+                    short_info.from_xy = from_xy;
+                    short_info.to_xy = to_xy;
+                    path_street_names.push_back(short_info);
+                }
+                check_start = to_id;
+            }
+            // Travelling to -> from on the segment
+            else if (to_id == check_start)
+            {
+                // Draw arrows
+                if (i % 6 == 0)
+                {
+                    draw_name_or_arrow(g, Segment_SegmentDetailedInfo[found_path[i]].streetName, true,
+                                        to_xy, from_xy, true);
+                }
+                // Save information to draw street name on found path
+                else if (i % 6 == 3)
+                {
+                    SegShortInfo short_info;
+                    short_info.street_name = Segment_SegmentDetailedInfo[found_path[i]].streetName;
+                    short_info.from_xy = to_xy;
+                    short_info.to_xy = from_xy;
+                    path_street_names.push_back(short_info);
+                }
+                check_start = from_id;
+            }
+        }
+    }
+
+    // Draw street names after drawing path
+    for (auto seg : path_street_names)
+    {
+        draw_name_or_arrow (g, seg.street_name, false, seg.from_xy, seg.to_xy, true);
     }
 
     /********************************************************************************
@@ -523,14 +579,14 @@ void draw_main_canvas (ezgl::renderer *g)
                     if (available_region[region][1] && seg_info.arrow)
                     {   // Display arrow
                         draw_name_or_arrow(g, seg_info.street_name, seg_info.arrow, 
-                                            seg_info.from_xy, seg_info.to_xy);
+                                            seg_info.from_xy, seg_info.to_xy, false);
                         available_region[region][1] = 0;
                         count_arrows--;
                         break;
                     } else if (available_region[region][0] && !seg_info.arrow)
                     {   // Display street name
                         draw_name_or_arrow(g, seg_info.street_name, seg_info.arrow, 
-                                            seg_info.from_xy, seg_info.to_xy);
+                                            seg_info.from_xy, seg_info.to_xy, false);
                         available_region[region][0] = 0;
                         count_names--;
                         break;

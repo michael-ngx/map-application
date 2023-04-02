@@ -30,7 +30,13 @@ void draw_street_segment_pixel (ezgl::renderer *g, StreetSegmentIdx seg_id,
     }
     if (street_type == "path")
     {
-         g->set_color(ezgl::RED);
+        if (night_mode)
+        {
+            g->set_color(ezgl::RED);
+        } else
+        {
+            g->set_color(ezgl::DARK_SLATE_BLUE);
+        }
     }
     // Set line width based on current zoom level and street type    
     int line_width = get_street_width_pixel(street_type); 
@@ -80,7 +86,13 @@ void draw_street_segment_meters (ezgl::renderer *g, StreetSegmentIdx seg_id,
     }
     if (street_type == "path")
     {
-         g->set_color(ezgl::RED);
+        if (night_mode)
+        {
+            g->set_color(ezgl::RED);
+        } else
+        {
+            g->set_color(ezgl::DARK_SLATE_BLUE);
+        }
     }
     // Set street width (in meters) based on current zoom level and street type 
     int width_meters = get_street_width_meters(street_type);
@@ -253,7 +265,7 @@ int get_street_width_meters (std::string& street_type)
 *************************************************************/
 // Draws text on street segments
 void draw_name_or_arrow (ezgl::renderer *g, std::string street_name, bool arrow,
-                        ezgl::point2d from_xy, ezgl::point2d to_xy)
+                        ezgl::point2d from_xy, ezgl::point2d to_xy, bool on_path)
 {
     // Calculate text rotation based on segment slope                   // TODO: Curved segments!
                                                                         // TODO: Set boundaries for street names based on street length/street width
@@ -292,27 +304,32 @@ void draw_name_or_arrow (ezgl::renderer *g, std::string street_name, bool arrow,
     g->set_text_rotation(angle_degree);
     // Draw name or arrow at position between from_xy and to_xy
     ezgl::point2d mid_xy = {(from_xy.x + to_xy.x) / 2, (from_xy.y + to_xy.y) / 2};
-    if (arrow)
-    {      
-        if(!night_mode){
+    if(!night_mode)
+    {
+        if (on_path)
+        {
+            g->set_color(ezgl::WHITE);
+        } else
+        {
             g->set_color(0, 0, 0);
-            g->set_font_size(12);
         }
-        else{
+    }
+    else
+    {
+        if (on_path)
+        {
+            g->set_color(ezgl::YELLOW);
+        } else
+        {
             g->set_color(255, 255, 255);
-            g->set_font_size(12);
         }
+    }
+    g->set_font_size(12);
+    if (arrow)
+    {    
         g->draw_text(mid_xy, "->");
     } else 
     {
-        if(!night_mode){
-            g->set_color(0, 0, 0);
-            g->set_font_size(12);
-        }
-        else{
-            g->set_color(255, 255, 255);
-            g->set_font_size(12);
-        }
         g->draw_text(mid_xy, street_name);
     }
 }
