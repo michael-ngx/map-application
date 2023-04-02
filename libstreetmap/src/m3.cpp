@@ -81,8 +81,8 @@ std::vector<StreetSegmentIdx> findPathBetweenIntersections (
 
     // Create the starting node
     // Add the starting node to the priority queue (FIFO) and record_node hash table
-    double h_start = findDistanceBetweenTwoPoints(Intersection_IntersectionInfo[start_id].position_xy, 
-                                                  Intersection_IntersectionInfo[dest_id].position_xy) / MAX_SPEED_LIMIT;
+    double h_start = findDistanceBetweenTwoPoints(Intersection_IntersectionInfo[start_id].position_latlon, 
+                                                  Intersection_IntersectionInfo[dest_id].position_latlon) / MAX_SPEED_LIMIT;
     Node startNode = {start_id, 0, h_start, -1, -1};
     pq.push(startNode);
     record_node.insert(std::make_pair(start_id, startNode));
@@ -133,8 +133,8 @@ std::vector<StreetSegmentIdx> findPathBetweenIntersections (
             }
 
             // Calculate the h-value of the neighbor node (fixed for each node)
-            double h = findDistanceBetweenTwoPoints(Intersection_IntersectionInfo[pair.first].position_xy,
-                                                    Intersection_IntersectionInfo[dest_id].position_xy) / MAX_SPEED_LIMIT;
+            double h = findDistanceBetweenTwoPoints(Intersection_IntersectionInfo[pair.first].position_latlon,
+                                                    Intersection_IntersectionInfo[dest_id].position_latlon) / MAX_SPEED_LIMIT;
 
             // Get the street segments connecting the current node and the neighbor node
             // There may be multiple segments connecting 2 adjacent nodes

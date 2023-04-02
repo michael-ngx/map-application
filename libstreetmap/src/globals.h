@@ -116,12 +116,6 @@ extern bool search_2_forced_change;
 // *********************************************************************************************************
 // Overloaded functions from M1
 // *********************************************************************************************************
-// Find distance between 2 points based on xy
-double findDistanceBetweenTwoPoints (ezgl::point2d point_1, ezgl::point2d point_2);
-// Function to find closest intersection based on xy, not LatLon
-IntersectionIdx findClosestIntersection(ezgl::point2d my_position);
-// Function to find closest POI of any type, based on xy, not LatLon
-POIIdx findClosestPOI(ezgl::point2d my_position);
 // Returns all intersection ids corresponding to intersection names that start with the given prefix
 std::vector<IntersectionIdx> findIntersectionIdsFromPartialIntersectionName(std::string intersection_prefix);
 
@@ -172,6 +166,7 @@ extern std::vector<StreetSegmentDetailedInfo> Segment_SegmentDetailedInfo;
 // Struct for preprocessed information of Intersections
 struct IntersectionInfo{
     ezgl::point2d position_xy;
+    LatLon position_latlon;
     std::string name;
     // Vector of all segments 
     std::vector<StreetSegmentIdx> all_segments;

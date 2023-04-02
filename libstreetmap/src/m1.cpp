@@ -181,11 +181,6 @@ double findDistanceBetweenTwoPoints(LatLon point_1, LatLon point_2){
     return distance;
 }
 
-double findDistanceBetweenTwoPoints (ezgl::point2d point_1, ezgl::point2d point_2)
-{
-    return sqrt(pow((point_2.y - point_1.y), 2) + pow((point_2.x - point_1.x), 2));
-}
-
 // Returns the length of the given street segment in meters
 // Speed Requirement --> moderate
 double findStreetSegmentLength(StreetSegmentIdx street_segment_id){
@@ -254,25 +249,6 @@ IntersectionIdx findClosestIntersection(LatLon my_position){
         }
     }
 
-    return closestIntersection;
-}
-
-IntersectionIdx findClosestIntersection(ezgl::point2d my_position)
-{
-    // Closest_distance found so far
-    double closest_distance = findDistanceBetweenTwoPoints(Intersection_IntersectionInfo[0].position_xy, my_position);
-    IntersectionIdx closestIntersection = 0;                            // First intersection
-
-    // Get distance from every intersection to IntersectionPosition
-    for(int i = 1; i < intersectionNum; i++){
-        double distance = findDistanceBetweenTwoPoints(Intersection_IntersectionInfo[i].position_xy, my_position);
-        if (distance < closest_distance)
-        {
-            closest_distance = distance;
-            closestIntersection = i;
-        }
-    }
-    clicked_intersection_distance = closest_distance;
     return closestIntersection;
 }
 
@@ -398,25 +374,6 @@ POIIdx findClosestPOI (LatLon my_position, std::string POItype)
         }
     }
     return closestPOI;
-}
-
-// Returns the nearest point of interest of any type, in xy
-POIIdx findClosestPOI(ezgl::point2d my_position)
-{
-    POIIdx closest_POI = 0;
-    double smallestDistance = findDistanceBetweenTwoPoints(my_position, POI_AllInfo[0].POIPoint); // Store the smallest distance (Starts at POIidx = 0)
-    
-    for(POIIdx id = 1; id < POINum; id++)
-    {
-        double tempDistance = findDistanceBetweenTwoPoints(my_position, POI_AllInfo[id].POIPoint);
-        if (tempDistance < smallestDistance)
-        {
-            smallestDistance = tempDistance;
-            closest_POI = id;
-        }
-    }
-    clicked_POI_distance = smallestDistance;
-    return closest_POI;
 }
 
 // Returns the area of the given closed feature in square meters
@@ -724,36 +681,32 @@ void init_segments()
         
         // Find max and min x, y for defining bounds of each segment
         // Based on bounds, we can add each segments to corresponding grids
-        ezgl::point2d from_xy = xy_from_latlon(getIntersectionPosition(rawInfo.from));
-        double max_x = from_xy.x;
-        double max_y = from_xy.y;
-        double min_x = from_xy.x;
-        double min_y = from_xy.y;
-        if (segment == 187962 || segment == 49755 || segment == 54042 || segment == 151779 || segment == 267111) std::cout << segment << " " << rawInfo.numCurvePoints << std::endl;
+        LatLon point_1_latlon = getIntersectionPosition(rawInfo.from);
+        LatLon to_latlon = getIntersectionPosition(rawInfo.to);
+        ezgl::point2d from_xy = xy_from_latlon(point_1_latlon);
+        ezgl::point2d to_xy = xy_from_latlon(to_latlon);
+        // Compare to get max min xy of each segment
+        double max_x = std::max(to_xy.x, from_xy.x);
+        double max_y = std::max(to_xy.y, from_xy.y);
+        double min_x = std::min(to_xy.x, from_xy.x);
+        double min_y = std::min(to_xy.y, from_xy.y);
+        
         // Pre-calculate length of each street segments (including curve points)
+        // Length between 2 points are mote accurate with LatLon (latavg is average of the 2 points, not the whole world)
         // Determine bounds of each segment
         if (rawInfo.numCurvePoints == 0)
         {
-            ezgl::point2d to_xy = xy_from_latlon(getIntersectionPosition(rawInfo.to));
-            processedInfo.length = findDistanceBetweenTwoPoints(from_xy, to_xy);
-            max_x = std::max(max_x, to_xy.x);
-            max_y = std::max(max_y, to_xy.y);
-            min_x = std::min(min_x, to_xy.x);
-            min_y = std::min(min_y, to_xy.y);
-
-            // Record the rectangle that bounds segment
-            processedInfo.segmentRectangle = ezgl::rectangle({min_x, min_y}, 
-                                                             {max_x, max_y});
+            processedInfo.length = findDistanceBetweenTwoPoints(point_1_latlon, to_latlon);
         } else
         {
-            
             // Starting length
             processedInfo.length = 0.0; 
             // Iterate through all curve points
             for (int i = 0; i < rawInfo.numCurvePoints; i++){
-                ezgl::point2d point_2_xy = xy_from_latlon(getStreetSegmentCurvePoint(segment, i));
-                processedInfo.length += findDistanceBetweenTwoPoints(from_xy, point_2_xy);
-                // Save the xy of curve points
+                LatLon point_2_latlon = getStreetSegmentCurvePoint(segment, i);
+                processedInfo.length += findDistanceBetweenTwoPoints(point_1_latlon, point_2_latlon);
+                // Save the xy of curve points for drawing
+                ezgl::point2d point_2_xy = xy_from_latlon(point_2_latlon);
                 processedInfo.curvePoints_xy.push_back(point_2_xy);
                 // Compare to get max min xy of each segment
                 max_x = std::max(point_2_xy.x, max_x);
@@ -761,20 +714,15 @@ void init_segments()
                 min_x = std::min(point_2_xy.x, min_x);
                 min_y = std::min(point_2_xy.y, min_y);
                 // Proceed to next curve point
-                from_xy = point_2_xy;
+                point_1_latlon = point_2_latlon;
             }
-            ezgl::point2d to_xy = xy_from_latlon(getIntersectionPosition(rawInfo.to));            // Destination (to) point
-            // from_xy is now the last curve point. Need to connect with to_xy
-            processedInfo.length += findDistanceBetweenTwoPoints(from_xy, to_xy);
-            max_x = std::max(to_xy.x, max_x);
-            max_y = std::max(to_xy.y, max_y);
-            min_x = std::min(to_xy.x, min_x);
-            min_y = std::min(to_xy.y, min_y);
-            
-            // Record the rectangle that bounds segment
-            processedInfo.segmentRectangle = ezgl::rectangle(ezgl::point2d(min_x, min_y),
-                                                             ezgl::point2d(max_x, max_y));
+            // point_1_latlon is now the last curve point. Need to add distance to to_latlon
+            processedInfo.length += findDistanceBetweenTwoPoints(point_1_latlon, to_latlon);
         }
+
+        // Record the rectangle that bounds segment
+        processedInfo.segmentRectangle = ezgl::rectangle({min_x, min_y},
+                                                         {max_x, max_y});
 
         // Pre-calculate travel time of each street segments
         // Record the max speed limit of a street in the city (for A* path finding)
@@ -872,9 +820,16 @@ void init_intersections(){
 
     for (IntersectionIdx id = 0; id < intersectionNum; id++)
     {     
-        // Pre-process information for all intersections
+        // Record intersection names
         std::string name = getIntersectionName(id);
         Intersection_IntersectionInfo[id].name = name;
+        // Populate data structures to allow searching for intersection by name
+        IntersectionName_IntersectionIdx_no_repeat.insert(std::make_pair(name, id));
+        IntersectionName_IntersectionIdx.insert(std::make_pair(name, id));
+        IntersectionName_lower_IntersectionIdx.insert(std::make_pair(lower_no_space(name), id));
+
+        // Pre-process information for all intersections
+        Intersection_IntersectionInfo[id].position_latlon = getIntersectionPosition(id);
         ezgl::point2d inter_xy = xy_from_latlon(getIntersectionPosition(id));
         Intersection_IntersectionInfo[id].position_xy = inter_xy;
 
@@ -903,11 +858,6 @@ void init_intersections(){
             }
             Intersection_IntersectionInfo[id].neighbors_and_segments.push_back(std::make_pair(neighbor, connecting_segments));
         }
-
-        // Populate data structures to allow searching for intersection by name
-        IntersectionName_IntersectionIdx_no_repeat.insert(std::make_pair(name, id));
-        IntersectionName_IntersectionIdx.insert(std::make_pair(name, id));
-        IntersectionName_lower_IntersectionIdx.insert(std::make_pair(lower_no_space(name), id));
 
         // Add Intersections to grids
         int row = (inter_xy.y - world_bottom_left.y) / grid_height;

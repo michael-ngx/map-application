@@ -178,8 +178,8 @@ void act_on_mouse_click (ezgl::application* application, GdkEventButton* /*event
     if (!navigation_mode)
     {
         // Check whether the mouse clicked closer to a POI or an intersection
-        IntersectionIdx inter_id = findClosestIntersection(ezgl::point2d(x, y));
-        // POIIdx POI_id = findClosestPOI(ezgl::point2d(x, y)); - temporarily disablied for M3
+        IntersectionIdx inter_id = findClosestIntersection(latlon_from_xy(x, y));
+        // POIIdx POI_id = findClosestPOI(latlon_from_xy(x, y)); - temporarily disablied for M3
         
         // User selected intersection
         // if (clicked_intersection_distance <= clicked_POI_distance)
@@ -234,7 +234,7 @@ void act_on_mouse_click (ezgl::application* application, GdkEventButton* /*event
     else
     {
         // Record closest intersection
-        IntersectionIdx inter_id = findClosestIntersection(ezgl::point2d(x, y));
+        IntersectionIdx inter_id = findClosestIntersection(latlon_from_xy(x, y));
         const gchar* cstr = Intersection_IntersectionInfo[inter_id].name.c_str();
         
         // Put the intersection name into input field, depending on which field is hightlighted
