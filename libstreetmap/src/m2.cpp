@@ -219,22 +219,38 @@ void draw_main_canvas (ezgl::renderer *g)
     int row_max = (visible_world.top() - world_bottom_left.y) / grid_height;
     int row_min = (visible_world.bottom() - world_bottom_left.y) / grid_height;
     // We will draw contents within the grids (col_min - 1 -> col_max + 1) and (row_min - 1 -> row_max + 1)
-    // +-1 is done to support smooth map movement
+    // +-1 is done for smooth transition between grids
     if (col_max > NUM_GRIDS - 2)
     {
         col_max = NUM_GRIDS - 2;
+        if (col_min > NUM_GRIDS)
+        {
+            col_min = NUM_GRIDS;
+        }
     }
     if (row_max > NUM_GRIDS - 2)
     {
         row_max = NUM_GRIDS - 2;
+        if (row_min > NUM_GRIDS)
+        {
+            row_min = NUM_GRIDS;
+        }
     }
     if (col_min < 1)
     {
         col_min = 1;
+        if (col_max < -1)
+        {
+            col_max = -1;
+        }
     }
     if (row_min < 1)
     {
         row_min = 1;
+        if (row_max < -1)
+        {
+            row_max = -1;
+        }
     }
 
     /********************************************************************************
@@ -255,15 +271,15 @@ void draw_main_canvas (ezgl::renderer *g)
     {
         factor = FEATURE_ZOOM_3;
     }
+    
     for (int i = row_min - 1; i <= row_max + 1; i++)
     {
         for (int j = col_min - 1; j <= col_max + 1; j++)
         {
-            if (MapGrids[i][j].Grid_Features.size())
+            if (MapGrids[i][j].Grid_Features.size() != 0)
             {
                 MapGrids[i][j].draw_grid_features(g, factor);
             }
-            
         }
     }
 
@@ -284,6 +300,25 @@ void draw_main_canvas (ezgl::renderer *g)
     if (subway_line_mode)
     {
         draw_subway_lines(g);
+    }
+
+    /********************************************************************************
+    * Draw result path of navigation mode
+    ********************************************************************************/
+    for (int i = 0; i < found_path.size(); i++)
+    {
+        IntersectionIdx from_id = Segment_SegmentDetailedInfo[found_path[i]].from;
+        IntersectionIdx to_id = Segment_SegmentDetailedInfo[found_path[i]].to;
+        ezgl::point2d from_xy = Intersection_IntersectionInfo[from_id].position_xy;
+        ezgl::point2d to_xy = Intersection_IntersectionInfo[to_id].position_xy;
+
+        if (ZOOM_LIMIT_2 <= curr_world_width)
+        {
+            draw_street_segment_pixel(g, found_path[i], from_xy, to_xy, "path");
+        } else
+        {
+            draw_street_segment_meters(g, found_path[i], from_xy, to_xy, "path");
+        }
     }
 
     /********************************************************************************
@@ -358,9 +393,7 @@ void draw_main_canvas (ezgl::renderer *g)
 //        }
     // }
 
-    /********************************************************************************
-    * Draw result path of navigation mode
-    ********************************************************************************/
+    
     // To check travel direction on street segment
     // IntersectionIdx check_start = start_point_id;
     // Vector to store information needed fraw drawing street names

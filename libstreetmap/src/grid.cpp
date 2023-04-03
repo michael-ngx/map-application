@@ -7,11 +7,19 @@
 void Grid::draw_grid_features(ezgl::renderer* g, float factor)
 {
     // Display limit, based on feature zoom factor
-    int limit = this->Grid_Features.size() * factor;
+    int limit;
+    if (this->Grid_Features.size() == 1)
+    {
+        limit = 1;
+    } else
+    {
+        limit = this->Grid_Features.size() * factor;
+    }
+
     // Displaying features
     for (int i = 0; i < limit; i++)
     {
-        if (!check_feature_drawn[this->Grid_Features[i].id])
+        if (check_feature_drawn[this->Grid_Features[i].id] == false)
         {
             check_feature_drawn[this->Grid_Features[i].id] = true;
             draw_feature_area(g, this->Grid_Features[i]);

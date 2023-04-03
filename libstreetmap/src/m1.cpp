@@ -594,7 +594,7 @@ void init_features()
         {
             row_max = NUM_GRIDS - 1;
         }
-
+        
         for (int i = row_min; i <= row_max; i++)
         {
             for (int j = col_min; j <= col_max; j++)
