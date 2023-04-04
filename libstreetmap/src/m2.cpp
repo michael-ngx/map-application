@@ -83,6 +83,8 @@ int count_arrows;
 std::vector<bool> check_feature_drawn(featureNum);
 // Index: StreetSegmentIdx, value: boolean to check if a segment has been drawn
 std::vector<bool> check_segment_drawn(segmentNum);
+// Index: StreetSegmentIdx, value: boolean to check if a segment name has been drawn
+std::vector<bool> check_name_drawn(segmentNum);
 
 // Starting point and destination point (Initialized to 0, 0) and id to -1, -1
 ezgl::point2d start_point = ezgl::point2d(0, 0);
@@ -196,11 +198,8 @@ void draw_main_canvas (ezgl::renderer *g)
     check_feature_drawn.assign(featureNum, false);
     // Reset all segments to be not drawn
     check_segment_drawn.assign(featureNum, false);
-
-    // For each region, allow showing 1 name, 1 arrow, and 1 subway station
-    // std::vector<std::vector<int>> available_region = {{1, 1, 1}, {1, 1, 1}, {1, 1, 1}, {1, 1, 1}, 
-    //                                                   {1, 1, 1}, {1, 1, 1}, {1, 1, 1}, {1, 1, 1},
-    //                                                   {1, 1, 1}, {1, 1, 1}, {1, 1, 1}, {1, 1, 1}};
+    // Reset all segments to be not drawn
+    check_name_drawn.assign(featureNum, false);
 
     //Draw the canvas for Night Mode
     if (night_mode)
@@ -307,34 +306,26 @@ void draw_main_canvas (ezgl::renderer *g)
     ********************************************************************************/
     for (int i = 0; i < found_path.size(); i++)
     {
-        IntersectionIdx from_id = Segment_SegmentDetailedInfo[found_path[i]].from;
-        IntersectionIdx to_id = Segment_SegmentDetailedInfo[found_path[i]].to;
-        ezgl::point2d from_xy = Intersection_IntersectionInfo[from_id].position_xy;
-        ezgl::point2d to_xy = Intersection_IntersectionInfo[to_id].position_xy;
-
+        StreetSegmentDetailedInfo segment = Segment_SegmentDetailedInfo[found_path[i]];
         if (ZOOM_LIMIT_2 <= curr_world_width)
         {
-            draw_street_segment_pixel(g, found_path[i], from_xy, to_xy, "path");
+            draw_street_segment_pixel(g, segment, true);
         } else
         {
-            draw_street_segment_meters(g, found_path[i], from_xy, to_xy, "path");
+            draw_street_segment_meters(g, segment, true);
         }
     }
 
     /********************************************************************************
     * Draw street names and arrows if zoomed in enough
     ********************************************************************************/
-    if (curr_world_width < ZOOM_LIMIT_2)
+    if (curr_world_width < ZOOM_LIMIT_1)
     {
-        // Reset number of names and arrows drawn to NUM_REGIONS
-        // If all regions are unavailable for name or arrows, break for-loop early
-        count_names = NUM_REGIONS;
-        count_arrows = NUM_REGIONS;
-        for (int i = row_min - 1; (i <= row_max + 1) && (count_names || count_arrows); i++)
+        for (int i = row_min - 1; i <= row_max + 1; i++)
         {
-            for (int j = col_min - 1; (j <= col_max + 1) && (count_names || count_arrows); j++)
+            for (int j = col_min - 1; j <= col_max + 1; j++)
             {
-                // MapGrids[i][j].draw_grid_names_or_arrows(g);                
+                MapGrids[i][j].draw_grid_names(g);                
             }
         }
     }
@@ -356,7 +347,6 @@ void draw_main_canvas (ezgl::renderer *g)
     // Display subway station
 //    if (subway_station_mode)
 //    {
-//        int count = NUM_REGIONS;
 //        for (int route = 0; route < AllSubwayRoutes.size(); route++)
 //        {
 //            // Display subway stations
@@ -365,28 +355,16 @@ void draw_main_canvas (ezgl::renderer *g)
 //            {
 //                continue;
 //            }
-//            for (int i = 0; i < AllSubwayRoutes[route].station_points.size() && count; i++)
+//            for (int i = 0; i < AllSubwayRoutes[route].station_points.size(); i++)
 //            {
-//                // Skips if subway is not in visible world
-//                if (visible_world.contains(AllSubwayRoutes[route].station_points[i]))
-//                {
 //                    // Draw all if at very low zoom level
 //                    if (curr_world_width < ZOOM_LIMIT_4)
 //                    {
-//                        draw_pin(g, AllSubwayRoutes[route].station_points[i], "subway_station");
+//                        draw_png(g, AllSubwayRoutes[route].station_points[i], "subway_station");
 //                    } else
 //                    {
-//                        for (int j = 0; j < NUM_REGIONS; j++)
-//                        {
-//                            // Draw 12 stations for high zoom levels
-//                            if (available_region[j][2] && visible_regions[j].contains(AllSubwayRoutes[route].station_points[i]))
-//                            {
-//                                available_region[j][2]--;
-//                                draw_pin(g, AllSubwayRoutes[route].station_points[i], "subway_station");
-//                                count--;
-//                                break;
-//                            }
-//                        }
+//                        
+//                                draw_png(g, AllSubwayRoutes[route].station_points[i], "subway_station");
 //                    }
 //                }
 //            }
@@ -423,7 +401,7 @@ void draw_main_canvas (ezgl::renderer *g)
     //             // Draw arrows
     //             if (i % 6 == 0)
     //             {
-    //                 draw_name_and_arrow(g, Segment_SegmentDetailedInfo[found_path[i]].streetName, true,
+    //                 draw_seg_name(g, Segment_SegmentDetailedInfo[found_path[i]].streetName, true,
     //                                     from_xy, to_xy, true);
     //             }
     //             // Save information to draw street name on found path
@@ -443,7 +421,7 @@ void draw_main_canvas (ezgl::renderer *g)
     //             // Draw arrows
     //             if (i % 6 == 0)
     //             {
-    //                 draw_name_and_arrow(g, Segment_SegmentDetailedInfo[found_path[i]].streetName, true,
+    //                 draw_seg_name(g, Segment_SegmentDetailedInfo[found_path[i]].streetName, true,
     //                                     to_xy, from_xy, true);
     //             }
     //             // Save information to draw street name on found path
@@ -463,7 +441,7 @@ void draw_main_canvas (ezgl::renderer *g)
     // Draw street names after drawing path
     // for (auto seg : path_street_names)
     // {
-    //     draw_name_and_arrow (g, seg.street_name, false, seg.from_xy, seg.to_xy, true);
+    //     draw_seg_name (g, seg, true);
     // }
 
     /********************************************************************************
@@ -471,11 +449,11 @@ void draw_main_canvas (ezgl::renderer *g)
     ********************************************************************************/
     for (auto& point : pin_display_start)
     {
-        draw_pin(g, point, "red_pin");
+        draw_png(g, point, "red_pin");
     }
     for (auto& point : pin_display_dest)
     {
-        draw_pin(g, point, "dest_flag");
+        draw_png(g, point, "dest_flag");
     }
     
     /********************************************************************************

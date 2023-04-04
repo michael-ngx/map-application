@@ -156,7 +156,8 @@ struct StreetSegmentDetailedInfo
     IntersectionIdx from, to;   // Intersection ID this segment runs from/to
     ezgl::point2d from_xy, to_xy;
     bool oneWay;
-    double length;
+    double length;              // Real length (in meters) of segment
+    int width;                  // Real width (in meters) of segment
     double travel_time;         // Travel time, in seconds
     float speedLimit;           // Speed limit of current segment, in m/s
     StreetIdx streetID;         // Index of street this segment belongs to

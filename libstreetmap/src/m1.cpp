@@ -22,6 +22,7 @@
 #include "globals.h"
 #include "grid.h"
 #include "OSMDatabaseAPI.h"
+#include "draw/draw.hpp"
 #include "draw/utilities.hpp"
 #include <iostream>
 #include <set>
@@ -462,9 +463,9 @@ void closeMap() {
     {
         for (int j = 0; j < NUM_GRIDS; j++)
         {
-            MapGrids[i][j].Grid_Non_Motorway_Segments.clear();
-            MapGrids[i][j].Grid_Motorway_Segments.clear();
-            MapGrids[i][j].Grid_Names_And_Arrows_Segments.clear();
+            MapGrids[i][j].Grid_Segments_Non_Motorway.clear();
+            MapGrids[i][j].Grid_Segments_Motorway.clear();
+            MapGrids[i][j].Grid_Segments_Names.clear();
             MapGrids[i][j].Grid_Intersections.clear();
             MapGrids[i][j].Grid_Features.clear();
             MapGrids[i][j].Grid_POIs.clear();
@@ -727,6 +728,9 @@ void init_segments()
             processedInfo.length += findDistanceBetweenTwoPoints(point_1_latlon, to_latlon);
         }
 
+        // Determine the width (in meters) of each street segment based on their type
+        processedInfo.width = get_street_width_meters(processedInfo.highway_type);
+
         // Record the rectangle that bounds segment
         processedInfo.segmentRectangle = ezgl::rectangle({min_x, min_y},
                                                          {max_x, max_y});
@@ -764,17 +768,15 @@ void init_segments()
             {
                 if (processedInfo.highway_type == "motorway" || processedInfo.highway_type == "motorway_link")
                 {
-                    MapGrids[i][j].Grid_Motorway_Segments.push_back(processedInfo);
+                    MapGrids[i][j].Grid_Segments_Motorway.push_back(processedInfo);
                 } else
                 {
-                    MapGrids[i][j].Grid_Non_Motorway_Segments.push_back(processedInfo);
+                    MapGrids[i][j].Grid_Segments_Non_Motorway.push_back(processedInfo);
                 }
 
-                if (processedInfo.streetName != "<unknown>" && processedInfo.length > 100
-                    && (processedInfo.highway_type == "primary" || processedInfo.highway_type == "secondary"
-                        || processedInfo.highway_type == "tertiary" || processedInfo.highway_type == "residential"))
+                if (processedInfo.streetName != "<unknown>")
                 {
-                    MapGrids[i][j].Grid_Names_And_Arrows_Segments.push_back(processedInfo);
+                    MapGrids[i][j].Grid_Segments_Names.push_back(processedInfo);
                 }
             }
         }
