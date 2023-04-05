@@ -41,6 +41,9 @@ Grid MapGrids[NUM_GRIDS][NUM_GRIDS];
 // *******************************************************************
 void m1_init();
 void init_segments();
+std::vector<ezgl::point2d> get_poly_between_points (ezgl::point2d& point_1,
+                                                    ezgl::point2d& point_2,
+                                                    double width_meters);
 void init_intersections();
 void init_streets();
 void init_features();
@@ -701,6 +704,9 @@ void init_segments()
         processedInfo.streetID = rawInfo.streetID;
         processedInfo.numCurvePoints = rawInfo.numCurvePoints;
         processedInfo.streetName = getStreetName(processedInfo.streetID);       // (get the name of the street that each segment belongs to - for m2)
+       
+        // Determine the width (in meters) of each street segment based on their type
+        processedInfo.width = get_street_width_meters(processedInfo.highway_type);
         
         // Find max and min x, y for defining bounds of each segment
         // Based on bounds, we can add each segments to corresponding grids
@@ -718,21 +724,28 @@ void init_segments()
         
         // Pre-calculate length of each street segments (including curve points)
         // Length between 2 points are mote accurate with LatLon (latavg is average of the 2 points, not the whole world)
+        ezgl::point2d point_1_xy = from_xy;
         // Determine bounds of each segment
         if (rawInfo.numCurvePoints == 0)
         {
             processedInfo.length = findDistanceBetweenTwoPoints(point_1_latlon, to_latlon);
+            // Get polygon linking 2 points
+            processedInfo.poly_points.push_back(get_poly_between_points(from_xy, to_xy, processedInfo.width));
         } else
         {
             // Starting length
             processedInfo.length = 0.0; 
             // Iterate through all curve points
-            for (int i = 0; i < rawInfo.numCurvePoints; i++){
+            for (int i = 0; i < rawInfo.numCurvePoints; i++)
+            {
                 LatLon point_2_latlon = getStreetSegmentCurvePoint(segment, i);
                 processedInfo.length += findDistanceBetweenTwoPoints(point_1_latlon, point_2_latlon);
                 // Save the xy of curve points for drawing
                 ezgl::point2d point_2_xy = xy_from_latlon(point_2_latlon);
                 processedInfo.curvePoints_xy.push_back(point_2_xy);
+                // Get polygon linking 2 (curve) points
+                point_1_xy = xy_from_latlon(point_1_latlon);
+                processedInfo.poly_points.push_back(get_poly_between_points(point_1_xy, point_2_xy, processedInfo.width));
                 // Compare to get max min xy of each segment
                 max_x = std::max(point_2_xy.x, max_x);
                 max_y = std::max(point_2_xy.y, max_y);
@@ -743,10 +756,10 @@ void init_segments()
             }
             // point_1_latlon is now the last curve point. Need to add distance to to_latlon
             processedInfo.length += findDistanceBetweenTwoPoints(point_1_latlon, to_latlon);
+            // Get polygon linking 2 points
+            point_1_xy = xy_from_latlon(point_1_latlon);
+            processedInfo.poly_points.push_back(get_poly_between_points(point_1_xy, to_xy, processedInfo.width));
         }
-
-        // Determine the width (in meters) of each street segment based on their type
-        processedInfo.width = get_street_width_meters(processedInfo.highway_type);
 
         // Record the rectangle that bounds segment
         processedInfo.segmentRectangle = ezgl::rectangle({min_x, min_y},
@@ -845,6 +858,33 @@ void init_segments()
     }
 }
 
+// Get the polygon connecting 2 points (used for draw_pixel_meters)
+std::vector<ezgl::point2d> get_poly_between_points (ezgl::point2d& point_1, ezgl::point2d& point_2, double width_meters)
+{
+    std::vector<ezgl::point2d> points;
+    double delta_x, delta_y;
+    if (point_1.y == point_2.y)
+    {   
+        delta_x = 0;
+        delta_y = width_meters;
+    } else
+    {
+        double orthog_slope = - ((point_2.x - point_1.x) / (point_2.y - point_1.y));
+        // delta_x and delta_y > 0
+        delta_x = abs(width_meters / sqrt(1 + pow(orthog_slope, 2)));
+        delta_y = orthog_slope * delta_x;
+    }
+    ezgl::point2d point_a(point_1.x + delta_x, point_1.y + delta_y);
+    ezgl::point2d point_b(point_2.x + delta_x, point_2.y + delta_y);
+    ezgl::point2d point_c(point_2.x - delta_x, point_2.y - delta_y);
+    ezgl::point2d point_d(point_1.x - delta_x, point_1.y - delta_y);
+    points.push_back(point_a);
+    points.push_back(point_b);
+    points.push_back(point_c);
+    points.push_back(point_d);
+    return points;
+}
+
 // *******************************************************************
 // Streets
 // *******************************************************************
@@ -900,7 +940,8 @@ void init_streets()
 // Intersections
 // *******************************************************************
 // init_intersections() must be done after init_segments(), to identify adjacent intersections and the segments to them
-void init_intersections(){
+void init_intersections()
+{
     Intersection_IntersectionInfo.resize(intersectionNum);
 
     for (IntersectionIdx id = 0; id < intersectionNum; id++)

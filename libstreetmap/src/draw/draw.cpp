@@ -97,69 +97,18 @@ void draw_street_segment_meters (ezgl::renderer *g, StreetSegmentDetailedInfo& s
     ezgl::point2d from_xy = segment.from_xy;
     ezgl::point2d curve_pt_xy; // Temp xy for current curve point.
                                // Starts drawing at from_xy to first curve point.
-    
-    // Connecting curvepoints. Increment from_xy.
-    for (int i = 0; i < segment.numCurvePoints; i++)
+    // Circle around "from" intersection
+    g->fill_arc(from_xy, segment.width, 0, 360);
+    // Drawing circles around curvepoints and polygons leading to THAT curvepoint
+    for (int i = 0; i < segment.poly_points.size() - 1; i++)
     {
-        curve_pt_xy = segment.curvePoints_xy[i];
-        draw_line_meters(g, from_xy, curve_pt_xy, segment.width);
-        from_xy = curve_pt_xy;
+        g->fill_arc(segment.curvePoints_xy[i], segment.width, 0, 360);
+        g->fill_poly(segment.poly_points[i]);
     }
-    // Connect last curve point to (x_to, y_to)
-    draw_line_meters(g, from_xy, segment.to_xy, segment.width);
-}
-
-// Draw lines in world coordinates with fill_polygon
-void draw_line_meters (ezgl::renderer *g, ezgl::point2d from_xy,
-                       ezgl::point2d to_xy, int& width_meters)
-{
-    // Circles around intersections (or curvepoints)
-    g->fill_arc(from_xy, width_meters, 0, 360);
-    g->fill_arc(to_xy, width_meters, 0, 360);
-    if (to_xy.y == from_xy.y)
-    {   
-        g->fill_rectangle({from_xy.x, from_xy.y + width_meters},
-                          {to_xy.x, to_xy.y - width_meters});
-        return;
-    } else 
-    {   
-        double orthog_slope = - ((to_xy.x - from_xy.x) / (to_xy.y - from_xy.y));
-        // delta_x and delta_y > 0
-        double delta_x = abs(width_meters / sqrt(1 + pow(orthog_slope, 2)));
-        double delta_y = abs(orthog_slope * delta_x);
-        
-        if (orthog_slope < 0)
-        {
-            ezgl::point2d point_1(from_xy.x + delta_x, from_xy.y - delta_y);
-            ezgl::point2d point_2(to_xy.x + delta_x, to_xy.y - delta_y);
-            ezgl::point2d point_3(to_xy.x - delta_x, to_xy.y + delta_y);
-            ezgl::point2d point_4(from_xy.x - delta_x, from_xy.y + delta_y);
-            // Vector of polygon points
-            std::vector<ezgl::point2d> points;
-            points.push_back(point_1);
-            points.push_back(point_2);
-            points.push_back(point_3);
-            points.push_back(point_4);
-            g->fill_poly(points);
-            g->fill_arc(from_xy, width_meters, 0, 360);
-            g->fill_arc(to_xy, width_meters, 0, 360);
-        } else
-        {
-            ezgl::point2d point_1(from_xy.x + delta_x, from_xy.y + delta_y);
-            ezgl::point2d point_2(to_xy.x + delta_x, to_xy.y + delta_y);
-            ezgl::point2d point_3(to_xy.x - delta_x, to_xy.y - delta_y);
-            ezgl::point2d point_4(from_xy.x - delta_x, from_xy.y - delta_y);
-            // Vector of polygon points
-            std::vector<ezgl::point2d> points;
-            points.push_back(point_1);
-            points.push_back(point_2);
-            points.push_back(point_3);
-            points.push_back(point_4);
-            g->fill_poly(points);
-            g->fill_arc(from_xy, width_meters, 0, 360);
-            g->fill_arc(to_xy, width_meters, 0, 360);
-        }
-    }
+    // Draw last segment in poly_points
+    g->fill_poly(segment.poly_points[segment.poly_points.size() - 1]);
+    // Circle around "to" intersection
+    g->fill_arc(segment.to_xy, segment.width, 0, 360);
 }
 
 // Manually fix street width with pixels according to zoom levels (far zoom levels)
@@ -286,7 +235,7 @@ void draw_seg_name (ezgl::renderer *g, StreetSegmentDetailedInfo& segment, bool 
         }
     }
     g->set_font_size(10);
-    g->draw_text(mid_xy, segment.streetName_arrow, segment.length, segment.width * 1.8);
+    g->draw_text(mid_xy, segment.streetName_arrow, segment.length * 0.5, segment.width * 1.8);
 }
 
 /************************************************************
@@ -362,7 +311,7 @@ void draw_feature_area (ezgl::renderer *g, FeatureDetailedInfo tempFeatureInfo)
         {
             if(!night_mode)
             {
-                g->set_color(206, 234, 214);
+                g->set_color(153, 212, 150);
             } else
             {
                 g->set_color(79, 91, 83);

@@ -157,15 +157,17 @@ struct StreetSegmentDetailedInfo
     ezgl::point2d from_xy, to_xy;
     bool oneWay;
     double length;              // Real length (in meters) of segment
-    int width;                  // Real width (in meters) of segment
+    int width;                  // Real half-width (in meters) of segment
     double travel_time;         // Travel time, in seconds
     float speedLimit;           // Speed limit of current segment, in m/s
     StreetIdx streetID;         // Index of street this segment belongs to
     std::string streetName;     // Name of the street this segment belongs to
     std::string streetName_arrow;   // Name of the street this segment belongs to, arrow included
     double angle_degree;         // Angle to be rotated to draw street segment name and arrow, in degrees
-    int numCurvePoints;      // number of curve points between the ends
-    std::vector<ezgl::point2d> curvePoints_xy; // Vector of xy of all curvepoints
+    int numCurvePoints;         // number of curve points between the ends
+    std::vector<ezgl::point2d> curvePoints_xy; // Vector of xy of all curvepoints (not containing from and to)
+    std::vector<std::vector<ezgl::point2d>> poly_points; // Each index is a vector of polygon points needed to draw 
+                                                        // small curve segments in world coordinates
     ezgl::rectangle segmentRectangle;       // Rectangle for checking display & navigation zooming
 };
 // Index: Segment id, Value: Processed information of the segment
