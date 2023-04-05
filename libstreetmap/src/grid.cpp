@@ -4,25 +4,19 @@
 /********************************************************************************
 * Draw features. Features are sorted by descending area
 ********************************************************************************/
-void Grid::draw_grid_features(ezgl::renderer* g, float factor)
+void Grid::draw_grid_features (ezgl::renderer* g, double limit)
 {
-    // Display limit, based on feature zoom factor
-    int limit;
-    if (this->Grid_Features.size() == 1)
+    // Displaying features with area > area limit
+    for (auto feature : this->Grid_Features)
     {
-        limit = 1;
-    } else
-    {
-        limit = this->Grid_Features.size() * factor;
-    }
-
-    // Displaying features
-    for (int i = 0; i < limit; i++)
-    {
-        if (check_feature_drawn[this->Grid_Features[i].id] == false)
+        if (feature.featureArea > limit
+            && !check_feature_drawn[feature.id])
         {
-            check_feature_drawn[this->Grid_Features[i].id] = true;
-            draw_feature_area(g, this->Grid_Features[i]);
+            check_feature_drawn[feature.id] = true;
+            draw_feature_area(g, feature);
+        } else if (feature.featureArea <= limit)
+        {
+            return;
         }
     }
 }
@@ -30,7 +24,7 @@ void Grid::draw_grid_features(ezgl::renderer* g, float factor)
 /********************************************************************************
 * Draw street segments
 ********************************************************************************/
-void Grid::draw_grid_segments(ezgl::renderer* g)
+void Grid::draw_grid_segments (ezgl::renderer* g)
 {
     for (auto segment : this->Grid_Segments_Non_Motorway)
     {

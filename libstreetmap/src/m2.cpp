@@ -255,20 +255,24 @@ void draw_main_canvas (ezgl::renderer *g)
     /********************************************************************************
     * Draw features
     ********************************************************************************/
-    float factor = 1;
-    // Determine number of features to be drawn to screen based on zoom levels
+    double limit = 0;
+    // Determine area limit of features to be drawn to screen based on zoom levels
+    // Only areas larger than the limit can be drawn to the screen
     if (curr_world_width >= ZOOM_LIMIT_0)
     {
-        factor = FEATURE_ZOOM_0;
+        limit = FEATURE_AREA_LIMIT_0;
     } else if (ZOOM_LIMIT_1 <= curr_world_width && curr_world_width < ZOOM_LIMIT_0)
     {
-        factor = FEATURE_ZOOM_1;
+        limit = FEATURE_AREA_LIMIT_1;
     } else if (ZOOM_LIMIT_2 <= curr_world_width && curr_world_width < ZOOM_LIMIT_1)
     {
-        factor = FEATURE_ZOOM_2;
+        limit = FEATURE_AREA_LIMIT_2;
     } else if (ZOOM_LIMIT_3 <= curr_world_width && curr_world_width < ZOOM_LIMIT_2)
     {
-        factor = FEATURE_ZOOM_3;
+        limit = FEATURE_AREA_LIMIT_3;
+    } else if (ZOOM_LIMIT_4 <= curr_world_width && curr_world_width < ZOOM_LIMIT_3)
+    {
+        limit = FEATURE_AREA_LIMIT_4;
     }
     
     for (int i = row_min - 1; i <= row_max + 1; i++)
@@ -277,7 +281,7 @@ void draw_main_canvas (ezgl::renderer *g)
         {
             if (MapGrids[i][j].Grid_Features.size() != 0)
             {
-                MapGrids[i][j].draw_grid_features(g, factor);
+                MapGrids[i][j].draw_grid_features(g, limit);
             }
         }
     }

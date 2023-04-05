@@ -74,11 +74,12 @@ const float ZOOM_LIMIT_2 = 5000;
 const float ZOOM_LIMIT_3 = 2000;
 const float ZOOM_LIMIT_4 = 1500;
 
-// Percentage of accessing feature array based on zoom levels
-const float FEATURE_ZOOM_0 = 0.001;
-const float FEATURE_ZOOM_1 = 0.01;
-const float FEATURE_ZOOM_2 = 0.05;
-const float FEATURE_ZOOM_3 = 0.1;
+// Minimum area a feature must have to be displayed by different zoom levels
+const double FEATURE_AREA_LIMIT_0 = 500000;
+const double FEATURE_AREA_LIMIT_1 = 200000;
+const double FEATURE_AREA_LIMIT_2 = 30000;
+const double FEATURE_AREA_LIMIT_3 = 7000;
+const double FEATURE_AREA_LIMIT_4 = 1000;
 
 // Camera zoom levels
 const double CAMERALVL_SMALL = 2.5;
