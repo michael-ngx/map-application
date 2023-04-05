@@ -136,7 +136,8 @@ std::unordered_map<OSMID, int> OSMID_WayIndex;
 /*******************************************************************************************************************************
  * STREET MAP LIBRARY
  ********************************************************************************************************************************/
-bool loadMap(std::string map_streets_database_filename) {
+bool loadMap (std::string map_streets_database_filename)
+{
     bool load_successful = false; //Indicates whether the map has loaded successfully
 
     std::cout << "loadMap: " << map_streets_database_filename << std::endl;
@@ -153,7 +154,8 @@ bool loadMap(std::string map_streets_database_filename) {
     load_successful = loadStreetsDatabaseBIN(map_streets_database_filename) &&
                     loadOSMDatabaseBIN(map_osm_database_filename);
 
-    if (load_successful){
+    if (load_successful)
+    {
         m1_init();
     }
     
@@ -163,7 +165,8 @@ bool loadMap(std::string map_streets_database_filename) {
 
 // Returns the distance between two (lattitude,longitude) coordinates in meters
 // Speed Requirement --> moderate
-double findDistanceBetweenTwoPoints(LatLon point_1, LatLon point_2){
+double findDistanceBetweenTwoPoints (LatLon point_1, LatLon point_2)
+{
     double lat1, lon1, lat2, lon2, latavg;
     double x1, y1, x2, y2;
     // Get latitude and longitude, in radians
@@ -184,7 +187,8 @@ double findDistanceBetweenTwoPoints(LatLon point_1, LatLon point_2){
 
 // Returns the length of the given street segment in meters
 // Speed Requirement --> moderate
-double findStreetSegmentLength(StreetSegmentIdx street_segment_id){
+double findStreetSegmentLength (StreetSegmentIdx street_segment_id)
+{
     return Segment_SegmentDetailedInfo[street_segment_id].length;
 }
 
@@ -192,7 +196,8 @@ double findStreetSegmentLength(StreetSegmentIdx street_segment_id){
 // to the other, in seconds, when driving at the speed limit
 // Note: (time = distance/speed_limit)
 // Speed Requirement --> high 
-double findStreetSegmentTravelTime(StreetSegmentIdx street_segment_id){
+double findStreetSegmentTravelTime (StreetSegmentIdx street_segment_id)
+{
     return Segment_SegmentDetailedInfo[street_segment_id].travel_time;
 }
 
@@ -209,8 +214,10 @@ std::vector<IntersectionIdx> findAdjacentIntersections(IntersectionIdx intersect
     std::vector<IntersectionIdx> adjacentIntersections;
     std::vector<StreetSegmentIdx> stSegments = findStreetSegmentsOfIntersection(intersection_id);   // All segments of intersection
 
-    for(auto& i : stSegments){
-        if(Segment_SegmentDetailedInfo[i].from == Segment_SegmentDetailedInfo[i].to){
+    for(auto& i : stSegments)
+    {
+        if(Segment_SegmentDetailedInfo[i].from == Segment_SegmentDetailedInfo[i].to)
+        {
             adjacentIntersections.push_back(Segment_SegmentDetailedInfo[i].from);       // Corner case
             continue;
         }
@@ -231,11 +238,13 @@ std::vector<IntersectionIdx> findAdjacentIntersections(IntersectionIdx intersect
 // Returns the geographically nearest intersection (i.e. as the crow flies) to 
 // the given position
 // Speed Requirement --> none
-IntersectionIdx findClosestIntersection(LatLon my_position){
+IntersectionIdx findClosestIntersection (LatLon my_position)
+{
     std::vector<IntersectionIdx> distanceContainer;
     
     // Get distance from every intersection to IntersectionPosition
-    for(int i = 0; i < intersectionNum; i++){
+    for(int i = 0; i < intersectionNum; i++)
+    {
         double distance = findDistanceBetweenTwoPoints(getIntersectionPosition(i), my_position);
         distanceContainer.push_back(distance);
     }
@@ -243,7 +252,8 @@ IntersectionIdx findClosestIntersection(LatLon my_position){
     IntersectionIdx closestIntersection = 0;                            // First intersection
     double closestDistance = distanceContainer[closestIntersection];    // Closest distance so far
     // Choose the nearest position
-    for(int i = 0; i < distanceContainer.size(); i++){
+    for(int i = 0; i < distanceContainer.size(); i++)
+    {
         if (distanceContainer[i] < closestDistance){
             closestDistance = distanceContainer[i];
             closestIntersection = i;
@@ -255,14 +265,16 @@ IntersectionIdx findClosestIntersection(LatLon my_position){
 
 // Returns the street segments that connect to the given intersection 
 // Speed Requirement --> high
-std::vector<StreetSegmentIdx> findStreetSegmentsOfIntersection(IntersectionIdx intersection_id){
+std::vector<StreetSegmentIdx> findStreetSegmentsOfIntersection (IntersectionIdx intersection_id)
+{
     return Intersection_IntersectionInfo[intersection_id].all_segments;
 }
 
 // Returns all intersections along the a given street.
 // There should be no duplicate intersections in the returned vector.
 // Speed Requirement --> high
-std::vector<IntersectionIdx> findIntersectionsOfStreet(StreetIdx street_id){
+std::vector<IntersectionIdx> findIntersectionsOfStreet (StreetIdx street_id)
+{
     return Street_StreetInfo.at(street_id).all_intersections;
 }
 
@@ -273,7 +285,8 @@ std::vector<IntersectionIdx> findIntersectionsOfStreet(StreetIdx street_id){
 // two streets cross.
 // There should be no duplicate intersections in the returned vector.
 // Speed Requirement --> high
-std::vector<IntersectionIdx> findIntersectionsOfTwoStreets(StreetIdx street_id1, StreetIdx street_id2){
+std::vector<IntersectionIdx> findIntersectionsOfTwoStreets (StreetIdx street_id1, StreetIdx street_id2)
+{
     std::vector<IntersectionIdx> intersectionTwoSt;
     // Get all intersections of 2 streets
     // Intersections are already sorted (required for set_intersection function
@@ -292,7 +305,7 @@ std::vector<IntersectionIdx> findIntersectionsOfTwoStreets(StreetIdx street_id1,
 // Returns all street ids corresponding to street names that start with the 
 // given prefix
 // Speed Requirement --> high
-std::vector<StreetIdx> findStreetIdsFromPartialStreetName(std::string street_prefix)
+std::vector<StreetIdx> findStreetIdsFromPartialStreetName (std::string street_prefix)
 {
     std::vector<StreetIdx> result;
     // Avoid crashing with empty input.
@@ -316,7 +329,7 @@ std::vector<StreetIdx> findStreetIdsFromPartialStreetName(std::string street_pre
 }
 
 // Returns all intersection ids corresponding to intersection names that start with the given prefix
-std::vector<IntersectionIdx> findIntersectionIdsFromPartialIntersectionName(std::string intersection_prefix)
+std::vector<IntersectionIdx> findIntersectionIdsFromPartialIntersectionName (std::string intersection_prefix)
 {
     std::vector<IntersectionIdx> result;
     // Avoid crashing with empty input.
@@ -381,7 +394,8 @@ POIIdx findClosestPOI (LatLon my_position, std::string POItype)
 // Assume a non self-intersecting polygon (i.e. no holes)
 // Return 0 if this feature is not a closed polygon.
 // Speed Requirement --> moderate
-double findFeatureArea(FeatureIdx feature_id){
+double findFeatureArea (FeatureIdx feature_id)
+{
     int numberOfPoints = getNumFeaturePoints(feature_id); // Total number of points
     // Variables used for area calculation
     double lat1, lon1, lat2, lon2, latavg;
@@ -420,7 +434,8 @@ double findFeatureArea(FeatureIdx feature_id){
 // If this OSMNode does not exist in the current map, or the specified key is 
 // not set on the specified OSMNode, return an empty string.
 // Speed Requirement --> high
-std::string getOSMNodeTagValue (OSMID OSMid, std::string key){
+std::string getOSMNodeTagValue (OSMID OSMid, std::string key)
+{
     //use try and catch block to check for out of range OSMid
     try{
         //use the OSMID_Nodes_AllTagPairs container to find given OSMid
@@ -438,7 +453,8 @@ std::string getOSMNodeTagValue (OSMID OSMid, std::string key){
     }
 }
 
-void closeMap() {
+void closeMap()
+{
     //Clean-up your map related data structures here
     Segment_SegmentDetailedInfo.clear();
     Intersection_IntersectionInfo.clear();
@@ -479,7 +495,8 @@ void closeMap() {
 /*******************************************************************************************************************************
  * HELPER FUNCTIONS
  ********************************************************************************************************************************/
-void m1_init(){
+void m1_init()
+{
     // Retrive total numbers from API
     segmentNum = getNumStreetSegments();
     streetNum = getNumStreets();
@@ -742,6 +759,51 @@ void init_segments()
         {
             MAX_SPEED_LIMIT = rawInfo.speedLimit;
         }
+
+        // Calculate the angle to be rotated to draw name on segment; and street names appended with arrows
+        // TODO: Curved segments!
+        double angle_degree;
+        std::string streetName_arrow = processedInfo.streetName;
+        if (from_xy.x == to_xy.x)
+        {
+            if (from_xy.y > to_xy.y)
+            {
+                angle_degree = 270;
+            } else if (from_xy.y == to_xy.y)
+            {
+                angle_degree = 0;
+            } else 
+            {
+                angle_degree = 90;
+            }
+        } else
+        {
+            double slope = (to_xy.y - from_xy.y) / (to_xy.x - from_xy.x);
+            if (slope >= 0)
+            {
+                angle_degree = atan2(abs(to_xy.y - from_xy.y), abs(to_xy.x - from_xy.x)) / kDegreeToRadian;
+                if (processedInfo.oneWay && from_xy.y > to_xy.y) 
+                {
+                    streetName_arrow = "<- " + streetName_arrow;
+                } else if (processedInfo.oneWay)
+                {
+                    streetName_arrow = streetName_arrow + " ->";
+                }
+            } else
+            {
+                angle_degree = 360 - atan2(abs(to_xy.y - from_xy.y), abs(to_xy.x - from_xy.x)) / kDegreeToRadian;
+                if (processedInfo.oneWay && from_xy.y < to_xy.y)
+                {
+                    streetName_arrow = "<- " + streetName_arrow;
+                } else if (processedInfo.oneWay)
+                {
+                    streetName_arrow = streetName_arrow + " ->";
+                }
+            }
+        }
+        processedInfo.streetName_arrow = streetName_arrow;
+        processedInfo.angle_degree = angle_degree;
+
         // Push processed info into vector
         Segment_SegmentDetailedInfo.push_back(processedInfo);
 

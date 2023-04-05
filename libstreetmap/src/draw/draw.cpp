@@ -262,52 +262,9 @@ int get_street_width_meters (std::string& street_type)
 // Draws text on street segments
 void draw_seg_name (ezgl::renderer *g, StreetSegmentDetailedInfo& segment, bool on_path)
 {
-    // Calculate text rotation based on segment slope                   // TODO: Curved segments!
-    double angle_degree;
-    ezgl::point2d from_xy = segment.from_xy;
-    ezgl::point2d to_xy = segment.to_xy;
-    std::string street_name = segment.streetName;
-
-    if (from_xy.x == to_xy.x)
-    {
-        if (from_xy.y > to_xy.y)
-        {
-            angle_degree = 270;
-        } else if (from_xy.y == to_xy.y)
-        {
-            return;
-        } else 
-        {
-            angle_degree = 90;
-        }
-    } else
-    {
-        double slope = (to_xy.y - from_xy.y) / (to_xy.x - from_xy.x);
-        if (slope >= 0)
-        {
-            angle_degree = atan2(abs(to_xy.y - from_xy.y), abs(to_xy.x - from_xy.x)) / kDegreeToRadian;   // 1,0 to 0,1
-            if (segment.oneWay && from_xy.y > to_xy.y) 
-            {
-                street_name = "<- " + street_name;
-            } else if (segment.oneWay)
-            {
-                street_name = street_name + " ->";
-            }
-        } else
-        {
-            angle_degree = 360 - atan2(abs(to_xy.y - from_xy.y), abs(to_xy.x - from_xy.x)) / kDegreeToRadian;
-            if (segment.oneWay && from_xy.y < to_xy.y)
-            {
-                street_name = "<- " + street_name;
-            } else if (segment.oneWay)
-            {
-                street_name = street_name + " ->";
-            }
-        }
-    }
-    g->set_text_rotation(angle_degree);
-    // Draw name or arrow at position between from_xy and to_xy
-    ezgl::point2d mid_xy = {(from_xy.x + to_xy.x) / 2, (from_xy.y + to_xy.y) / 2};
+    g->set_text_rotation(segment.angle_degree);
+    // Draw name or arrow at position between from_xy and to_xy (temporary)
+    ezgl::point2d mid_xy = {(segment.from_xy.x + segment.to_xy.x) / 2, (segment.from_xy.y + segment.to_xy.y) / 2};
     if(!night_mode)
     {
         if (on_path)
@@ -329,7 +286,7 @@ void draw_seg_name (ezgl::renderer *g, StreetSegmentDetailedInfo& segment, bool 
         }
     }
     g->set_font_size(10);
-    g->draw_text(mid_xy, street_name, segment.length, segment.width * 1.8);
+    g->draw_text(mid_xy, segment.streetName_arrow, segment.length, segment.width * 1.8);
 }
 
 /************************************************************
