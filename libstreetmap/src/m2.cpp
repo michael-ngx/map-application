@@ -336,7 +336,10 @@ void draw_main_canvas (ezgl::renderer *g)
         {
             for (int j = col_min - 1; j <= col_max + 1; j++)
             {
-                // MapGrids[i][j].draw_grid_POIs(g);
+                if (MapGrids[i][j].Grid_POIs.size() != 0)
+                {
+                    MapGrids[i][j].draw_grid_POIs(g);
+                }
             }
         }
     }

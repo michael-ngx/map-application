@@ -94,6 +94,11 @@ const double FIND_ZOOM_WIDTH = 1000.0;
 // Total number of map grids to initialize data to
 const int NUM_GRIDS = 20;
 
+// Maximum number of POIs that can be drawn in 1 grid
+const int MAX_GRID_POI = 10;
+// Default step for skipping POIIdx to avoid collision
+const int POI_STEP = 7;
+
 // *********************************************************************************************************
 // Overload functions from M1
 // *********************************************************************************************************

@@ -122,8 +122,16 @@ void Grid::draw_grid_names (ezgl::renderer *g)
 ********************************************************************************/
 void Grid::draw_grid_POIs(ezgl::renderer* g)
 {
+    // Track number of POIs drawn within the current grid
+    int count = 0;
+    // "Step" for skipping POI by id. This is based on the fact that close POIs tend to have close POIIdx
+    int step = POI_STEP;
     for (auto POI : this->Grid_POIs)
     {
-        draw_POIs(g, POI);
+        if (POI.id % step == 0 && count <= MAX_GRID_POI && visible_world.contains(POI.POIPoint))
+        {
+            draw_POIs(g, POI);
+            count++;
+        }
     }
 }
