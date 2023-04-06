@@ -38,7 +38,7 @@ extern GtkEntryCompletion *completion;
 extern GtkEntryCompletion *completion_destination;
 
 // *********************************************************************************************************
-// Global constants
+// Gtk Feature States
 // *********************************************************************************************************
 // Check current map path for city switching - Main
 extern std::string CURRENT_MAP_PATH;
@@ -62,6 +62,9 @@ extern bool direction_display_on;
 extern double clicked_intersection_distance;
 extern double clicked_POI_distance;
 
+// *********************************************************************************************************
+// Drawing & zooming variables
+// *********************************************************************************************************
 // Rectangle for visible world - Updated every frame in M2
 extern ezgl::rectangle visible_world;
 extern double curr_world_width;
@@ -88,38 +91,11 @@ const double CAMERALVL_LARGE = 2;
 // Width of new world to be zoomed to after searching
 const double FIND_ZOOM_WIDTH = 1000.0;
 
-// Number of screen regions for displaying street names and arrows
-const int NUM_REGIONS = 12;
-extern int count_names;
-extern int count_arrows;
-
 // Total number of map grids to initialize data to
 const int NUM_GRIDS = 20;
 
-// All points where pins will be drawn on - Cleared and Modified based on user input
-extern std::vector<ezgl::point2d> pin_display_start;
-extern std::vector<ezgl::point2d> pin_display_dest;
-// Starting point and destination point
-extern ezgl::point2d start_point;
-extern ezgl::point2d destination_point;
-extern IntersectionIdx start_point_id;
-extern IntersectionIdx destination_point_id;
-// Bool to check if an intersection in a search bar is "Set"
-// "Set" means clicked directly on the map/Pressed Enter to search
-// "Unset" is when user modified text in the search bar
-// Navigations are executed only when both text fields are set
-extern bool start_point_set;
-extern bool destination_point_set;
-// Bool to check if the content of the search bar is being changed 
-// by autocomplete (search_response and navigation_response)
-// or by user (adding/deleting characters, etc.) 
-// If done by autocomplete, "changed" signal from GtkSearchEntry 
-// should not modify the start_point_set or destination_point_set
-extern bool search_1_forced_change;
-extern bool search_2_forced_change;
-
 // *********************************************************************************************************
-// Overloaded functions from M1
+// Overload functions from M1
 // *********************************************************************************************************
 // Returns all intersection ids corresponding to intersection names that start with the given prefix
 std::vector<IntersectionIdx> findIntersectionIdsFromPartialIntersectionName(std::string intersection_prefix);
@@ -249,8 +225,6 @@ struct POIDetailedInfo
 extern std::vector<POIDetailedInfo> POI_AllInfo;
 // Key: POI Name, Value: All Food POI locations
 extern std::multimap<std::string, POIDetailedInfo> POI_AllFood;
-// All POI whose name will be displayed
-extern std::vector<std::vector<POIDetailedInfo>> poi_display;
 
 // *********************************************************************************************************
 // OSM
@@ -304,6 +278,27 @@ struct Node
     }
 };
 
+// All points where pins will be drawn on - Cleared and Modified based on user input
+extern std::vector<ezgl::point2d> pin_display_start;
+extern std::vector<ezgl::point2d> pin_display_dest;
+// Starting point and destination point
+extern ezgl::point2d start_point;
+extern ezgl::point2d destination_point;
+extern IntersectionIdx start_point_id;
+extern IntersectionIdx destination_point_id;
+// Bool to check if an intersection in a search bar is "Set"
+// "Set" means clicked directly on the map/Pressed Enter to search
+// "Unset" is when user modified text in the search bar
+// Navigations are executed only when both text fields are set
+extern bool start_point_set;
+extern bool destination_point_set;
+// Bool to check if the content of the search bar is being changed 
+// by autocomplete (search_response and navigation_response)
+// or by user (adding/deleting characters, etc.) 
+// If done by autocomplete, "changed" signal from GtkSearchEntry 
+// should not modify the start_point_set or destination_point_set
+extern bool search_1_forced_change;
+extern bool search_2_forced_change;
 // Storing vector for found path for special display
 extern std::vector<StreetSegmentIdx> found_path;
 

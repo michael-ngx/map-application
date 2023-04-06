@@ -56,6 +56,9 @@ GtkTreeIter iter;
 GtkEntryCompletion *completion;
 GtkEntryCompletion *completion_destination;
 
+/**********************************************
+ * Feature states
+ *********************************************/
 // Check current filter for applying filters
 std::string CURRENT_FILTER = "Filters";
 // Checks if night mode is on
@@ -71,13 +74,13 @@ bool navigation_mode = false;
 // Checks if the direction display is on
 bool direction_display_on = false;
 
+/**********************************************
+ * Drawing - zoom levels & grids
+ *********************************************/
 // Rectangle of current visible world, in meters
 ezgl::rectangle visible_world;
 double curr_world_width;
 double curr_world_height;
-
-int count_names;
-int count_arrows;
 
 // Index: FeatureIdx, value: boolean to check if a feature has been drawn
 std::vector<bool> check_feature_drawn(featureNum);
@@ -86,6 +89,9 @@ std::vector<bool> check_segment_drawn(segmentNum);
 // Index: StreetSegmentIdx, value: boolean to check if a segment name has been drawn
 std::vector<bool> check_name_drawn(segmentNum);
 
+/**********************************************
+ * Navigation & search
+ *********************************************/
 // Starting point and destination point (Initialized to 0, 0) and id to -1, -1
 ezgl::point2d start_point = ezgl::point2d(0, 0);
 ezgl::point2d destination_point = ezgl::point2d(0, 0);
@@ -105,19 +111,6 @@ bool destination_point_set = false;
 bool search_1_forced_change = false;
 bool search_2_forced_change = false;
 
-// Short info for segments whose street name will be displayed
-struct SegShortInfo
-{
-    std::string street_name;
-    ezgl::point2d from_xy;
-    ezgl::point2d to_xy;
-    StreetSegmentIdx seg_id;
-    bool arrow;
-    std::string street_type;
-};
-
-// All POI whose name will be displayed
-std::vector<std::vector<POIDetailedInfo>> poi_display;
 // All points where pin will be drawn on
 std::vector<ezgl::point2d> pin_display_start;
 std::vector<ezgl::point2d> pin_display_dest;
@@ -197,9 +190,9 @@ void draw_main_canvas (ezgl::renderer *g)
     // Reset all features to be not drawn
     check_feature_drawn.assign(featureNum, false);
     // Reset all segments to be not drawn
-    check_segment_drawn.assign(featureNum, false);
+    check_segment_drawn.assign(segmentNum, false);
     // Reset all segments to be not drawn
-    check_name_drawn.assign(featureNum, false);
+    check_name_drawn.assign(segmentNum, false);
 
     //Draw the canvas for Night Mode
     if (night_mode)
@@ -293,7 +286,7 @@ void draw_main_canvas (ezgl::renderer *g)
     {
         for (int j = col_min - 1; j <= col_max + 1; j++)
         {
-            MapGrids[i][j].draw_grid_segments(g);            
+            MapGrids[i][j].draw_grid_segments(g);
         }
     }
 
