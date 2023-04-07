@@ -184,8 +184,7 @@ void city_change_cbk (GtkComboBoxText* self, ezgl::application* application)
         // Clear subway mode if new city doesn't have subways
         if (AllSubwayRoutes.size() == 0)
         {
-            subway_line_mode = false;
-            subway_station_mode = false;
+            subway_mode = false;
             // Hides subway off button, if not hidden
             gtk_widget_hide(GTK_WIDGET(SubwayOffButton));
             // Unhides subway button
@@ -258,8 +257,7 @@ void subway_cbk (GtkButton* /*self*/, ezgl::application* application)
     } else
     {
         application->update_message("Subway Mode On");
-        subway_line_mode = true;
-        subway_station_mode = true;
+        subway_mode = true;
         // Hides itself
         gtk_widget_hide(GTK_WIDGET(SubwayButton));
         // Unhides subway off button
@@ -270,8 +268,7 @@ void subway_cbk (GtkButton* /*self*/, ezgl::application* application)
 void subway_off_cbk (GtkButton* /*self*/, ezgl::application* application)
 {
     application->update_message("Subway Mode Off");
-    subway_line_mode = false;
-    subway_station_mode = false;
+    subway_mode = false;
     // Hides itself
     gtk_widget_hide(GTK_WIDGET(SubwayOffButton));
     // Unhides subway button

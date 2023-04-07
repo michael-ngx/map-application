@@ -131,6 +131,8 @@ std::unordered_map<OSMID, std::vector<std::pair<std::string, std::string>>> OSMI
 std::unordered_map<OSMID, std::string> OSMID_Highway_Type;
 // Keys: index, Value: Subway relations of current world
 std::vector<SubwayRoutes> AllSubwayRoutes;
+// Key: subway station name, value: boolean to check if a station with the name has been drawn
+std::unordered_map<std::string, bool> check_subway_station_added;
 
 // Return Node Index and Way Index from OSMID
 std::unordered_map<OSMID, int> OSMID_NodeIndex;
@@ -487,6 +489,7 @@ void closeMap()
             MapGrids[i][j].Grid_Intersections.clear();
             MapGrids[i][j].Grid_Features.clear();
             MapGrids[i][j].Grid_POIs.clear();
+            MapGrids[i][j].Grid_Subway_Stations.clear();
         }
     }
 
@@ -1102,10 +1105,45 @@ void init_osm_relations_subways()
                         curr_way_track_points.push_back(xy_from_latlon(getNodeCoords(tempOSMNode)));
                     }
                     subway.track_points.push_back(curr_way_track_points);
-                } else if ((subway.roles[i] == "stop") && (subway.members[i].type() == TypedOSMID::Node))
-                {   // Subway stations
+                }
+                // Subway stations 
+                else if ((subway.roles[i] == "stop") && (subway.members[i].type() == TypedOSMID::Node))
+                {
                     const OSMNode* tempOSMNode = getNodeByIndex(OSMID_NodeIndex.at(subway.members[i]));
-                    subway.station_points.push_back(xy_from_latlon(getNodeCoords(tempOSMNode)));
+                    ezgl::point2d position_xy = xy_from_latlon(getNodeCoords(tempOSMNode));
+                    
+                    // Add Subway stations to grids
+                    SubwayStation station;
+                    station.position_xy = position_xy;
+                    int row = (position_xy.y - world_bottom_left.y) / grid_height;
+                    int col = (position_xy.x - world_bottom_left.x) / grid_width;
+                    if (row >= NUM_GRIDS)
+                    {
+                        row = NUM_GRIDS - 1;
+                    }
+                    if (col >= NUM_GRIDS)
+                    {
+                        col = NUM_GRIDS - 1;
+                    }
+
+                    // Get name of subway station
+                    for (int tagIdx = 0; tagIdx < getTagCount(tempOSMNode); ++tagIdx)
+                    {
+                        auto tag_pair = getTagPair(tempOSMNode, tagIdx);
+                        if (tag_pair.first == "name")
+                        {
+                            std::string name = tag_pair.second;
+                            // Since there are multiple nodes at one station, only 1 of them will be added to the grids
+                            // We check by setting up an unordered_map to look up which station name has been added
+                            if (check_subway_station_added.find(name) == check_subway_station_added.end())
+                            {
+                                check_subway_station_added.insert(std::make_pair(name, NULL));
+                                station.name = name;
+                                MapGrids[row][col].Grid_Subway_Stations.push_back(station);
+                            }
+                            break;
+                        }
+                    }
                 }
             }
             AllSubwayRoutes.push_back(subway);

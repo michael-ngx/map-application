@@ -18,11 +18,13 @@ class Grid
         std::vector<StreetSegmentDetailedInfo> Grid_Segments_Motorway;
         std::vector<StreetSegmentDetailedInfo> Grid_Segments_Names;
         std::vector<IntersectionInfo> Grid_Intersections;
+        std::vector<SubwayStation> Grid_Subway_Stations;
 
         void draw_grid_features (ezgl::renderer *g, double limit);
         void draw_grid_segments (ezgl::renderer *g);
         void draw_grid_POIs (ezgl::renderer *g);
         void draw_grid_names (ezgl::renderer *g);
+        void draw_grid_subway_stations (ezgl::renderer *g);
 };
 extern Grid MapGrids[NUM_GRIDS][NUM_GRIDS];
 

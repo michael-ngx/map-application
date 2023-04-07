@@ -65,10 +65,8 @@ std::string CURRENT_FILTER = "Filters";
 bool night_mode = false;
 // Checks if filter is on
 bool filtered = false;
-// Checks if the subway station mode if turned on (to show subway stations)
-bool subway_station_mode = false;
-// Checks if the subway line mode if turned on (to show subway lines)
-bool subway_line_mode = false;
+// Checks if the subway mode if turned on
+bool subway_mode = false;
 // Checks if the navigation mode if turned on (to allow navigation)
 bool navigation_mode = false;
 // Checks if the direction display is on
@@ -293,9 +291,16 @@ void draw_main_canvas (ezgl::renderer *g)
     /********************************************************************************
     * Draw subway if in subway mode
     ********************************************************************************/
-    if (subway_line_mode)
+    if (subway_mode)
     {
         draw_subway_lines(g);
+        for (int i = row_min - 1; i <= row_max + 1; i++)
+        {
+            for (int j = col_min - 1; j <= col_max + 1; j++)
+            {
+                MapGrids[i][j].draw_grid_subway_stations(g);
+            }
+        }
     }
 
     /********************************************************************************
@@ -343,33 +348,6 @@ void draw_main_canvas (ezgl::renderer *g)
             }
         }
     }
-    
-    // Display subway station
-//    if (subway_station_mode)
-//    {
-//        for (int route = 0; route < AllSubwayRoutes.size(); route++)
-//        {
-//            // Display subway stations
-//            // TODO: Avoid redundant stations
-//            if (AllSubwayRoutes[route].station_points.size() == 0)
-//            {
-//                continue;
-//            }
-//            for (int i = 0; i < AllSubwayRoutes[route].station_points.size(); i++)
-//            {
-//                    // Draw all if at very low zoom level
-//                    if (curr_world_width < ZOOM_LIMIT_4)
-//                    {
-//                        draw_png(g, AllSubwayRoutes[route].station_points[i], "subway_station");
-//                    } else
-//                    {
-//                        
-//                                draw_png(g, AllSubwayRoutes[route].station_points[i], "subway_station");
-//                    }
-//                }
-//            }
-//        }
-    // }
 
     
     // To check travel direction on street segment

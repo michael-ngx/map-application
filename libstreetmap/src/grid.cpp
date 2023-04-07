@@ -135,3 +135,23 @@ void Grid::draw_grid_POIs(ezgl::renderer* g)
         }
     }
 }
+
+/********************************************************************************
+* Draw Subway Stations
+********************************************************************************/
+void Grid::draw_grid_subway_stations (ezgl::renderer *g)
+{
+    for (auto station : this->Grid_Subway_Stations)
+    {
+        ezgl::point2d point = station.position_xy;
+        if (!visible_world.contains(point))
+        {
+            continue;
+        }
+        draw_png(g, point, "subway_station");
+        point.y += 10;
+        g->set_color(ezgl::RED);
+        g->format_font("monospace", ezgl::font_slant::normal, ezgl::font_weight::normal, 12);
+        g->draw_text(point, station.name);
+    }
+}

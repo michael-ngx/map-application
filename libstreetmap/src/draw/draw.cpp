@@ -416,7 +416,7 @@ void draw_subway_lines (ezgl::renderer* g)
             }
         }
     }
-}  
+}
 
 /************************************************************
 * Draw POIs

@@ -48,10 +48,8 @@ extern std::string CURRENT_FILTER;
 extern bool night_mode;
 // Checks if filter is on - M2
 extern bool filtered;
-// Checks if the subway station mode if turned on (to show subway stations) - M2
-extern bool subway_station_mode;
-// Checks if the subway line mode if turned on (to show subway lines) - M2
-extern bool subway_line_mode;
+// Checks if the subway mode if turned on - M2
+extern bool subway_mode;
 // Checks if the navigation mode if turned on (to allow navigation) - M2
 extern bool navigation_mode;
 // Checks if the direction display is on
@@ -247,7 +245,12 @@ struct SubwayRoutes
     std::vector<std::string> roles;     // Roles of each member
     std::vector<TypedOSMID> members;    // TypedOSMID of each members. Can check type (Way/Node/Relations)
     std::vector<std::vector<ezgl::point2d>> track_points;    // Vector of vector of point2d for points along all raiway=subway
-    std::vector<ezgl::point2d> station_points;  // Vector of point2d for all stations
+};
+// Stores subway station information
+struct SubwayStation
+{
+    ezgl::point2d position_xy;
+    std::string name;
 };
 // Keys: index, Value: Subway relations of current world
 extern std::vector<SubwayRoutes> AllSubwayRoutes;
