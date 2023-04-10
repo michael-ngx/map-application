@@ -105,15 +105,19 @@ void Grid::draw_grid_names (ezgl::renderer *g)
 {
     for (auto segment : this->Grid_Segments_Names)
     {
-        // Skip segment if segment is part of found_path (will be drawn later)
         // Skip segment if it's already drawn (by other grids)
-        if (std::find(found_path.begin(), found_path.end(), segment.id) != found_path.end()
-            || check_name_drawn[segment.id])
+        if (check_name_drawn[segment.id])
         {
             continue;
         }
         check_name_drawn[segment.id] = true;
-        draw_seg_name(g, segment);
+        if (std::find(found_path.begin(), found_path.end(), segment.id) != found_path.end())
+        {
+            draw_seg_name(g, segment, true);
+        } else
+        {
+            draw_seg_name(g, segment);
+        }
     }
 }
 

@@ -234,8 +234,16 @@ void draw_seg_name (ezgl::renderer *g, StreetSegmentDetailedInfo& segment, bool 
             g->set_color(255, 255, 255);
         }
     }
-    g->set_font_size(10);
-    g->draw_text(mid_xy, segment.streetName_arrow, segment.length * 0.5, segment.width * 1.8);
+    // Bigger street name for names on_path
+    if (on_path)
+    {
+        g->set_font_size(12);
+        g->draw_text(mid_xy, segment.streetName_arrow, segment.length * 0.5, segment.width * 1.8);
+    } else
+    {
+        g->set_font_size(10);
+        g->draw_text(mid_xy, segment.streetName_arrow, segment.length * 0.5, segment.width * 1.8);
+    }
 }
 
 /************************************************************
