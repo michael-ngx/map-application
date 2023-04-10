@@ -316,58 +316,6 @@ void draw_main_canvas (ezgl::renderer *g)
         {
             draw_street_segment_meters(g, segment, true);
         }
-
-        // Start displaying arrows and names when zoomed in
-        if (curr_world_width <= ZOOM_LIMIT_3)
-        {
-            // Get the intersections along the path
-            // Travelling from -> to on the segment
-            if (from_id == check_start)
-            {
-                // Draw arrows
-                if (i % 6 == 0)
-                {
-                    draw_name_or_arrow(g, Segment_SegmentDetailedInfo[found_path[i]].streetName, true,
-                                        from_xy, to_xy, true);
-                }
-                // Save information to draw street name on found path
-                else if (i % 6 == 3)
-                {
-                    SegShortInfo short_info;
-                    short_info.street_name = Segment_SegmentDetailedInfo[found_path[i]].streetName;
-                    short_info.from_xy = from_xy;
-                    short_info.to_xy = to_xy;
-                    path_street_names.push_back(short_info);
-                }
-                check_start = to_id;
-            }
-            // Travelling to -> from on the segment
-            else if (to_id == check_start)
-            {
-                // Draw arrows
-                if (i % 6 == 0)
-                {
-                    draw_name_or_arrow(g, Segment_SegmentDetailedInfo[found_path[i]].streetName, true,
-                                        to_xy, from_xy, true);
-                }
-                // Save information to draw street name on found path
-                else if (i % 6 == 3)
-                {
-                    SegShortInfo short_info;
-                    short_info.street_name = Segment_SegmentDetailedInfo[found_path[i]].streetName;
-                    short_info.from_xy = to_xy;
-                    short_info.to_xy = from_xy;
-                    path_street_names.push_back(short_info);
-                }
-                check_start = from_id;
-            }
-        }
-    }
-
-    // Draw street names after drawing path
-    for (auto seg : path_street_names)
-    {
-        draw_name_or_arrow (g, seg.street_name, false, seg.from_xy, seg.to_xy, true);
     }
 
     /********************************************************************************

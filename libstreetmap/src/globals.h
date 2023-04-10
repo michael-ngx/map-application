@@ -86,10 +86,6 @@ const double FEATURE_AREA_LIMIT_4 = 1000;
 const double CAMERALVL_SMALL = 2.5;
 const double CAMERALVL_LARGE = 2;
 
-// Camera zoom levels
-const double CAMERALVL_SMALL = 2.5;
-const double CAMERALVL_LARGE = 2;
-
 // Width of new world to be zoomed to after searching
 const double FIND_ZOOM_WIDTH = 1000.0;
 
