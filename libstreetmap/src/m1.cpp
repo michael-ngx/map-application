@@ -20,7 +20,9 @@
  */
 #include "m1.h"
 #include "globals.h"
+#include "grid.h"
 #include "OSMDatabaseAPI.h"
+#include "draw/draw.hpp"
 #include "draw/utilities.hpp"
 #include <iostream>
 #include <set>
@@ -29,7 +31,7 @@
 #include <bits/stdc++.h>
 #include <cctype>
 
-
+Grid MapGrids[NUM_GRIDS][NUM_GRIDS];
 /*******************************************************************************************************************************
  * GLOBAL VARIABLES AND HELPER FUNCTION DECLARATION
  ********************************************************************************************************************************/
@@ -39,6 +41,9 @@
 // *******************************************************************
 void m1_init();
 void init_segments();
+std::vector<ezgl::point2d> get_poly_between_points (ezgl::point2d& point_1,
+                                                    ezgl::point2d& point_2,
+                                                    double width_meters);
 void init_intersections();
 void init_streets();
 void init_features();
@@ -52,10 +57,10 @@ ezgl::color get_rgb_color(std::string osm_color);
 // *******************************************************************
 // Latlon bounds of current city
 // *******************************************************************
-LatLonBounds latlon_bound;
-double max_lat, max_lon;
-double min_lat, min_lon;
+ezgl::point2d world_top_right, world_bottom_left;
 double lat_avg;
+double world_height, world_width;
+double grid_height, grid_width;
 
 // *******************************************************************
 // Numbers
@@ -126,6 +131,8 @@ std::unordered_map<OSMID, std::vector<std::pair<std::string, std::string>>> OSMI
 std::unordered_map<OSMID, std::string> OSMID_Highway_Type;
 // Keys: index, Value: Subway relations of current world
 std::vector<SubwayRoutes> AllSubwayRoutes;
+// Key: subway station name, value: boolean to check if a station with the name has been drawn
+std::unordered_map<std::string, bool> check_subway_station_added;
 
 // Return Node Index and Way Index from OSMID
 std::unordered_map<OSMID, int> OSMID_NodeIndex;
@@ -134,7 +141,8 @@ std::unordered_map<OSMID, int> OSMID_WayIndex;
 /*******************************************************************************************************************************
  * STREET MAP LIBRARY
  ********************************************************************************************************************************/
-bool loadMap(std::string map_streets_database_filename) {
+bool loadMap (std::string map_streets_database_filename)
+{
     bool load_successful = false; //Indicates whether the map has loaded successfully
 
     std::cout << "loadMap: " << map_streets_database_filename << std::endl;
@@ -151,7 +159,8 @@ bool loadMap(std::string map_streets_database_filename) {
     load_successful = loadStreetsDatabaseBIN(map_streets_database_filename) &&
                     loadOSMDatabaseBIN(map_osm_database_filename);
 
-    if (load_successful){
+    if (load_successful)
+    {
         m1_init();
     }
     
@@ -161,7 +170,8 @@ bool loadMap(std::string map_streets_database_filename) {
 
 // Returns the distance between two (lattitude,longitude) coordinates in meters
 // Speed Requirement --> moderate
-double findDistanceBetweenTwoPoints(LatLon point_1, LatLon point_2){
+double findDistanceBetweenTwoPoints (LatLon point_1, LatLon point_2)
+{
     double lat1, lon1, lat2, lon2, latavg;
     double x1, y1, x2, y2;
     // Get latitude and longitude, in radians
@@ -169,25 +179,21 @@ double findDistanceBetweenTwoPoints(LatLon point_1, LatLon point_2){
     lon1 = point_1.longitude() * kDegreeToRadian;
     lat2 = point_2.latitude() * kDegreeToRadian;
     lon2 = point_2.longitude() * kDegreeToRadian;
-    latavg = (lat1 + lat2)/2;
+    latavg = (lat1 + lat2) / 2;
     // Convert to cartesian coordinates
     x1 = kEarthRadiusInMeters * lon1 * cos(latavg);
     y1 = kEarthRadiusInMeters * lat1;
     x2 = kEarthRadiusInMeters * lon2 * cos(latavg);
     y2 = kEarthRadiusInMeters * lat2;
     // Find distance between (x1, y1) and (x2, y2)
-    double distance = sqrt(pow((y2-y1),2) + pow((x2-x1),2));
+    double distance = sqrt(pow((y2 - y1), 2) + pow((x2 - x1), 2));
     return distance;
-}
-
-double findDistanceBetweenTwoPoints (ezgl::point2d point_1, ezgl::point2d point_2)
-{
-    return sqrt(pow((point_2.y - point_1.y), 2) + pow((point_2.x - point_1.x),2));
 }
 
 // Returns the length of the given street segment in meters
 // Speed Requirement --> moderate
-double findStreetSegmentLength(StreetSegmentIdx street_segment_id){
+double findStreetSegmentLength (StreetSegmentIdx street_segment_id)
+{
     return Segment_SegmentDetailedInfo[street_segment_id].length;
 }
 
@@ -195,7 +201,8 @@ double findStreetSegmentLength(StreetSegmentIdx street_segment_id){
 // to the other, in seconds, when driving at the speed limit
 // Note: (time = distance/speed_limit)
 // Speed Requirement --> high 
-double findStreetSegmentTravelTime(StreetSegmentIdx street_segment_id){
+double findStreetSegmentTravelTime (StreetSegmentIdx street_segment_id)
+{
     return Segment_SegmentDetailedInfo[street_segment_id].travel_time;
 }
 
@@ -212,8 +219,10 @@ std::vector<IntersectionIdx> findAdjacentIntersections(IntersectionIdx intersect
     std::vector<IntersectionIdx> adjacentIntersections;
     std::vector<StreetSegmentIdx> stSegments = findStreetSegmentsOfIntersection(intersection_id);   // All segments of intersection
 
-    for(auto& i : stSegments){
-        if(Segment_SegmentDetailedInfo[i].from == Segment_SegmentDetailedInfo[i].to){
+    for(auto& i : stSegments)
+    {
+        if(Segment_SegmentDetailedInfo[i].from == Segment_SegmentDetailedInfo[i].to)
+        {
             adjacentIntersections.push_back(Segment_SegmentDetailedInfo[i].from);       // Corner case
             continue;
         }
@@ -234,11 +243,13 @@ std::vector<IntersectionIdx> findAdjacentIntersections(IntersectionIdx intersect
 // Returns the geographically nearest intersection (i.e. as the crow flies) to 
 // the given position
 // Speed Requirement --> none
-IntersectionIdx findClosestIntersection(LatLon my_position){
+IntersectionIdx findClosestIntersection (LatLon my_position)
+{
     std::vector<IntersectionIdx> distanceContainer;
     
     // Get distance from every intersection to IntersectionPosition
-    for(int i = 0; i < intersectionNum; i++){
+    for(int i = 0; i < intersectionNum; i++)
+    {
         double distance = findDistanceBetweenTwoPoints(getIntersectionPosition(i), my_position);
         distanceContainer.push_back(distance);
     }
@@ -246,7 +257,8 @@ IntersectionIdx findClosestIntersection(LatLon my_position){
     IntersectionIdx closestIntersection = 0;                            // First intersection
     double closestDistance = distanceContainer[closestIntersection];    // Closest distance so far
     // Choose the nearest position
-    for(int i = 0; i < distanceContainer.size(); i++){
+    for(int i = 0; i < distanceContainer.size(); i++)
+    {
         if (distanceContainer[i] < closestDistance){
             closestDistance = distanceContainer[i];
             closestIntersection = i;
@@ -256,35 +268,18 @@ IntersectionIdx findClosestIntersection(LatLon my_position){
     return closestIntersection;
 }
 
-IntersectionIdx findClosestIntersection(ezgl::point2d my_position)
-{
-    // Closest_distance found so far
-    double closest_distance = findDistanceBetweenTwoPoints(Intersection_IntersectionInfo[0].position_xy, my_position);
-    IntersectionIdx closestIntersection = 0;                            // First intersection
-
-    // Get distance from every intersection to IntersectionPosition
-    for(int i = 1; i < intersectionNum; i++){
-        double distance = findDistanceBetweenTwoPoints(Intersection_IntersectionInfo[i].position_xy, my_position);
-        if (distance < closest_distance)
-        {
-            closest_distance = distance;
-            closestIntersection = i;
-        }
-    }
-    clicked_intersection_distance = closest_distance;
-    return closestIntersection;
-}
-
 // Returns the street segments that connect to the given intersection 
 // Speed Requirement --> high
-std::vector<StreetSegmentIdx> findStreetSegmentsOfIntersection(IntersectionIdx intersection_id){
+std::vector<StreetSegmentIdx> findStreetSegmentsOfIntersection (IntersectionIdx intersection_id)
+{
     return Intersection_IntersectionInfo[intersection_id].all_segments;
 }
 
 // Returns all intersections along the a given street.
 // There should be no duplicate intersections in the returned vector.
 // Speed Requirement --> high
-std::vector<IntersectionIdx> findIntersectionsOfStreet(StreetIdx street_id){
+std::vector<IntersectionIdx> findIntersectionsOfStreet (StreetIdx street_id)
+{
     return Street_StreetInfo.at(street_id).all_intersections;
 }
 
@@ -295,7 +290,8 @@ std::vector<IntersectionIdx> findIntersectionsOfStreet(StreetIdx street_id){
 // two streets cross.
 // There should be no duplicate intersections in the returned vector.
 // Speed Requirement --> high
-std::vector<IntersectionIdx> findIntersectionsOfTwoStreets(StreetIdx street_id1, StreetIdx street_id2){
+std::vector<IntersectionIdx> findIntersectionsOfTwoStreets (StreetIdx street_id1, StreetIdx street_id2)
+{
     std::vector<IntersectionIdx> intersectionTwoSt;
     // Get all intersections of 2 streets
     // Intersections are already sorted (required for set_intersection function
@@ -314,7 +310,7 @@ std::vector<IntersectionIdx> findIntersectionsOfTwoStreets(StreetIdx street_id1,
 // Returns all street ids corresponding to street names that start with the 
 // given prefix
 // Speed Requirement --> high
-std::vector<StreetIdx> findStreetIdsFromPartialStreetName(std::string street_prefix)
+std::vector<StreetIdx> findStreetIdsFromPartialStreetName (std::string street_prefix)
 {
     std::vector<StreetIdx> result;
     // Avoid crashing with empty input.
@@ -338,7 +334,7 @@ std::vector<StreetIdx> findStreetIdsFromPartialStreetName(std::string street_pre
 }
 
 // Returns all intersection ids corresponding to intersection names that start with the given prefix
-std::vector<IntersectionIdx> findIntersectionIdsFromPartialIntersectionName(std::string intersection_prefix)
+std::vector<IntersectionIdx> findIntersectionIdsFromPartialIntersectionName (std::string intersection_prefix)
 {
     std::vector<IntersectionIdx> result;
     // Avoid crashing with empty input.
@@ -399,30 +395,12 @@ POIIdx findClosestPOI (LatLon my_position, std::string POItype)
     return closestPOI;
 }
 
-// Returns the nearest point of interest of any type, in xy
-POIIdx findClosestPOI(ezgl::point2d my_position)
-{
-    POIIdx closest_POI = 0;
-    double smallestDistance = findDistanceBetweenTwoPoints(my_position, POI_AllInfo[0].POIPoint); // Store the smallest distance (Starts at POIidx = 0)
-    
-    for(POIIdx id = 1; id < POINum; id++)
-    {
-        double tempDistance = findDistanceBetweenTwoPoints(my_position, POI_AllInfo[id].POIPoint);
-        if (tempDistance < smallestDistance)
-        {
-            smallestDistance = tempDistance;
-            closest_POI = id;
-        }
-    }
-    clicked_POI_distance = smallestDistance;
-    return closest_POI;
-}
-
 // Returns the area of the given closed feature in square meters
 // Assume a non self-intersecting polygon (i.e. no holes)
 // Return 0 if this feature is not a closed polygon.
 // Speed Requirement --> moderate
-double findFeatureArea(FeatureIdx feature_id){
+double findFeatureArea (FeatureIdx feature_id)
+{
     int numberOfPoints = getNumFeaturePoints(feature_id); // Total number of points
     // Variables used for area calculation
     double lat1, lon1, lat2, lon2, latavg;
@@ -461,7 +439,8 @@ double findFeatureArea(FeatureIdx feature_id){
 // If this OSMNode does not exist in the current map, or the specified key is 
 // not set on the specified OSMNode, return an empty string.
 // Speed Requirement --> high
-std::string getOSMNodeTagValue (OSMID OSMid, std::string key){
+std::string getOSMNodeTagValue (OSMID OSMid, std::string key)
+{
     //use try and catch block to check for out of range OSMid
     try{
         //use the OSMID_Nodes_AllTagPairs container to find given OSMid
@@ -479,7 +458,8 @@ std::string getOSMNodeTagValue (OSMID OSMid, std::string key){
     }
 }
 
-void closeMap() {
+void closeMap()
+{
     //Clean-up your map related data structures here
     Segment_SegmentDetailedInfo.clear();
     Intersection_IntersectionInfo.clear();
@@ -491,13 +471,27 @@ void closeMap() {
     Features_AllInfo.clear();
     POI_AllInfo.clear();
     POI_AllFood.clear();
-    poi_display.clear();
     OSMID_Nodes_AllTagPairs.clear();
     OSMID_Highway_Type.clear();
     AllSubwayRoutes.clear();
     OSMID_NodeIndex.clear();
     OSMID_WayIndex.clear();
     found_path.clear();
+
+    // Clear data structures in grids
+    for (int i = 0; i < NUM_GRIDS; i++)
+    {
+        for (int j = 0; j < NUM_GRIDS; j++)
+        {
+            MapGrids[i][j].Grid_Segments_Non_Motorway.clear();
+            MapGrids[i][j].Grid_Segments_Motorway.clear();
+            MapGrids[i][j].Grid_Segments_Names.clear();
+            MapGrids[i][j].Grid_Intersections.clear();
+            MapGrids[i][j].Grid_Features.clear();
+            MapGrids[i][j].Grid_POIs.clear();
+            MapGrids[i][j].Grid_Subway_Stations.clear();
+        }
+    }
 
     closeStreetDatabase();
     closeOSMDatabase();
@@ -506,21 +500,22 @@ void closeMap() {
 /*******************************************************************************************************************************
  * HELPER FUNCTIONS
  ********************************************************************************************************************************/
-void m1_init(){
+void m1_init()
+{
     // Retrive total numbers from API
     segmentNum = getNumStreetSegments();
     streetNum = getNumStreets();
     intersectionNum = getNumIntersections();
     featureNum = getNumFeatures();
-    POINum = getNumPointsOfInterest();
+    POINum = getNumPointsOfInterest();    
     // Initialize database
     init_features();
     init_POI();
+    init_osm_ways();
     init_segments();
     init_streets();
     init_intersections();
     init_osm_nodes();
-    init_osm_ways();
     init_osm_relations_subways();
 }
 
@@ -533,14 +528,15 @@ void init_features()
 {
     // Find max and min lat, lon of feature points in city
     // Initialize for comparision
-    max_lat = getFeaturePoint(0, 0).latitude();
-    max_lon = getFeaturePoint(0, 0).longitude();
-    min_lat = max_lat;
-    min_lon = max_lon;
+    double max_lat = getFeaturePoint(0, 0).latitude();
+    double max_lon = getFeaturePoint(0, 0).longitude();
+    double min_lat = max_lat;
+    double min_lon = max_lon;
     
     for (int featureIdx = 0; featureIdx < featureNum; featureIdx++)
     {
         FeatureDetailedInfo tempFeatureInfo;
+        tempFeatureInfo.id = featureIdx;
         tempFeatureInfo.featureType = getFeatureType(featureIdx);
         tempFeatureInfo.featureOSMID = getFeatureOSMID(featureIdx);
 
@@ -576,17 +572,19 @@ void init_features()
     // Already have max min lat lon of the whole world
     // xy_from_latlon conversion function needs max_lat and min_lat
     lat_avg = (max_lat + min_lat) / 2;
-    latlon_bound.max = LatLon(max_lat, max_lon);
-    latlon_bound.min = LatLon(min_lat, min_lon);
+    // Set world values
+    LatLon latlon_top_right = LatLon(max_lat, max_lon);
+    LatLon latlon_bottom_left = LatLon(min_lat, min_lon);
+    world_top_right = xy_from_latlon(latlon_top_right);
+    world_bottom_left = xy_from_latlon(latlon_bottom_left);
+    world_height = world_top_right.y - world_bottom_left.y;
+    grid_height = world_height / NUM_GRIDS;
+    world_width = world_top_right.x - world_bottom_left.x;
+    grid_width = world_width / NUM_GRIDS;
 
-    //Load pre-processed data into Features_AllPoints
     for (int featureIdx = 0; featureIdx < featureNum; featureIdx++)
     {
-        Features_AllInfo[featureIdx].featureRectangle = 
-                    ezgl::rectangle(xy_from_latlon(LatLon(Features_AllInfo[featureIdx].temp_min_lat,
-                                                        Features_AllInfo[featureIdx].temp_min_lon)), 
-                                    xy_from_latlon(LatLon(Features_AllInfo[featureIdx].temp_max_lat,
-                                                        Features_AllInfo[featureIdx].temp_max_lon)));
+        //Load pre-processed data into Features_AllPoints
         for (int pointIdx = 0; pointIdx < getNumFeaturePoints(featureIdx); pointIdx++)
         {
             ezgl::point2d tempPoint = xy_from_latlon(getFeaturePoint(featureIdx, pointIdx));
@@ -594,7 +592,40 @@ void init_features()
         }
         Features_AllInfo[featureIdx].featureArea = findFeatureArea(featureIdx);
     }
+    // Sort the Features_AllInfo based on descending feature areas
     std::sort(Features_AllInfo.begin(), Features_AllInfo.end(), compareFeatureArea);
+
+    for (auto feature : Features_AllInfo)
+    {
+        // Determine which grid(s) the feature belongs
+        ezgl::point2d xy_bottom_left = xy_from_latlon(LatLon(feature.temp_min_lat,
+                                                             feature.temp_min_lon));
+        ezgl::point2d xy_top_right = xy_from_latlon(LatLon(feature.temp_max_lat,
+                                                           feature.temp_max_lon));
+        int col_max = (xy_top_right.x - world_bottom_left.x) / grid_width;
+        int col_min = (xy_bottom_left.x - world_bottom_left.x) / grid_width;
+        int row_max = (xy_top_right.y - world_bottom_left.y) / grid_height;
+        int row_min = (xy_bottom_left.y - world_bottom_left.y) / grid_height;
+        
+        // Put the features into the grids
+        // If feature has bounds at the edge of map, but to grid NUM_GRIDS - 1
+        if (col_max >= NUM_GRIDS)
+        {
+            col_max = NUM_GRIDS - 1;
+        }
+        if (row_max >= NUM_GRIDS)
+        {
+            row_max = NUM_GRIDS - 1;
+        }
+        
+        for (int i = row_min; i <= row_max; i++)
+        {
+            for (int j = col_min; j <= col_max; j++)
+            {
+                MapGrids[i][j].Grid_Features.push_back(feature);
+            }
+        }
+    }
 }
 
 //Helper function for sorting feature areas
@@ -632,18 +663,32 @@ void init_POI(){
         POI_AllInfo.push_back(tempPOIInfo);
         
         // If POI is a food place, add to POI_AllFood
-        if (tempPOIInfo.POIType == "bar" || tempPOIInfo.POIType == "beer" || tempPOIInfo.POIType == "cafe" || tempPOIInfo.POIType == "cafe;fast_food" 
-            || tempPOIInfo.POIType == "cater" || tempPOIInfo.POIType == "fast_food" || tempPOIInfo.POIType == "food_court" || tempPOIInfo.POIType == "ice_cream"
-            || tempPOIInfo.POIType == "old_restaurant" || tempPOIInfo.POIType == "pub" || tempPOIInfo.POIType == "restaurant" || tempPOIInfo.POIType == "veterinary")
+        // if (tempPOIInfo.POIType == "bar" || tempPOIInfo.POIType == "beer" || tempPOIInfo.POIType == "cafe" || tempPOIInfo.POIType == "cafe;fast_food" 
+        //     || tempPOIInfo.POIType == "cater" || tempPOIInfo.POIType == "fast_food" || tempPOIInfo.POIType == "food_court" || tempPOIInfo.POIType == "ice_cream"
+        //     || tempPOIInfo.POIType == "old_restaurant" || tempPOIInfo.POIType == "pub" || tempPOIInfo.POIType == "restaurant" || tempPOIInfo.POIType == "veterinary")
+        // {
+        //     POI_AllFood.insert(std::make_pair(tempPOIInfo.POIName + " - " + std::to_string(tempIdx), tempPOIInfo));
+        // }
+
+        // Add POIs to grids
+        int row = (tempPOIInfo.POIPoint.y - world_bottom_left.y) / grid_height;
+        int col = (tempPOIInfo.POIPoint.x - world_bottom_left.x) / grid_width;
+        if (row >= NUM_GRIDS)
         {
-            POI_AllFood.insert(std::make_pair(tempPOIInfo.POIName + " - " + std::to_string(tempIdx), tempPOIInfo));
+            row = NUM_GRIDS - 1;
         }
+        if (col >= NUM_GRIDS)
+        {
+            col = NUM_GRIDS - 1;
+        }
+        MapGrids[row][col].Grid_POIs.push_back(tempPOIInfo);
     }
 }
 
 // *******************************************************************
 // Street Segments
 // *******************************************************************
+// init_segments() must be done after init_osm_ways(), to record street type for each segments
 void init_segments()
 {
     // Vector of StreetSegmentDetailedInfo (StreetSegmentIdx - StreetSegmentDetailedInfo)
@@ -652,85 +697,204 @@ void init_segments()
         StreetSegmentInfo rawInfo = getStreetSegmentInfo(segment);          // Raw info object   
         StreetSegmentDetailedInfo processedInfo;                            // Processed info object
         
+        processedInfo.id = segment;
         processedInfo.wayOSMID = rawInfo.wayOSMID;
+        processedInfo.highway_type = OSMID_Highway_Type.at(rawInfo.wayOSMID);
         processedInfo.from = rawInfo.from;
         processedInfo.to = rawInfo.to;
         processedInfo.oneWay = rawInfo.oneWay;
         processedInfo.streetID = rawInfo.streetID;
         processedInfo.numCurvePoints = rawInfo.numCurvePoints;
         processedInfo.streetName = getStreetName(processedInfo.streetID);       // (get the name of the street that each segment belongs to - for m2)
+       
+        // Determine the width (in meters) of each street segment based on their type
+        processedInfo.width = get_street_width_meters(processedInfo.highway_type);
         
-        // Find max and min x, y for defining rectangles of each segment
-        ezgl::point2d point_xy = xy_from_latlon(getIntersectionPosition(rawInfo.from));
-        double max_x = point_xy.x;
-        double max_y = point_xy.y;
-        double min_x = point_xy.x;
-        double min_y = point_xy.y;
-
+        // Find max and min x, y for defining bounds of each segment
+        // Based on bounds, we can add each segments to corresponding grids
+        LatLon point_1_latlon = getIntersectionPosition(rawInfo.from);
+        LatLon to_latlon = getIntersectionPosition(rawInfo.to);
+        ezgl::point2d from_xy = xy_from_latlon(point_1_latlon);
+        ezgl::point2d to_xy = xy_from_latlon(to_latlon);
+        processedInfo.from_xy = from_xy;
+        processedInfo.to_xy = to_xy;
+        // Compare to get max min xy of each segment
+        double max_x = std::max(to_xy.x, from_xy.x);
+        double max_y = std::max(to_xy.y, from_xy.y);
+        double min_x = std::min(to_xy.x, from_xy.x);
+        double min_y = std::min(to_xy.y, from_xy.y);
+        
         // Pre-calculate length of each street segments (including curve points)
-        // Determine rectangle bounds of each segment
+        // Length between 2 points are mote accurate with LatLon (latavg is average of the 2 points, not the whole world)
+        ezgl::point2d point_1_xy = from_xy;
+        // Determine bounds of each segment
         if (rawInfo.numCurvePoints == 0)
         {
-            LatLon point_1 = getIntersectionPosition(rawInfo.from);
-            LatLon point_2 = getIntersectionPosition(rawInfo.to);
-            processedInfo.length = findDistanceBetweenTwoPoints(point_1, point_2);
-
-            ezgl::point2d point_1_xy = xy_from_latlon(point_1);
-            ezgl::point2d point_2_xy = xy_from_latlon(point_2);
-            processedInfo.segmentRectangle = ezgl::rectangle({std::min(point_1_xy.x, point_2_xy.x), std::min(point_1_xy.y, point_2_xy.y)}, 
-                                                             {std::max(point_1_xy.x, point_2_xy.x), std::max(point_1_xy.y, point_2_xy.y)});
+            processedInfo.length = findDistanceBetweenTwoPoints(point_1_latlon, to_latlon);
+            // Get polygon linking 2 points
+            processedInfo.poly_points.push_back(get_poly_between_points(from_xy, to_xy, processedInfo.width));
         } else
         {
-            LatLon point_1 = getIntersectionPosition(rawInfo.from);
-            processedInfo.length = 0.0; // Starting length
+            // Starting length
+            processedInfo.length = 0.0; 
             // Iterate through all curve points
-            for (int i = 0; i < rawInfo.numCurvePoints; i++){
-                LatLon point_2 = getStreetSegmentCurvePoint(segment, i);
-                double templength = findDistanceBetweenTwoPoints(point_1, point_2);
-                processedInfo.length += templength;
-                ezgl::point2d point_2_xy = xy_from_latlon(point_2);
-                processedInfo.curvePoints_xy.push_back(point_2_xy);    // Save the xy of curve points (for m2)
-                point_1 = point_2;
+            for (int i = 0; i < rawInfo.numCurvePoints; i++)
+            {
+                LatLon point_2_latlon = getStreetSegmentCurvePoint(segment, i);
+                processedInfo.length += findDistanceBetweenTwoPoints(point_1_latlon, point_2_latlon);
+                // Save the xy of curve points for drawing
+                ezgl::point2d point_2_xy = xy_from_latlon(point_2_latlon);
+                processedInfo.curvePoints_xy.push_back(point_2_xy);
+                // Get polygon linking 2 (curve) points
+                point_1_xy = xy_from_latlon(point_1_latlon);
+                processedInfo.poly_points.push_back(get_poly_between_points(point_1_xy, point_2_xy, processedInfo.width));
                 // Compare to get max min xy of each segment
                 max_x = std::max(point_2_xy.x, max_x);
                 max_y = std::max(point_2_xy.y, max_y);
                 min_x = std::min(point_2_xy.x, min_x);
                 min_y = std::min(point_2_xy.y, min_y);
+                // Proceed to next curve point
+                point_1_latlon = point_2_latlon;
             }
-            LatLon point_2 = getIntersectionPosition(rawInfo.to);                   // Destination (to) point
-            processedInfo.length += findDistanceBetweenTwoPoints(point_1, point_2);
-            ezgl::point2d point_2_xy = xy_from_latlon(point_2);
-            max_x = std::max(point_2_xy.x, max_x);
-            max_y = std::max(point_2_xy.y, max_y);
-            min_x = std::min(point_2_xy.x, min_x);
-            min_y = std::min(point_2_xy.y, min_y);
-            
-            // Record the rectangle that bounds segment
-            processedInfo.segmentRectangle = ezgl::rectangle(ezgl::point2d(min_x, min_y),
-                                                             ezgl::point2d(max_x, max_y));
+            // point_1_latlon is now the last curve point. Need to add distance to to_latlon
+            processedInfo.length += findDistanceBetweenTwoPoints(point_1_latlon, to_latlon);
+            // Get polygon linking 2 points
+            point_1_xy = xy_from_latlon(point_1_latlon);
+            processedInfo.poly_points.push_back(get_poly_between_points(point_1_xy, to_xy, processedInfo.width));
         }
 
-        // Pre-calculate travel time of each street segments
-        processedInfo.travel_time = processedInfo.length/rawInfo.speedLimit;
+        // Record the rectangle that bounds segment
+        processedInfo.segmentRectangle = ezgl::rectangle({min_x, min_y},
+                                                         {max_x, max_y});
 
-        // To record the max speed limit of a street in the city (for A* path finding)
+        // Pre-calculate travel time of each street segments
+        // Record the max speed limit of a street in the city (for A* path finding)
+        processedInfo.travel_time = processedInfo.length / rawInfo.speedLimit;
         if (rawInfo.speedLimit > MAX_SPEED_LIMIT)
         {
             MAX_SPEED_LIMIT = rawInfo.speedLimit;
         }
 
+        // Calculate the angle to be rotated to draw name on segment; and street names appended with arrows
+        // TODO: Curved segments!
+        double angle_degree;
+        std::string streetName_arrow = processedInfo.streetName;
+        if (from_xy.x == to_xy.x)
+        {
+            if (from_xy.y > to_xy.y)
+            {
+                angle_degree = 270;
+            } else if (from_xy.y == to_xy.y)
+            {
+                angle_degree = 0;
+            } else 
+            {
+                angle_degree = 90;
+            }
+        } else
+        {
+            double slope = (to_xy.y - from_xy.y) / (to_xy.x - from_xy.x);
+            if (slope >= 0)
+            {
+                angle_degree = atan2(abs(to_xy.y - from_xy.y), abs(to_xy.x - from_xy.x)) / kDegreeToRadian;
+                if (processedInfo.oneWay && from_xy.y > to_xy.y) 
+                {
+                    streetName_arrow = "<- " + streetName_arrow;
+                } else if (processedInfo.oneWay)
+                {
+                    streetName_arrow = streetName_arrow + " ->";
+                }
+            } else
+            {
+                angle_degree = 360 - atan2(abs(to_xy.y - from_xy.y), abs(to_xy.x - from_xy.x)) / kDegreeToRadian;
+                if (processedInfo.oneWay && from_xy.y < to_xy.y)
+                {
+                    streetName_arrow = "<- " + streetName_arrow;
+                } else if (processedInfo.oneWay)
+                {
+                    streetName_arrow = streetName_arrow + " ->";
+                }
+            }
+        }
+        processedInfo.streetName_arrow = streetName_arrow;
+        processedInfo.angle_degree = angle_degree;
+
         // Push processed info into vector
         Segment_SegmentDetailedInfo.push_back(processedInfo);
+
+        // Determine which grid(s) the segment belongs
+        int col_max = (max_x - world_bottom_left.x) / grid_width;
+        int col_min = (min_x - world_bottom_left.x) / grid_width;
+        int row_max = (max_y - world_bottom_left.y) / grid_height;
+        int row_min = (min_y - world_bottom_left.y) / grid_height;
+
+        // Put the segments into the grids
+        // If feature has bounds at the edge of map, but to grid NUM_GRIDS - 1
+        if (col_max >= NUM_GRIDS)
+        {
+            col_max = NUM_GRIDS - 1;
+        }
+        if (row_max >= NUM_GRIDS)
+        {
+            row_max = NUM_GRIDS - 1;
+        }
+
+        for (int i = row_min; i <= row_max; i++)
+        {
+            for (int j = col_min; j <= col_max; j++)
+            {
+                if (processedInfo.highway_type == "motorway" || processedInfo.highway_type == "motorway_link")
+                {
+                    MapGrids[i][j].Grid_Segments_Motorway.push_back(processedInfo);
+                } else
+                {
+                    MapGrids[i][j].Grid_Segments_Non_Motorway.push_back(processedInfo);
+                }
+
+                if (processedInfo.streetName != "<unknown>")
+                {
+                    MapGrids[i][j].Grid_Segments_Names.push_back(processedInfo);
+                }
+            }
+        }
     }
+}
+
+// Get the polygon connecting 2 points (used for draw_pixel_meters)
+std::vector<ezgl::point2d> get_poly_between_points (ezgl::point2d& point_1, ezgl::point2d& point_2, double width_meters)
+{
+    std::vector<ezgl::point2d> points;
+    double delta_x, delta_y;
+    if (point_1.y == point_2.y)
+    {   
+        delta_x = 0;
+        delta_y = width_meters;
+    } else
+    {
+        double orthog_slope = - ((point_2.x - point_1.x) / (point_2.y - point_1.y));
+        // delta_x and delta_y > 0
+        delta_x = abs(width_meters / sqrt(1 + pow(orthog_slope, 2)));
+        delta_y = orthog_slope * delta_x;
+    }
+    ezgl::point2d point_a(point_1.x + delta_x, point_1.y + delta_y);
+    ezgl::point2d point_b(point_2.x + delta_x, point_2.y + delta_y);
+    ezgl::point2d point_c(point_2.x - delta_x, point_2.y - delta_y);
+    ezgl::point2d point_d(point_1.x - delta_x, point_1.y - delta_y);
+    points.push_back(point_a);
+    points.push_back(point_b);
+    points.push_back(point_c);
+    points.push_back(point_d);
+    return points;
 }
 
 // *******************************************************************
 // Streets
 // *******************************************************************
-// Init street must be done after init_segments (to record all segments and intersections within a street)
+// init_streets() must be done after init_segments() (to record all segments and intersections within a street)
 void init_streets()
 {
-    for(int seg_id = 0; seg_id < segmentNum; seg_id++){
+    for(int seg_id = 0; seg_id < segmentNum; seg_id++)
+    {
         // Info of current segment
         StreetSegmentDetailedInfo segmentInfo = Segment_SegmentDetailedInfo[seg_id];
         StreetIdx street_id = segmentInfo.streetID;
@@ -746,7 +910,7 @@ void init_streets()
             street_info.all_intersections.push_back(Segment_SegmentDetailedInfo[seg_id].from);
             street_info.all_intersections.push_back(Segment_SegmentDetailedInfo[seg_id].to);
             Street_StreetInfo.insert(std::make_pair(street_id, street_info));
-        } else 
+        } else
         {
             // Push segment into street info
             Street_StreetInfo.at(street_id).all_segments.push_back(seg_id);
@@ -777,16 +941,25 @@ void init_streets()
 // *******************************************************************
 // Intersections
 // *******************************************************************
-// Init intersection must be done after init segments, to identify adjacent intersections and the segments to them
-void init_intersections(){
+// init_intersections() must be done after init_segments(), to identify adjacent intersections and the segments to them
+void init_intersections()
+{
     Intersection_IntersectionInfo.resize(intersectionNum);
 
     for (IntersectionIdx id = 0; id < intersectionNum; id++)
     {     
-        // Pre-process information for all intersections
+        // Record intersection names
         std::string name = getIntersectionName(id);
         Intersection_IntersectionInfo[id].name = name;
-        Intersection_IntersectionInfo[id].position_xy = xy_from_latlon(getIntersectionPosition(id));
+        // Populate data structures to allow searching for intersection by name
+        IntersectionName_IntersectionIdx_no_repeat.insert(std::make_pair(name, id));
+        IntersectionName_IntersectionIdx.insert(std::make_pair(name, id));
+        IntersectionName_lower_IntersectionIdx.insert(std::make_pair(lower_no_space(name), id));
+
+        // Pre-process information for all intersections
+        Intersection_IntersectionInfo[id].position_latlon = getIntersectionPosition(id);
+        ezgl::point2d inter_xy = xy_from_latlon(getIntersectionPosition(id));
+        Intersection_IntersectionInfo[id].position_xy = inter_xy;
 
         // Populate vector of all segments connecting to the intersection
         for(int segment = 0; segment < getNumIntersectionStreetSegment(id); segment++) {
@@ -814,10 +987,18 @@ void init_intersections(){
             Intersection_IntersectionInfo[id].neighbors_and_segments.push_back(std::make_pair(neighbor, connecting_segments));
         }
 
-        // Populate data structures to allow searching for intersection by name
-        IntersectionName_IntersectionIdx_no_repeat.insert(std::make_pair(name, id));
-        IntersectionName_IntersectionIdx.insert(std::make_pair(name, id));
-        IntersectionName_lower_IntersectionIdx.insert(std::make_pair(lower_no_space(name), id));
+        // Add Intersections to grids
+        int row = (inter_xy.y - world_bottom_left.y) / grid_height;
+        int col = (inter_xy.x - world_bottom_left.x) / grid_width;
+        if (row >= NUM_GRIDS)
+        {
+            row = NUM_GRIDS - 1;
+        }
+        if (col >= NUM_GRIDS)
+        {
+            col = NUM_GRIDS - 1;
+        }
+        MapGrids[row][col].Grid_Intersections.push_back(Intersection_IntersectionInfo[id]);
     }
 }
 
@@ -845,7 +1026,8 @@ void init_osm_nodes()
     }
 }
 
-// Pre-load data for OSMWays - Only consider OSMIDs having a tag of highway, record highway type
+// Pre-load data for OSMWays - Only consider OSMIDs having a tag of "highway", record highway type (street type)
+// This function must be called before init_segments() to record street segment type
 void init_osm_ways()
 {
     for (int way = 0; way < getNumberOfWays(); ++way)
@@ -923,10 +1105,45 @@ void init_osm_relations_subways()
                         curr_way_track_points.push_back(xy_from_latlon(getNodeCoords(tempOSMNode)));
                     }
                     subway.track_points.push_back(curr_way_track_points);
-                } else if ((subway.roles[i] == "stop") && (subway.members[i].type() == TypedOSMID::Node))
-                {   // Subway stations
+                }
+                // Subway stations 
+                else if ((subway.roles[i] == "stop") && (subway.members[i].type() == TypedOSMID::Node))
+                {
                     const OSMNode* tempOSMNode = getNodeByIndex(OSMID_NodeIndex.at(subway.members[i]));
-                    subway.station_points.push_back(xy_from_latlon(getNodeCoords(tempOSMNode)));
+                    ezgl::point2d position_xy = xy_from_latlon(getNodeCoords(tempOSMNode));
+                    
+                    // Add Subway stations to grids
+                    SubwayStation station;
+                    station.position_xy = position_xy;
+                    int row = (position_xy.y - world_bottom_left.y) / grid_height;
+                    int col = (position_xy.x - world_bottom_left.x) / grid_width;
+                    if (row >= NUM_GRIDS)
+                    {
+                        row = NUM_GRIDS - 1;
+                    }
+                    if (col >= NUM_GRIDS)
+                    {
+                        col = NUM_GRIDS - 1;
+                    }
+
+                    // Get name of subway station
+                    for (int tagIdx = 0; tagIdx < getTagCount(tempOSMNode); ++tagIdx)
+                    {
+                        auto tag_pair = getTagPair(tempOSMNode, tagIdx);
+                        if (tag_pair.first == "name")
+                        {
+                            std::string name = tag_pair.second;
+                            // Since there are multiple nodes at one station, only 1 of them will be added to the grids
+                            // We check by setting up an unordered_map to look up which station name has been added
+                            if (check_subway_station_added.find(name) == check_subway_station_added.end())
+                            {
+                                check_subway_station_added.insert(std::make_pair(name, NULL));
+                                station.name = name;
+                                MapGrids[row][col].Grid_Subway_Stations.push_back(station);
+                            }
+                            break;
+                        }
+                    }
                 }
             }
             AllSubwayRoutes.push_back(subway);
