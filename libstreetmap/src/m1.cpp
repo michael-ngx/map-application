@@ -1015,13 +1015,7 @@ void init_osm_nodes()
         // For getting OSMNode given OSMID
         OSMID_NodeIndex.insert(std::make_pair(tempOSMID, index));
         for (int tagIdx = 0; tagIdx < getTagCount(tempOSMNode); ++tagIdx){
-            if (OSMID_Nodes_AllTagPairs.find(tempOSMID) == OSMID_Nodes_AllTagPairs.end()){
-                std::vector<std::pair<std::string, std::string>> tempVector;
-                tempVector.push_back(getTagPair(tempOSMNode, tagIdx));
-                OSMID_Nodes_AllTagPairs.insert(std::make_pair(tempOSMID, tempVector));
-            } else {
-                OSMID_Nodes_AllTagPairs.at(tempOSMID).push_back(getTagPair(tempOSMNode, tagIdx));
-            }
+            OSMID_Nodes_AllTagPairs[tempOSMID].push_back(getTagPair(tempOSMNode, tagIdx));
         }
     }
 }
@@ -1125,24 +1119,14 @@ void init_osm_relations_subways()
                     {
                         col = NUM_GRIDS - 1;
                     }
-
                     // Get name of subway station
-                    for (int tagIdx = 0; tagIdx < getTagCount(tempOSMNode); ++tagIdx)
+                    std::string name = getOSMNodeTagValue(subway.members[i], "name");
+                    if (check_subway_station_added.find(name) == check_subway_station_added.end())
                     {
-                        auto tag_pair = getTagPair(tempOSMNode, tagIdx);
-                        if (tag_pair.first == "name")
-                        {
-                            std::string name = tag_pair.second;
-                            // Since there are multiple nodes at one station, only 1 of them will be added to the grids
-                            // We check by setting up an unordered_map to look up which station name has been added
-                            if (check_subway_station_added.find(name) == check_subway_station_added.end())
-                            {
-                                check_subway_station_added.insert(std::make_pair(name, NULL));
-                                station.name = name;
-                                MapGrids[row][col].Grid_Subway_Stations.push_back(station);
-                            }
-                            break;
-                        }
+                        check_subway_station_added.insert(std::make_pair(name, NULL));
+                        station.name = name;
+                        // Avoid redundant stations
+                        MapGrids[row][col].Grid_Subway_Stations.push_back(station);
                     }
                 }
             }

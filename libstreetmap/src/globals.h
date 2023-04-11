@@ -259,7 +259,7 @@ extern std::unordered_map<OSMID, int> OSMID_NodeIndex;
 extern std::unordered_map<OSMID, int> OSMID_WayIndex;
 
 // *********************************************************************************************************
-// A* Path finding
+// Path finding Algorithms
 // *********************************************************************************************************
 // Turn penalty default for map
 const double DEFAULT_TURN_PENALTY = 15;
@@ -267,7 +267,7 @@ const double DEFAULT_TURN_PENALTY = 15;
 // Max speed limit of a street in the city
 extern double MAX_SPEED_LIMIT;
 
-// A struct to represent a node in the search graph
+// A struct to represent a node in the search graph (A* algorithm)
 struct Node
 {
     IntersectionIdx id;
@@ -283,6 +283,20 @@ struct Node
     bool operator< (const Node& other) const
     {
         return (g + h) > (other.g + other.h);
+    }
+};
+
+// Node with less information (Multidestination Djakstra)
+struct NodeMulti
+{
+    IntersectionIdx id;
+    float g;        // g-value (cost of path from start node to this node)
+    IntersectionIdx parent;     // node that leads to this node on the shortest path found so far
+    StreetSegmentIdx parent_segment;      // segment (with least travel time) that leads to this node
+    // Used to set up ascending priority queue (pops the smallest value first)
+    bool operator< (const NodeMulti& other) const
+    {
+        return g > other.g;
     }
 };
 
