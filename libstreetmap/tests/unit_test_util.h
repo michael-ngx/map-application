@@ -11,8 +11,10 @@
 #include "m3.h"
 #include "LatLon.h" 
 
+// Previously 200 but it caused some crashes as the failure message can't be more than 1024
+// char failureStr[1024]; in  DeferredTestResult.h
 #ifndef MAX_VEC_PRINT
-#define MAX_VEC_PRINT 200
+#define MAX_VEC_PRINT 40
 #endif
 
 template<typename T>

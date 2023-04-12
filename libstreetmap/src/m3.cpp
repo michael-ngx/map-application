@@ -23,6 +23,7 @@
 #include "m3.h"
 #include "globals.h"
 #include <queue>
+#include <unordered_set>
 #include <cmath>
 #include <algorithm>
 
@@ -77,7 +78,7 @@ std::vector<StreetSegmentIdx> findPathBetweenIntersections (
     std::priority_queue<Node> pq;
     std::unordered_map<IntersectionIdx, Node> record_node;
     // Keep track of visited node ids
-    std::unordered_map<IntersectionIdx, bool> visited;
+    std::unordered_set<IntersectionIdx> visited;
 
     // Create the starting node
     // Add the starting node to the priority queue (FIFO) and record_node hash table
@@ -113,7 +114,7 @@ std::vector<StreetSegmentIdx> findPathBetweenIntersections (
             continue;
         }
         // Mark current node as visited
-        visited.insert(std::make_pair(current.id, NULL));
+        visited.insert(current.id);
 
         // Intersection Info for current node (to get neighbors and edges)
         IntersectionInfo intersection = Intersection_IntersectionInfo[current.id];

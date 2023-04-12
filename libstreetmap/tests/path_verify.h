@@ -18,9 +18,15 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-#include <UnitTest++/UnitTest++.h>
+#pragma once
+#include "StreetsDatabaseAPI.h"
 
-TEST(ExampleTest) {
-    //This test will always pass
-    CHECK(true);
+namespace ece297test {
+
+    bool path_is_legal(const IntersectionIdx start_intersection, const IntersectionIdx end_intersection, 
+                const std::vector<StreetSegmentIdx>& path);
+
+    bool path_is_legal(const IntersectionIdx start_intersection, const std::vector<IntersectionIdx>& end_intersections, 
+                    const std::vector<StreetSegmentIdx>& path);
 }
+
