@@ -27,11 +27,6 @@ struct DeliveryPoint
     std::unordered_set<int> deliveries_to_pick;
     // Deliveries that will be dropOff
     std::unordered_set<int> deliveries_to_drop;
-    // Check if current Point has been visited
-    // "picked" only means that all deliveries_to_pick are picked.
-    // We may still need to come back for dropping
-    // (if deliveries_to_drop is not empty)
-    bool picked = false;
     // Flag to check if current DeliveryPoint is both pickUp & dropoff for some package
     int same_pickUp_dropOff = 0;
 };
@@ -39,7 +34,7 @@ struct DeliveryPoint
 // Single start - Multidestination Djikstra algorithm
 // Record the fastest travel time between 2 intersections, turn penalty included
 // Store result directly to the row of 2D Matrix
-void multiDestinationDjakstra (
+bool multiDestinationDjakstra (
         const IntersectionIdx start_id,
         const std::unordered_set<IntersectionIdx> &delivery_set,
         const std::unordered_set<IntersectionIdx> &depot_set,
@@ -49,11 +44,12 @@ void multiDestinationDjakstra (
 
 // Get the closest next legal travel point based on current_point
 // Legal if: path exist && (never visited & have something to pickUp || have at least 1 package to dropOff)
-IntersectionIdx getNextLegalDeliveryPoint (
-        const IntersectionIdx current_id,
+std::pair<IntersectionIdx, float> getNextLegalDeliveryPoint (
         const std::unordered_map<IntersectionIdx, std::pair<float, std::vector<StreetSegmentIdx>>> &Matrix_row,
         const std::unordered_map<IntersectionIdx, DeliveryPoint> &delivery_map,
+        const std::unordered_map<IntersectionIdx, bool> &current_picked_map,
         const std::unordered_set<IntersectionIdx> &pickUp_set,
+        const std::unordered_set<IntersectionIdx> &depot_set,
         const std::unordered_set<int> &carrying_ids);
 
 // Check if set1 contains at least 1 element in set2
@@ -78,6 +74,8 @@ std::vector<CourierSubPath> travelingCourier(
                             const std::vector<IntersectionIdx>& depots,
                             const float turn_penalty)
 {
+    // Resulting vector
+    std::vector<CourierSubPath> result;
     // Unordered map of all interested delivery intersections 
     // Interesting intersections can be pickUp or dropOff (of one or more deliveries), 
     // or both pickUp and dropOff (of one or more deliveries)
@@ -164,201 +162,238 @@ std::vector<CourierSubPath> travelingCourier(
     std::unordered_map<IntersectionIdx, 
     std::unordered_map<IntersectionIdx, std::pair<float, std::vector<StreetSegmentIdx>>>> Matrix;
 
-    /***************************************************************
+    /*********************************************************************************************
      * 1. Pre-compute travel time between any 2 interested intersections
      * (Multi-destination Djikstra)
-     ***************************************************************/
+     *********************************************************************************************/
     // a. Any delivery location -> All delivery (except for itself) + depots 
+    int count_error = 0;
     #pragma omp parallel for
     for (IntersectionIdx delivery : delivery_vect)
     {
         std::unordered_map<IntersectionIdx, std::pair<float, std::vector<StreetSegmentIdx>>> Matrix_row;
-        multiDestinationDjakstra(delivery,
-                                 delivery_set,
-                                 depot_set,
-                                 Matrix_row,
-                                 turn_penalty,
-                                 false);
+        bool check = multiDestinationDjakstra(delivery,
+                                              delivery_set,
+                                              depot_set,
+                                              Matrix_row,
+                                              turn_penalty,
+                                              false);
+        if (check == false)
+        {
+            count_error++;
+        }
         #pragma omp critical
         Matrix.insert(std::make_pair(delivery, std::move(Matrix_row)));
+    }
+    // If there's an interested point that can reach no interested point
+    if (count_error)
+    {
+        return result;
     }
     // b. Any depot location -> All pick-ups
     #pragma omp parallel for
     for (IntersectionIdx depot : depots)
     {
         std::unordered_map<IntersectionIdx, std::pair<float, std::vector<StreetSegmentIdx>>> Matrix_row;
-        multiDestinationDjakstra(depot,
-                                 pickUp_set,
-                                 depot_set,
-                                 Matrix_row,
-                                 turn_penalty,
-                                 true);
+        bool check = multiDestinationDjakstra(depot,
+                                              pickUp_set,
+                                              depot_set,
+                                              Matrix_row,
+                                              turn_penalty,
+                                              true);
+        if (check == false)
+        {
+            count_error++;
+        }
         #pragma omp critical
         Matrix.insert(std::make_pair(depot, std::move(Matrix_row)));
     }
-
-    /***************************************************************
-     * 2. Greedy Algorithm
-     ***************************************************************/
-    // Number of deliveries left
-    int num_deliveries = deliveries.size();
-    // Resulting vector
-    std::vector<CourierSubPath> result;
-    // Stores the current legal travel path
-    std::vector<IntersectionIdx> current_path;
-    // Delivery ids currently carrying
-    std::unordered_set<int> carrying_ids;    
-
-    // Start at a depot that's closest to any **pick-up point**
-    IntersectionIdx begin_depot;
-    IntersectionIdx start_delivery_point;
-    float min_begin_time = FLT_MAX;
-    IntersectionIdx second_begin_depot;
-    IntersectionIdx second_start_delivery_point;
-    float second_min_begin_time = FLT_MAX;
-    bool init = false;
-
-    for (IntersectionIdx depot : depots)
+    // If there's an interested point that can reach no interested point
+    if (count_error)
     {
+        return result;
+    }
+
+    /*********************************************************************************************
+     * 2. Greedy Algorithm
+     *********************************************************************************************/
+    // Current best travel path
+    std::vector<IntersectionIdx> best_path;
+    // Current best travel path time between different starting points
+    float best_time = FLT_MAX;
+
+    // #pragma omp parallel for
+    // Check different starting points
+    for (int i = 0; i < depots.size(); i++)
+    {
+        bool run = true;
+        // Number of deliveries left
+        int num_deliveries = deliveries.size();
+        // Stores the current legal travel path
+        std::vector<IntersectionIdx> current_path;
+        // Delivery ids currently carrying
+        std::unordered_set<int> carrying_ids;
+        // Picked up map for current path
+        std::unordered_map<IntersectionIdx, bool> current_picked_map;
+        for (auto delivery : pickUp_set)
+        {
+            current_picked_map.insert(std::make_pair(delivery, false));
+        }
+        // Total travel time of the current path
+        float total_time = 0;
+
+        // Start at the closest pickUp point
+        IntersectionIdx start_delivery_point;
+        float min_begin_time = FLT_MAX;
+        bool init = false;
+
         for (auto pickUp_it = pickUp_set.begin(); 
             pickUp_it != pickUp_set.end(); 
             ++pickUp_it)
         {
             // No path from depot to pickUp point
-            if (Matrix.at(depot).find(*pickUp_it) == Matrix.at(depot).end())
+            if (Matrix.at(depots[i]).find(*pickUp_it) == Matrix.at(depots[i]).end())
             {
                 continue;
             }
             if (!init)
             {   // Runs here until at least one depot -> pickUp point is initialized
-                if (Matrix.at(depot).at(*pickUp_it).first < min_begin_time)
+                if (Matrix.at(depots[i]).at(*pickUp_it).first < min_begin_time)
                 {
-                    min_begin_time = Matrix.at(depot).at(*pickUp_it).first;
-                    begin_depot = depot;
+                    min_begin_time = Matrix.at(depots[i]).at(*pickUp_it).first;
                     start_delivery_point = *pickUp_it;
                     init = true;
                 }
             } else
             {
-                if (Matrix.at(depot).at(*pickUp_it).first < min_begin_time)
+                if (Matrix.at(depots[i]).at(*pickUp_it).first < min_begin_time)
                 {
-                    second_min_begin_time = min_begin_time;
-                    second_begin_depot = begin_depot;
-                    second_start_delivery_point = start_delivery_point;
-                    min_begin_time = Matrix.at(depot).at(*pickUp_it).first;
-                    begin_depot = depot;
+                    min_begin_time = Matrix.at(depots[i]).at(*pickUp_it).first;
                     start_delivery_point = *pickUp_it;
-                } else if (Matrix.at(depot).at(*pickUp_it).first != min_begin_time
-                        && Matrix.at(depot).at(*pickUp_it).first < second_min_begin_time)
-                {
-                    second_min_begin_time = Matrix.at(depot).at(*pickUp_it).first;
-                    second_begin_depot = depot;
-                    second_start_delivery_point = *pickUp_it;
                 }
             }
         }
-    }
-    // Error path (no path from any depot to any pickUp point)
-    if (!init)
-    {
-        return result;
-    }
-    // Save current path
-    current_path.push_back(begin_depot);
-    current_path.push_back(start_delivery_point);
-
-    // Pick up at the first delivery point
-    carrying_ids.insert(delivery_map.at(start_delivery_point).deliveries_to_pick.begin(),
-                        delivery_map.at(start_delivery_point).deliveries_to_pick.end());
-    delivery_map.at(start_delivery_point).picked = true;
-    // Must do for every first time we visit a point: check for same_pickUp_dropOff packages
-    // If true, these package(s) are automatically pickedUp and droppedOff
-    if (delivery_map.at(start_delivery_point).same_pickUp_dropOff)
-    {
-        num_deliveries -= delivery_map.at(start_delivery_point).same_pickUp_dropOff;
-    }
-
-    // Main while loop for travelling
-    IntersectionIdx current_point = start_delivery_point;
-    while (num_deliveries)
-    {
-        // Determine next legal delivery point
-        IntersectionIdx next_point = getNextLegalDeliveryPoint(current_point,
-                                                               Matrix.at(current_point),
-                                                               delivery_map,
-                                                               pickUp_set,
-                                                               carrying_ids);
-        // No legal points are found --> error delivery path
-        if (next_point == -1)
+        
+        // Error path (no path from any depot to any pickUp point)
+        if (!init)
         {
-            return result;
+            continue;
+        }
+        // Travel time of first courier subpath
+        total_time += min_begin_time;
+        // Save current path
+        current_path.push_back(depots[i]);
+        current_path.push_back(start_delivery_point);
+
+        // Pick up at the first delivery point
+        carrying_ids.insert(delivery_map.at(start_delivery_point).deliveries_to_pick.begin(),
+                            delivery_map.at(start_delivery_point).deliveries_to_pick.end());
+        current_picked_map.at(start_delivery_point) = true;
+        // Must do for every first time we visit a point: check for same_pickUp_dropOff packages
+        // If true, these package(s) are automatically pickedUp and droppedOff
+        if (delivery_map.at(start_delivery_point).same_pickUp_dropOff)
+        {
+            num_deliveries -= delivery_map.at(start_delivery_point).same_pickUp_dropOff;
         }
 
-        // If never visited the point --> pickUp packages
-        if (!delivery_map.at(next_point).picked)
+        // Main while loop for travelling
+        IntersectionIdx current_point = start_delivery_point;
+
+        while (num_deliveries)
         {
-            carrying_ids.insert(delivery_map.at(next_point).deliveries_to_pick.begin(),
-                                delivery_map.at(next_point).deliveries_to_pick.end());
-            delivery_map.at(next_point).picked = true;
-            // Check for same_pickUp_dropOff
-            if (delivery_map.at(next_point).same_pickUp_dropOff)
+            // Determine next legal delivery point
+            auto [next_point, time] = getNextLegalDeliveryPoint(Matrix.at(current_point),
+                                                                delivery_map,
+                                                                current_picked_map,
+                                                                pickUp_set,
+                                                                depot_set,
+                                                                carrying_ids);
+            // No legal points are found --> error delivery path
+            if (next_point == -1)
             {
-                num_deliveries -= delivery_map.at(next_point).same_pickUp_dropOff;
+                run = false;
+                break;
+            }
+            // Add total time
+            total_time += time;
+            
+            // If never visited the point --> pickUp packages
+            if (pickUp_set.find(next_point) != pickUp_set.end() && !current_picked_map.at(next_point))
+            {
+                carrying_ids.insert(delivery_map.at(next_point).deliveries_to_pick.begin(),
+                                    delivery_map.at(next_point).deliveries_to_pick.end());
+                current_picked_map.at(next_point) = true;
+                // Check for same_pickUp_dropOff
+                if (delivery_map.at(next_point).same_pickUp_dropOff)
+                {
+                    num_deliveries -= delivery_map.at(next_point).same_pickUp_dropOff;
+                }
+            }
+
+            // dropOff packages if any
+            for (auto it = delivery_map.at(next_point).deliveries_to_drop.begin(); 
+                it != delivery_map.at(next_point).deliveries_to_drop.end(); it++)
+            {
+                if (carrying_ids.find(*it) != carrying_ids.end())
+                {
+                    carrying_ids.erase(*it);
+                    num_deliveries--;
+                }
+            }
+
+            // Record next point
+            current_path.push_back(next_point);
+
+            // Proceed
+            current_point = next_point;
+        }
+
+        if (run == false)
+        {
+            continue;
+        }
+
+        // Find closest depot to the last point
+        IntersectionIdx chosen_end_depot = -1;
+        float min_end = FLT_MAX;
+        for (auto depot_end : depots)
+        {
+            if (Matrix.at(current_point).find(depot_end) != Matrix.at(current_point).end()
+                && Matrix.at(current_point).at(depot_end).first < min_end)
+            {
+                min_end = Matrix.at(current_point).at(depot_end).first;
+                chosen_end_depot = depot_end;
             }
         }
-
-        // dropOff packages if any
-        for (auto it = delivery_map.at(next_point).deliveries_to_drop.begin(); 
-            it != delivery_map.at(next_point).deliveries_to_drop.end(); )
+        // Cannot reach any depots from the last point - should not happen
+        // Since the last point should always be able to traverse back to the beginning depot
+        if (chosen_end_depot == -1)
         {
-            if (carrying_ids.find(*it) != carrying_ids.end())
-            {
-                carrying_ids.erase(*it);
-                // Update iterator to next element if a delete happens
-                it = delivery_map.at(next_point).deliveries_to_drop.erase(it);
-                num_deliveries--;
-            } else
-            {
-                ++it; // Increment iterator normally
-            }
+            continue;
         }
+        total_time += min_end;
+        current_path.push_back(chosen_end_depot);
 
-        // Record next point
-        current_path.push_back(next_point);
-
-        // Proceed
-        current_point = next_point;
+        // #pragma omp critical
+        if (total_time < best_time && total_time != 0)
+        {
+            best_time = total_time;
+            best_path = std::move(current_path);
+        }
     }
 
     /***************************************************************
-     * Recover the result
+     * Generate result path
      ***************************************************************/
-    // Find closest depot to the last point
-    IntersectionIdx end_depot = -1;
-    float min_end = FLT_MAX;
-    for (IntersectionIdx depot : depots)
-    {
-        if (Matrix.at(current_point).find(depot) != Matrix.at(current_point).end()
-            && Matrix.at(current_point).at(depot).first < min_end)
-        {
-            min_end = Matrix.at(current_point).at(depot).first;
-            end_depot = depot;
-        }
-    }
-    // Cannot reach any depots from the last point - should not happen
-    // Since the last point should always be able to traverse back to the beginning depot
-    if (end_depot == -1)
+    if (best_path.size() == 0)
     {
         return result;
     }
-    current_path.push_back(end_depot);
-
-    // Generate result path
-    IntersectionIdx point_1 = current_path[0];
+    IntersectionIdx point_1 = best_path[0];
     IntersectionIdx point_2;
-    for (int i = 1; i < current_path.size(); i++)
+    for (int i = 1; i < best_path.size(); i++)
     {
-        point_2 = current_path[i];
+        point_2 = best_path[i];
         CourierSubPath subPath = {point_1, point_2, Matrix.at(point_1).at(point_2).second};
         result.push_back(subPath);
         point_1 = point_2;
@@ -369,7 +404,7 @@ std::vector<CourierSubPath> travelingCourier(
 /*******************************************************************************************************************************
  * HELPER FUNCTIONS
  ********************************************************************************************************************************/
-void multiDestinationDjakstra (
+bool multiDestinationDjakstra (
         const IntersectionIdx start_id,
         const std::unordered_set<IntersectionIdx> &delivery_set,
         const std::unordered_set<IntersectionIdx> &depot_set,
@@ -437,7 +472,7 @@ void multiDestinationDjakstra (
                 || 
                 (from_depot && Matrix_row.size() == delivery_set.size()))
             {
-                break;
+                return true;
             }
         }
 
@@ -515,57 +550,69 @@ void multiDestinationDjakstra (
             }
         }
     }
-    // It is assumed here that if some interested nodes cannot be reached by start_id,
-    // the corresponding travel time in the Matrix has been initialized to 0
-    
+    // No interested nodes can be reached by start_id, the Matrix has 0 size
+    if (Matrix_row.size() == 0)
+    {
+        return false;
+    } 
+    // Some, but not all interested nodes can be reached by start_id
+    else
+    {
+        return true;
+    }
 }
 
 // Get the closest next legal travel point from current_point
-IntersectionIdx getNextLegalDeliveryPoint (
-        const IntersectionIdx current_id,
+std::pair<IntersectionIdx, float> getNextLegalDeliveryPoint (
         const std::unordered_map<IntersectionIdx, std::pair<float, std::vector<StreetSegmentIdx>>> &Matrix_row,
         const std::unordered_map<IntersectionIdx, DeliveryPoint> &delivery_map,
+        const std::unordered_map<IntersectionIdx, bool> &current_picked_map,
         const std::unordered_set<IntersectionIdx> &pickUp_set,
+        const std::unordered_set<IntersectionIdx> &depot_set,
         const std::unordered_set<int> &carrying_ids)
 {
-    IntersectionIdx next_point = -1;
-    float min_time = FLT_MAX;
-    // Check if there are any legal points
-    bool init = false;
+    IntersectionIdx next_point_smart = -1;
+    IntersectionIdx next_point_dumb = -1;
+    float min_time_smart = FLT_MAX;
+    float min_time_dumb = FLT_MAX;
 
-    for (auto pair : delivery_map)
+    // Only looping through intersections current_id can reach to
+    for (auto pair : Matrix_row)
     {
         IntersectionIdx point_id = pair.first;
-        DeliveryPoint next_point_info = pair.second;
-        if (point_id == current_id)
+        // Skip if point_id is a depot
+        if (depot_set.find(point_id) != depot_set.end())
         {
             continue;
         }
-        // Legal if: path exist && (never visited & have something to pickUp || have at least 1 package to dropOff)
-        if (!init)
-        {   // Goes here until found at least 1 legal next point (can travel to)
-            if (Matrix_row.find(point_id) != Matrix_row.end() && Matrix_row.at(point_id).first != 0)
-            {
-                next_point = point_id;
-                init = true;
-            }
+        // "Smart" if: never visited & have something to pickUp || have at least 1 package to dropOff
+        if (
+            pair.second.first < min_time_smart
+            &&
+            ((pickUp_set.find(point_id) != pickUp_set.end() && !current_picked_map.at(point_id))
+            || check_set_intersection(carrying_ids, delivery_map.at(point_id).deliveries_to_drop))
+            )
+        {
+            next_point_smart = point_id;
+            min_time_smart = pair.second.first;
         } else
-        {   // Improve by looking for more useful next_points
-            if (
-                Matrix_row.find(point_id) != Matrix_row.end() && Matrix_row.at(point_id).first < min_time
-                &&
-                ((!next_point_info.picked && pickUp_set.find(point_id) != pickUp_set.end())
-                || check_set_intersection(carrying_ids, next_point_info.deliveries_to_drop))
-               )
+        {
+            if (pair.second.first < min_time_dumb)
             {
-                next_point = point_id;
-                min_time = Matrix_row.at(point_id).first;
+                next_point_dumb = point_id;
+                min_time_dumb = pair.second.first;
             }
         }
     }
 
-    // If there are no next_point, -1 is returned
-    return next_point;
+    // If there's a "smart" next point, go to that one
+    if (min_time_smart != FLT_MAX)
+    {
+        return std::make_pair(next_point_smart, min_time_smart);
+    } else
+    {
+        return std::make_pair(next_point_dumb, min_time_dumb);
+    }
 }
 
 // Check if set1 contains at least 1 element in set2
