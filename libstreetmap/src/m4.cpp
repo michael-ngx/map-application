@@ -47,10 +47,12 @@ void multiDestinationDjakstra (
         bool from_depot);
 
 // Get the closest next legal travel point based on current_point
-// Legal if: path exist && (never visited (never pickedUp) || have at least 1 package to dropOff)
+// Legal if: path exist && (never visited & have something to pickUp || have at least 1 package to dropOff)
 IntersectionIdx getNextLegalDeliveryPoint (
+        const IntersectionIdx current_id,
         const std::unordered_map<IntersectionIdx, std::pair<float, std::vector<StreetSegmentIdx>>> &Matrix_row,
         const std::unordered_map<IntersectionIdx, DeliveryPoint> &delivery_map,
+        const std::unordered_set<IntersectionIdx> &pickUp_set,
         const std::unordered_set<int> &carrying_ids);
 
 // Check if set1 contains at least 1 element in set2
@@ -147,7 +149,7 @@ std::vector<CourierSubPath> travelingCourier(
     }
     
     // 2D Matrix of travel time between any 2 intersections (except for itself)
-    // Call to Matrix[From][To] returns a pair:
+    // Call to Matrix.at(From).at(To) returns a pair:
     // - pair.first: Fastest travel time From -> To
     // - pair.second: Fastest travel route From -> To
     std::unordered_map<IntersectionIdx, 
@@ -161,23 +163,27 @@ std::vector<CourierSubPath> travelingCourier(
     // #pragma omp parallel for
     for (IntersectionIdx delivery : delivery_set)
     {
+        std::unordered_map<IntersectionIdx, std::pair<float, std::vector<StreetSegmentIdx>>> Matrix_row;
         multiDestinationDjakstra(delivery,
                                  delivery_set,
                                  depot_set,
-                                 Matrix[delivery],
+                                 Matrix_row,
                                  turn_penalty,
                                  false);
+        Matrix.insert(std::make_pair(delivery, std::move(Matrix_row)));
     }
     // b. Any depot location -> All pick-ups
     // #pragma omp parallel for
     for (IntersectionIdx depot : depots)
     {
+        std::unordered_map<IntersectionIdx, std::pair<float, std::vector<StreetSegmentIdx>>> Matrix_row;
         multiDestinationDjakstra(depot,
                                  pickUp_set,
                                  depot_set,
-                                 Matrix[depot],
+                                 Matrix_row,
                                  turn_penalty,
                                  true);
+        Matrix.insert(std::make_pair(depot, std::move(Matrix_row)));
     }
 
     /***************************************************************
@@ -195,16 +201,18 @@ std::vector<CourierSubPath> travelingCourier(
     // Start at a depot that's closest to any **pick-up point**
     IntersectionIdx begin_depot = depots[0];
     IntersectionIdx start_delivery_point = *pickUp_set.begin();
-    float min_begin = Matrix[depots[0]][*pickUp_set.begin()].first;
+    float min_begin = Matrix.at(depots[0]).at(*pickUp_set.begin()).first;
     for (IntersectionIdx depot : depots)
     {
-        for (IntersectionIdx pickUp : pickUp_set)
+        for (auto pickUp_it = pickUp_set.begin(); 
+            pickUp_it != pickUp_set.end(); 
+            ++pickUp_it)
         {
-            if (Matrix[depot][pickUp].first < min_begin)
+            if (Matrix.at(depot).at(*pickUp_it).first < min_begin)
             {
-                min_begin = Matrix[depot][pickUp].first;
+                min_begin = Matrix.at(depot).at(*pickUp_it).first;
                 begin_depot = depot;
-                start_delivery_point = pickUp;
+                start_delivery_point = *pickUp_it;
             }
         }
     }
@@ -228,15 +236,16 @@ std::vector<CourierSubPath> travelingCourier(
     while (num_deliveries)
     {
         // Determine next legal delivery point
-        IntersectionIdx next_point = getNextLegalDeliveryPoint(Matrix[current_point],
+        IntersectionIdx next_point = getNextLegalDeliveryPoint(current_point,
+                                                               Matrix.at(current_point),
                                                                delivery_map,
+                                                               pickUp_set,
                                                                carrying_ids);
         // No legal points are found --> error delivery path
         // TODO: Try different path (?)
         if (next_point == -1)
         {
-            std::vector<CourierSubPath> result_error;
-            return result_error;
+            return result;
         }
 
         // If never visited the point --> pickUp packages
@@ -254,14 +263,17 @@ std::vector<CourierSubPath> travelingCourier(
 
         // dropOff packages if any
         for (auto it = delivery_map.at(next_point).deliveries_to_drop.begin(); 
-            it != delivery_map.at(next_point).deliveries_to_drop.end(); 
-            ++it)
+            it != delivery_map.at(next_point).deliveries_to_drop.end(); )
         {
             if (carrying_ids.find(*it) != carrying_ids.end())
             {
                 carrying_ids.erase(*it);
-                delivery_map.at(next_point).deliveries_to_drop.erase(*it);
+                // Update iterator to next element if a delete happens
+                it = delivery_map.at(next_point).deliveries_to_drop.erase(it);
                 num_deliveries--;
+            } else
+            {
+                ++it; // Increment iterator normally
             }
         }
 
@@ -277,12 +289,12 @@ std::vector<CourierSubPath> travelingCourier(
      ***************************************************************/
     // Find closest depot to the last point
     IntersectionIdx end_depot = depots[0];
-    float min_end = Matrix[current_point][depots[0]].first;
+    float min_end = Matrix.at(current_point).at(depots[0]).first;
     for (IntersectionIdx depot : depots)
     {
-        if (Matrix[current_point][depot].first < min_end)
+        if (Matrix.at(current_point).at(depot).first < min_end)
         {
-            min_end = Matrix[current_point][depot].first;
+            min_end = Matrix.at(current_point).at(depot).first;
             end_depot = depot;
         }
     }
@@ -294,8 +306,9 @@ std::vector<CourierSubPath> travelingCourier(
     for (int i = 1; i < current_path.size(); i++)
     {
         point_2 = current_path[i];
-        CourierSubPath subPath = {point_1, point_2, Matrix[point_1][point_2].second};
+        CourierSubPath subPath = {point_1, point_2, Matrix.at(point_1).at(point_2).second};
         result.push_back(subPath);
+        point_1 = point_2;
     }
     return result;
 }
@@ -352,6 +365,8 @@ void multiDestinationDjakstra (
                 delivery_set.find(current.id) != delivery_set.end())
             )
         {
+            IntersectionIdx point_reached = current.id;
+            float time = current.g;
             std::vector<StreetSegmentIdx> path;
             // Reconstruct the path from start_id and current.id
             while (current.parent != -1)
@@ -360,7 +375,7 @@ void multiDestinationDjakstra (
                 current = record_node[current.parent];
             }
             // Record travel time to current row in Matrix
-            Matrix_row.insert(std::make_pair(current.id, std::make_pair(current.g, path)));
+            Matrix_row.insert(std::make_pair(point_reached, std::make_pair(time, path)));
 
             // Break early if found path to all interested nodes
             // NOT from_depot : delivery points - 1 (itself) + depots
@@ -374,15 +389,16 @@ void multiDestinationDjakstra (
         }
 
         // Intersection Info for current node (to get neighbors and edges)
-        IntersectionInfo intersection = Intersection_IntersectionInfo[current.id];
+        IntersectionInfo intersection_info = Intersection_IntersectionInfo[current.id];
+        
         // If current node has no neighbors --> skip
-        if (intersection.neighbors_and_segments.empty())
+        if (intersection_info.neighbors_and_segments.empty())
         {
             continue;
         }
 
         // Explore all neighbors
-        for (std::pair<IntersectionIdx, std::vector<StreetSegmentIdx>> pair : intersection.neighbors_and_segments)
+        for (auto pair : intersection_info.neighbors_and_segments)
         {
             // If neighbor node is visited --> Skip to next neighbor
             if (visited.find(pair.first) != visited.end())
@@ -448,12 +464,15 @@ void multiDestinationDjakstra (
     }
     // It is assumed here that if some interested nodes cannot be reached by start_id,
     // the corresponding travel time in the Matrix has been initialized to 0
+    
 }
 
 // Get the closest next legal travel point based on current_point
 IntersectionIdx getNextLegalDeliveryPoint (
+        const IntersectionIdx current_id,
         const std::unordered_map<IntersectionIdx, std::pair<float, std::vector<StreetSegmentIdx>>> &Matrix_row,
         const std::unordered_map<IntersectionIdx, DeliveryPoint> &delivery_map,
+        const std::unordered_set<IntersectionIdx> &pickUp_set,
         const std::unordered_set<int> &carrying_ids)
 {
     IntersectionIdx next_point = -1;
@@ -461,33 +480,39 @@ IntersectionIdx getNextLegalDeliveryPoint (
     // Check if there are any legal points
     bool init = false;
 
-    for (auto inter_pair : Matrix_row)
+    for (auto pair : delivery_map)
     {
-        // Legal if: path exist && (never visited (never pickedUp) || have at least 1 package to dropOff)
+        IntersectionIdx point_id = pair.first;
+        DeliveryPoint next_point_info = pair.second;
+        if (point_id == current_id)
+        {
+            continue;
+        }
+        // Legal if: path exist && (never visited & have something to pickUp || have at least 1 package to dropOff)
         if (!init)
         {   // Goes here until find at least 1 legal next point
             if (
-                inter_pair.second.first != 0 
+                Matrix_row.at(point_id).first != 0 
                 && 
-                (!delivery_map.at(inter_pair.first).picked 
-                || check_set_intersection(carrying_ids, delivery_map.at(inter_pair.first).deliveries_to_drop))
+                ((!next_point_info.picked && pickUp_set.find(point_id) != pickUp_set.end())
+                || check_set_intersection(carrying_ids, next_point_info.deliveries_to_drop))
                )
             {
-                next_point = inter_pair.first;
-                min_time = inter_pair.second.first;
+                next_point = point_id;
+                min_time = Matrix_row.at(point_id).first;
                 init = true;
             }
         } else
         {
             if (
-                inter_pair.second.first < min_time
+                Matrix_row.at(point_id).first < min_time
                 &&
-                (!delivery_map.at(inter_pair.first).picked 
-                || check_set_intersection(carrying_ids, delivery_map.at(inter_pair.first).deliveries_to_drop))
+                ((!next_point_info.picked && pickUp_set.find(point_id) != pickUp_set.end())
+                || check_set_intersection(carrying_ids, next_point_info.deliveries_to_drop))
                )
             {
-                next_point = inter_pair.first;
-                min_time = inter_pair.second.first;
+                next_point = point_id;
+                min_time = Matrix_row.at(point_id).first;
             }
         }
     }
