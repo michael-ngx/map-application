@@ -3,6 +3,7 @@
 #include "globals.h"
 #include <queue>
 #include <unordered_set>
+#include <cfloat>
 
 /*******************************************************************************************************************************
  * GLOBAL VARIABLES & FUNCTION DECLARATIONS
@@ -195,6 +196,8 @@ std::vector<CourierSubPath> travelingCourier(
         Matrix.insert(std::make_pair(depot, std::move(Matrix_row)));
     }
 
+    // std::cout << Matrix.at(175444).size() << " inter:" << Matrix.at(175444).begin()->first << " " << Intersection_IntersectionInfo[Matrix.at(175444).begin()->first].name << std::endl;
+
     /***************************************************************
      * 2. Greedy Algorithm
      ***************************************************************/
@@ -210,7 +213,10 @@ std::vector<CourierSubPath> travelingCourier(
     // Start at a depot that's closest to any **pick-up point**
     IntersectionIdx begin_depot = depots[0];
     IntersectionIdx start_delivery_point = *pickUp_set.begin();
-    float min_begin = Matrix.at(depots[0]).at(*pickUp_set.begin()).first;
+    float min_begin = FLT_MAX;
+    IntersectionIdx second_begin_depot;
+    IntersectionIdx second_start_delivery_point;
+    float second_min_begin = FLT_MAX;
     for (IntersectionIdx depot : depots)
     {
         for (auto pickUp_it = pickUp_set.begin(); 
@@ -219,12 +225,22 @@ std::vector<CourierSubPath> travelingCourier(
         {
             if (Matrix.at(depot).at(*pickUp_it).first < min_begin)
             {
+                second_min_begin = min_begin;
+                second_begin_depot = begin_depot;
+                second_start_delivery_point = start_delivery_point;
                 min_begin = Matrix.at(depot).at(*pickUp_it).first;
                 begin_depot = depot;
                 start_delivery_point = *pickUp_it;
+            } else if (Matrix.at(depot).at(*pickUp_it).first != min_begin
+                    && Matrix.at(depot).at(*pickUp_it).first < second_min_begin)
+            {
+                second_min_begin = Matrix.at(depot).at(*pickUp_it).first;
+                second_begin_depot = depot;
+                second_start_delivery_point = *pickUp_it;
             }
         }
     }
+    // std::cout << min_begin << " " << second_min_begin << std::endl;
     // Save current path
     current_path.push_back(begin_depot);
     current_path.push_back(start_delivery_point);
@@ -251,7 +267,6 @@ std::vector<CourierSubPath> travelingCourier(
                                                                pickUp_set,
                                                                carrying_ids);
         // No legal points are found --> error delivery path
-        // TODO: Try different path (?)
         if (next_point == -1)
         {
             return result;
@@ -476,7 +491,7 @@ void multiDestinationDjakstra (
     
 }
 
-// Get the closest next legal travel point based on current_point
+// Get the closest next legal travel point from current_point
 IntersectionIdx getNextLegalDeliveryPoint (
         const IntersectionIdx current_id,
         const std::unordered_map<IntersectionIdx, std::pair<float, std::vector<StreetSegmentIdx>>> &Matrix_row,
@@ -485,7 +500,7 @@ IntersectionIdx getNextLegalDeliveryPoint (
         const std::unordered_set<int> &carrying_ids)
 {
     IntersectionIdx next_point = -1;
-    float min_time = -1;
+    float min_time = FLT_MAX;
     // Check if there are any legal points
     bool init = false;
 
@@ -499,22 +514,16 @@ IntersectionIdx getNextLegalDeliveryPoint (
         }
         // Legal if: path exist && (never visited & have something to pickUp || have at least 1 package to dropOff)
         if (!init)
-        {   // Goes here until find at least 1 legal next point
-            if (
-                Matrix_row.at(point_id).first != 0 
-                && 
-                ((!next_point_info.picked && pickUp_set.find(point_id) != pickUp_set.end())
-                || check_set_intersection(carrying_ids, next_point_info.deliveries_to_drop))
-               )
+        {   // Goes here until found at least 1 legal next point (can travel to)
+            if (Matrix_row.find(point_id) != Matrix_row.end() && Matrix_row.at(point_id).first != 0)
             {
                 next_point = point_id;
-                min_time = Matrix_row.at(point_id).first;
                 init = true;
             }
         } else
-        {
+        {   // Improve by looking for more useful next_points
             if (
-                Matrix_row.at(point_id).first < min_time
+                Matrix_row.find(point_id) != Matrix_row.end() && Matrix_row.at(point_id).first < min_time
                 &&
                 ((!next_point_info.picked && pickUp_set.find(point_id) != pickUp_set.end())
                 || check_set_intersection(carrying_ids, next_point_info.deliveries_to_drop))
