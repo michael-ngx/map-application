@@ -160,6 +160,7 @@ std::vector<CourierSubPath> travelingCourier(
     // Call to Matrix.at(From).at(To) returns a pair:
     // - pair.first: Fastest travel time From -> To
     // - pair.second: Fastest travel route From -> To
+    // CAUTION: There will be an error if there's no path From->To
     std::unordered_map<IntersectionIdx, 
     std::unordered_map<IntersectionIdx, std::pair<float, std::vector<StreetSegmentIdx>>>> Matrix;
 
@@ -196,8 +197,6 @@ std::vector<CourierSubPath> travelingCourier(
         Matrix.insert(std::make_pair(depot, std::move(Matrix_row)));
     }
 
-    // std::cout << Matrix.at(175444).size() << " inter:" << Matrix.at(175444).begin()->first << " " << Intersection_IntersectionInfo[Matrix.at(175444).begin()->first].name << std::endl;
-
     /***************************************************************
      * 2. Greedy Algorithm
      ***************************************************************/
@@ -211,36 +210,59 @@ std::vector<CourierSubPath> travelingCourier(
     std::unordered_set<int> carrying_ids;    
 
     // Start at a depot that's closest to any **pick-up point**
-    IntersectionIdx begin_depot = depots[0];
-    IntersectionIdx start_delivery_point = *pickUp_set.begin();
-    float min_begin = FLT_MAX;
+    IntersectionIdx begin_depot;
+    IntersectionIdx start_delivery_point;
+    float min_begin_time = FLT_MAX;
     IntersectionIdx second_begin_depot;
     IntersectionIdx second_start_delivery_point;
-    float second_min_begin = FLT_MAX;
+    float second_min_begin_time = FLT_MAX;
+    bool init = false;
+
     for (IntersectionIdx depot : depots)
     {
         for (auto pickUp_it = pickUp_set.begin(); 
             pickUp_it != pickUp_set.end(); 
             ++pickUp_it)
         {
-            if (Matrix.at(depot).at(*pickUp_it).first < min_begin)
+            // No path from depot to pickUp point
+            if (Matrix.at(depot).find(*pickUp_it) == Matrix.at(depot).end())
             {
-                second_min_begin = min_begin;
-                second_begin_depot = begin_depot;
-                second_start_delivery_point = start_delivery_point;
-                min_begin = Matrix.at(depot).at(*pickUp_it).first;
-                begin_depot = depot;
-                start_delivery_point = *pickUp_it;
-            } else if (Matrix.at(depot).at(*pickUp_it).first != min_begin
-                    && Matrix.at(depot).at(*pickUp_it).first < second_min_begin)
+                continue;
+            }
+            if (!init)
+            {   // Runs here until at least one depot -> pickUp point is initialized
+                if (Matrix.at(depot).at(*pickUp_it).first < min_begin_time)
+                {
+                    min_begin_time = Matrix.at(depot).at(*pickUp_it).first;
+                    begin_depot = depot;
+                    start_delivery_point = *pickUp_it;
+                    init = true;
+                }
+            } else
             {
-                second_min_begin = Matrix.at(depot).at(*pickUp_it).first;
-                second_begin_depot = depot;
-                second_start_delivery_point = *pickUp_it;
+                if (Matrix.at(depot).at(*pickUp_it).first < min_begin_time)
+                {
+                    second_min_begin_time = min_begin_time;
+                    second_begin_depot = begin_depot;
+                    second_start_delivery_point = start_delivery_point;
+                    min_begin_time = Matrix.at(depot).at(*pickUp_it).first;
+                    begin_depot = depot;
+                    start_delivery_point = *pickUp_it;
+                } else if (Matrix.at(depot).at(*pickUp_it).first != min_begin_time
+                        && Matrix.at(depot).at(*pickUp_it).first < second_min_begin_time)
+                {
+                    second_min_begin_time = Matrix.at(depot).at(*pickUp_it).first;
+                    second_begin_depot = depot;
+                    second_start_delivery_point = *pickUp_it;
+                }
             }
         }
     }
-    // std::cout << min_begin << " " << second_min_begin << std::endl;
+    // Error path (no path from any depot to any pickUp point)
+    if (!init)
+    {
+        return result;
+    }
     // Save current path
     current_path.push_back(begin_depot);
     current_path.push_back(start_delivery_point);
@@ -312,15 +334,22 @@ std::vector<CourierSubPath> travelingCourier(
      * Recover the result
      ***************************************************************/
     // Find closest depot to the last point
-    IntersectionIdx end_depot = depots[0];
-    float min_end = Matrix.at(current_point).at(depots[0]).first;
+    IntersectionIdx end_depot = -1;
+    float min_end = FLT_MAX;
     for (IntersectionIdx depot : depots)
     {
-        if (Matrix.at(current_point).at(depot).first < min_end)
+        if (Matrix.at(current_point).find(depot) != Matrix.at(current_point).end()
+            && Matrix.at(current_point).at(depot).first < min_end)
         {
             min_end = Matrix.at(current_point).at(depot).first;
             end_depot = depot;
         }
+    }
+    // Cannot reach any depots from the last point - should not happen
+    // Since the last point should always be able to traverse back to the beginning depot
+    if (end_depot == -1)
+    {
+        return result;
     }
     current_path.push_back(end_depot);
 
