@@ -83,6 +83,7 @@ std::vector<CourierSubPath> travelingCourier(
     std::unordered_map<IntersectionIdx, DeliveryPoint> delivery_map;
     // All interested points
     std::unordered_set<IntersectionIdx> delivery_set;
+    std::vector<IntersectionIdx> delivery_vect;
     // All pickUp points (for begin point)
     std::unordered_set<IntersectionIdx> pickUp_set;
     // All depots
@@ -105,6 +106,8 @@ std::vector<CourierSubPath> travelingCourier(
                 DeliveryPoint point;
                 point.same_pickUp_dropOff = 1;
                 delivery_map.insert(std::make_pair(deliveries[i].pickUp, point));
+                // Vector for multithread
+                delivery_vect.push_back(deliveries[i].pickUp);
             } else
             {
                 delivery_map.at(deliveries[i].pickUp).same_pickUp_dropOff++;
@@ -122,6 +125,8 @@ std::vector<CourierSubPath> travelingCourier(
             DeliveryPoint point;
             point.deliveries_to_pick.insert(i);
             delivery_map.insert(std::make_pair(deliveries[i].pickUp, point));
+            // Vector for multithread
+            delivery_vect.push_back(deliveries[i].pickUp);
         } else
         {
             delivery_map.at(deliveries[i].pickUp).deliveries_to_pick.insert(i);
@@ -136,6 +141,8 @@ std::vector<CourierSubPath> travelingCourier(
             DeliveryPoint point;
             point.deliveries_to_drop.insert(i);
             delivery_map.insert(std::make_pair(deliveries[i].dropOff, point));
+            // Vector for multithread
+            delivery_vect.push_back(deliveries[i].dropOff);
         } else
         {
             delivery_map.at(deliveries[i].dropOff).deliveries_to_drop.insert(i);
@@ -160,8 +167,8 @@ std::vector<CourierSubPath> travelingCourier(
      * (Multi-destination Djikstra)
      ***************************************************************/
     // a. Any delivery location -> All delivery (except for itself) + depots 
-    // #pragma omp parallel for
-    for (IntersectionIdx delivery : delivery_set)
+    #pragma omp parallel for
+    for (IntersectionIdx delivery : delivery_vect)
     {
         std::unordered_map<IntersectionIdx, std::pair<float, std::vector<StreetSegmentIdx>>> Matrix_row;
         multiDestinationDjakstra(delivery,
@@ -170,10 +177,11 @@ std::vector<CourierSubPath> travelingCourier(
                                  Matrix_row,
                                  turn_penalty,
                                  false);
+        #pragma omp critical
         Matrix.insert(std::make_pair(delivery, std::move(Matrix_row)));
     }
     // b. Any depot location -> All pick-ups
-    // #pragma omp parallel for
+    #pragma omp parallel for
     for (IntersectionIdx depot : depots)
     {
         std::unordered_map<IntersectionIdx, std::pair<float, std::vector<StreetSegmentIdx>>> Matrix_row;
@@ -183,6 +191,7 @@ std::vector<CourierSubPath> travelingCourier(
                                  Matrix_row,
                                  turn_penalty,
                                  true);
+        #pragma omp critical
         Matrix.insert(std::make_pair(depot, std::move(Matrix_row)));
     }
 

@@ -70,17 +70,7 @@ int main(int argc, char** argv) {
     CURRENT_MAP_PATH = map_path;
 
     //You can now do something with the map data
-
-    // std::vector<DeliveryInf> deliveries;
-    // std::vector<IntersectionIdx> depots;
-    // std::vector<CourierSubPath> result_path;
-    // float turn_penalty;
-
-    // deliveries = {DeliveryInf(23285, 30394), DeliveryInf(65052, 98292), DeliveryInf(69434, 112840), DeliveryInf(165581, 51879), DeliveryInf(76559, 147917)};
-    // depots = {82393, 91986, 83785};
-    // turn_penalty = 30.000000000;
-    // result_path = travelingCourier(deliveries, depots, turn_penalty);
-    // drawMap();
+    drawMap();
     
     //Clean-up the map data and related data structures
     std::cout << "Closing map\n";
