@@ -43,6 +43,17 @@ bool multiDestinationDjakstra (
         const float turn_penalty,
         bool from_depot);
 
+// Given a std::list of found path, test if the path is legal
+// The check traverses through the whole path and return based on the deliveries
+// pickedUp and delivered
+bool checkPathLegal(const std::list<IntersectionIdx> &test_path,
+                    const std::unordered_map<IntersectionIdx, 
+                          std::unordered_map<IntersectionIdx, std::pair<float, std::vector<StreetSegmentIdx>>>> &Matrix,
+                    const std::unordered_map<IntersectionIdx, DeliveryPoint> &delivery_map,
+                    const std::unordered_set<IntersectionIdx> &pickUp_set,
+                    const std::unordered_set<IntersectionIdx> &depot_set,
+                    const int &num_deliveries);
+
 // Get the closest next legal travel point based on current_point
 // Legal if: path exist && (never visited & have something to pickUp || have at least 1 package to dropOff)
 std::pair<IntersectionIdx, float> getNextLegalDeliveryPoint (
@@ -544,6 +555,69 @@ bool multiDestinationDjakstra (
     } 
     // Some, but not all interested nodes can be reached by start_id
     else
+    {
+        return true;
+    }
+}
+
+// Check for legality of new path
+bool checkPathLegal(const std::list<IntersectionIdx> &test_path,
+                    const std::unordered_map<IntersectionIdx, 
+                          std::unordered_map<IntersectionIdx, std::pair<float, std::vector<StreetSegmentIdx>>>> &Matrix,
+                    const std::unordered_map<IntersectionIdx, DeliveryPoint> &delivery_map,
+                    const std::unordered_set<IntersectionIdx> &pickUp_set,
+                    const std::unordered_set<IntersectionIdx> &depot_set,
+                    const int &num_deliveries)
+{
+    int deliveries_left = num_deliveries;
+    // If first point and last point is not a depot
+    if (depot_set.find(*test_path.begin()) == depot_set.end()
+        || depot_set.find(*std::prev(test_path.end())) == depot_set.end())
+    {
+        return false;
+    }
+    // Deliveries pickedUp so far
+    std::unordered_set<int> carrying_ids;
+    // Traverse the path and do pickUp/dropOff
+    for (auto it = test_path.begin(); it != std::prev(test_path.end()); ++it)
+    {
+        // If there are no path between it and std::next(it)
+        if (Matrix.at(*it).find(*std::next(it)) == Matrix.at(*it).end())
+        {
+            return false;
+        }
+        
+        // Pick Up if is a pickUp point
+        if (pickUp_set.find(*it) != pickUp_set.end())
+        {
+            carrying_ids.insert(delivery_map.at(*it).deliveries_to_pick.begin(),
+                                delivery_map.at(*it).deliveries_to_pick.end());
+            // Check for same_pickUp_dropOff
+            if (delivery_map.at(*it).same_pickUp_dropOff)
+            {
+                deliveries_left -= delivery_map.at(*it).same_pickUp_dropOff;
+            }
+        }
+
+        // dropOff packages if any (if current point is not a depot)
+        if (depot_set.find(*it) == depot_set.end())
+        {
+            for (auto it_drop = delivery_map.at(*it).deliveries_to_drop.begin(); 
+            it_drop != delivery_map.at(*it).deliveries_to_drop.end(); it_drop++)
+            {
+                if (carrying_ids.find(*it_drop) != carrying_ids.end())
+                {
+                    carrying_ids.erase(*it_drop);
+                    deliveries_left--;
+                }
+            }
+        }
+    }
+    // Check for num_deliveries left
+    if (deliveries_left != 0)
+    {
+        return false;
+    } else
     {
         return true;
     }
