@@ -81,11 +81,22 @@ int main(int argc, char** argv) {
     // result_path = travelingCourier(deliveries, depots, turn_penalty);
     // std::cout << result_path.size() << std::endl;
 
-    deliveries = {DeliveryInf(33059, 39404)};
-    depots = {8};
-    turn_penalty = 30.000000000;
-    result_path = travelingCourier(deliveries, depots, turn_penalty);
+    // deliveries = {DeliveryInf(33059, 39404)};
+    // depots = {8};
+    // turn_penalty = 30.000000000;
+    // result_path = travelingCourier(deliveries, depots, turn_penalty);
 
+    // deliveries = {DeliveryInf(197, 292)};
+    // depots = {168};
+    // turn_penalty = 30.0;
+    // result_path = travelingCourier(deliveries, depots, turn_penalty);
+    // std::cout << result_path.size() << std::endl;
+    
+    // deliveries = {DeliveryInf(243, 167), DeliveryInf(326, 295), DeliveryInf(167, 96), DeliveryInf(273,62), DeliveryInf(314,324)};
+    // depots = {307, 101, 189};
+    // turn_penalty = 30.0;
+    // result_path = travelingCourier(deliveries, depots, turn_penalty);
+    // std::cout << result_path.size() << std::endl;
 
 
     // drawMap();

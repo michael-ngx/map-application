@@ -128,6 +128,7 @@ std::vector<CourierSubPath> travelingCourier(
             delivery_vect.push_back(deliveries[i].pickUp);
         } else
         {
+            pickUp_set.insert(deliveries[i].pickUp);
             delivery_map.at(deliveries[i].pickUp).deliveries_to_pick.insert(i);
         }
         
@@ -222,7 +223,7 @@ std::vector<CourierSubPath> travelingCourier(
     // Current best travel path time between different starting points
     float best_time = FLT_MAX;
 
-    // #pragma omp parallel for
+    #pragma omp parallel for
     // Check different starting points
     for (int i = 0; i < depots.size(); i++)
     {
@@ -374,7 +375,7 @@ std::vector<CourierSubPath> travelingCourier(
         total_time += min_end;
         current_path.push_back(chosen_end_depot);
 
-        // #pragma omp critical
+        #pragma omp critical
         if (total_time < best_time && total_time != 0)
         {
             best_time = total_time;
