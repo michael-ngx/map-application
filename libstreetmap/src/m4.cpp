@@ -2,6 +2,7 @@
 #include "m4.h"
 #include "globals.h"
 #include <queue>
+#include <list>
 #include <unordered_set>
 #include <cfloat>
 
@@ -85,6 +86,7 @@ std::vector<CourierSubPath> travelingCourier(
     std::vector<IntersectionIdx> delivery_vect;
     // All pickUp points (for begin point)
     std::unordered_set<IntersectionIdx> pickUp_set;
+    std::vector<IntersectionIdx> pickUp_vect;
     // All depots
     std::unordered_set<IntersectionIdx> depot_set;
 
@@ -99,6 +101,7 @@ std::vector<CourierSubPath> travelingCourier(
             // Look up sets
             delivery_set.insert(deliveries[i].pickUp);
             pickUp_set.insert(deliveries[i].pickUp);
+            pickUp_vect.push_back(deliveries[i].pickUp);
             // Delivery map (notice that we do not record the package)
             if (delivery_map.find(deliveries[i].pickUp) == delivery_map.end())
             {
@@ -120,6 +123,7 @@ std::vector<CourierSubPath> travelingCourier(
             // Look up sets
             delivery_set.insert(deliveries[i].pickUp);
             pickUp_set.insert(deliveries[i].pickUp);
+            pickUp_vect.push_back(deliveries[i].pickUp);
             // Delivery map
             DeliveryPoint point;
             point.deliveries_to_pick.insert(i);
@@ -128,7 +132,11 @@ std::vector<CourierSubPath> travelingCourier(
             delivery_vect.push_back(deliveries[i].pickUp);
         } else
         {
-            pickUp_set.insert(deliveries[i].pickUp);
+            if (pickUp_set.find(deliveries[i].pickUp) == pickUp_set.end())
+            {
+                pickUp_set.insert(deliveries[i].pickUp);
+                pickUp_vect.push_back(deliveries[i].pickUp);
+            }
             delivery_map.at(deliveries[i].pickUp).deliveries_to_pick.insert(i);
         }
         
@@ -219,19 +227,18 @@ std::vector<CourierSubPath> travelingCourier(
      * 2. Greedy Algorithm
      *********************************************************************************************/
     // Current best travel path
-    std::vector<IntersectionIdx> best_path;
+    std::list<IntersectionIdx> best_path;
     // Current best travel path time between different starting points
     float best_time = FLT_MAX;
 
     #pragma omp parallel for
     // Check different starting points
-    for (int i = 0; i < depots.size(); i++)
+    for (auto pickUp_start : pickUp_vect)
     {
-        bool run = true;
         // Number of deliveries left
         int num_deliveries = deliveries.size();
         // Stores the current legal travel path
-        std::vector<IntersectionIdx> current_path;
+        std::list<IntersectionIdx> current_path;
         // Delivery ids currently carrying
         std::unordered_set<int> carrying_ids;
         // Picked up map for current path
@@ -243,62 +250,23 @@ std::vector<CourierSubPath> travelingCourier(
         // Total travel time of the current path
         float total_time = 0;
 
-        // Start at the closest pickUp point
-        IntersectionIdx start_delivery_point;
-        float min_begin_time = FLT_MAX;
-        bool init = false;
-
-        for (auto pickUp_it = pickUp_set.begin(); 
-            pickUp_it != pickUp_set.end(); 
-            ++pickUp_it)
-        {
-            // No path from depot to pickUp point
-            if (Matrix.at(depots[i]).find(*pickUp_it) == Matrix.at(depots[i]).end())
-            {
-                continue;
-            }
-            if (!init)
-            {   // Runs here until at least one depot -> pickUp point is initialized
-                if (Matrix.at(depots[i]).at(*pickUp_it).first < min_begin_time)
-                {
-                    min_begin_time = Matrix.at(depots[i]).at(*pickUp_it).first;
-                    start_delivery_point = *pickUp_it;
-                    init = true;
-                }
-            } else
-            {
-                if (Matrix.at(depots[i]).at(*pickUp_it).first < min_begin_time)
-                {
-                    min_begin_time = Matrix.at(depots[i]).at(*pickUp_it).first;
-                    start_delivery_point = *pickUp_it;
-                }
-            }
-        }
-        
-        // Error path (no path from any depot to any pickUp point)
-        if (!init)
-        {
-            continue;
-        }
-        // Travel time of first courier subpath
-        total_time += min_begin_time;
         // Save current path
-        current_path.push_back(depots[i]);
-        current_path.push_back(start_delivery_point);
+        current_path.push_back(pickUp_start);
 
         // Pick up at the first delivery point
-        carrying_ids.insert(delivery_map.at(start_delivery_point).deliveries_to_pick.begin(),
-                            delivery_map.at(start_delivery_point).deliveries_to_pick.end());
-        current_picked_map.at(start_delivery_point) = true;
+        carrying_ids.insert(delivery_map.at(pickUp_start).deliveries_to_pick.begin(),
+                            delivery_map.at(pickUp_start).deliveries_to_pick.end());
+        current_picked_map.at(pickUp_start) = true;
         // Must do for every first time we visit a point: check for same_pickUp_dropOff packages
         // If true, these package(s) are automatically pickedUp and droppedOff
-        if (delivery_map.at(start_delivery_point).same_pickUp_dropOff)
+        if (delivery_map.at(pickUp_start).same_pickUp_dropOff)
         {
-            num_deliveries -= delivery_map.at(start_delivery_point).same_pickUp_dropOff;
+            num_deliveries -= delivery_map.at(pickUp_start).same_pickUp_dropOff;
         }
 
         // Main while loop for travelling
-        IntersectionIdx current_point = start_delivery_point;
+        bool run = true;
+        IntersectionIdx current_point = pickUp_start;
 
         while (num_deliveries)
         {
@@ -349,30 +317,49 @@ std::vector<CourierSubPath> travelingCourier(
             current_point = next_point;
         }
 
-        if (run == false)
+        if (run == false || current_path.empty())
         {
             continue;
         }
-
-        // Find closest depot to the last point
+        
+        // Find closest depot to start and end point
+        IntersectionIdx chosen_start_depot = -1;
         IntersectionIdx chosen_end_depot = -1;
-        float min_end = FLT_MAX;
-        for (auto depot_end : depots)
+        float min_begin_time = FLT_MAX;
+        float min_end_time = FLT_MAX;
+        
+        for (auto depot : depots)
         {
-            if (Matrix.at(current_point).find(depot_end) != Matrix.at(current_point).end()
-                && Matrix.at(current_point).at(depot_end).first < min_end)
+            // Check path from depot to first pickUp point
+            if (Matrix.at(depot).find(pickUp_start) != Matrix.at(depot).end())
             {
-                min_end = Matrix.at(current_point).at(depot_end).first;
-                chosen_end_depot = depot_end;
+                if (Matrix.at(depot).at(pickUp_start).first < min_begin_time)
+                {
+                    min_begin_time = Matrix.at(depot).at(pickUp_start).first;
+                    chosen_start_depot = depot;
+                }
+            }
+
+            // Check path from last delivery point to depot
+            if (Matrix.at(current_path.back()).find(depot) != Matrix.at(current_path.back()).end())
+            {
+                if (Matrix.at(current_path.back()).at(depot).first < min_end_time)
+                {
+                    min_end_time = Matrix.at(current_path.back()).at(depot).first;
+                    chosen_end_depot = depot;
+                }
             }
         }
-        // Cannot reach any depots from the last point - should not happen
-        // Since the last point should always be able to traverse back to the beginning depot
-        if (chosen_end_depot == -1)
+        
+        // Error path (no path from any depot to pickUp point or last point to any depot)
+        if (chosen_start_depot == -1 || chosen_end_depot == -1)
         {
             continue;
         }
-        total_time += min_end;
+        // Travel time of first courier subpath
+        total_time += min_begin_time;
+        total_time += min_end_time;
+        current_path.push_front(chosen_start_depot);
         current_path.push_back(chosen_end_depot);
 
         #pragma omp critical
@@ -390,14 +377,13 @@ std::vector<CourierSubPath> travelingCourier(
     {
         return result;
     }
-    IntersectionIdx point_1 = best_path[0];
-    IntersectionIdx point_2;
-    for (int i = 1; i < best_path.size(); i++)
+
+    for (auto it = best_path.begin(); it != std::prev(best_path.end()); ++it)
     {
-        point_2 = best_path[i];
-        CourierSubPath subPath = {point_1, point_2, Matrix.at(point_1).at(point_2).second};
+        CourierSubPath subPath = {*it,
+                                  *std::next(it),
+                                  Matrix.at(*it).at(*std::next(it)).second};
         result.push_back(subPath);
-        point_1 = point_2;
     }
     return result;
 }
