@@ -161,6 +161,8 @@ bool loadMap (std::string map_streets_database_filename)
 
     if (load_successful)
     {
+        // Update the CURRENT_CITY based on first input
+        CURRENT_MAP_PATH = map_streets_database_filename;
         m1_init();
     }
     
