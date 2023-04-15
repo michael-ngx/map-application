@@ -103,7 +103,7 @@ int main(int argc, char** argv) {
     // std::cout << result_path.size() << std::endl;
 
 
-    // drawMap();
+    //drawMap();
 
     //Clean-up the map data and related data structures
     std::cout << "Closing map\n";

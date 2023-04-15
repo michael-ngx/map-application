@@ -5,6 +5,9 @@
 #include <list>
 #include <unordered_set>
 #include <cfloat>
+#include <chrono>
+#include <stdlib.h>
+#include <time.h>
 
 /*******************************************************************************************************************************
  * GLOBAL VARIABLES & FUNCTION DECLARATIONS
@@ -21,6 +24,9 @@
 // NOTE: It sometimes better to drop off some of the packages, and come back later to drop off the rest
 //
 // Depots will never appear as pickUp or dropOff locations for deliveries.
+
+//Time limit for doing permutation
+#define TIME_LIMIT 45 //m4: 50 seconds time limit
 
 struct DeliveryPoint
 {
@@ -53,6 +59,18 @@ bool checkPathLegal(const std::list<IntersectionIdx> &test_path,
                     const std::unordered_set<IntersectionIdx> &pickUp_set,
                     const std::unordered_set<IntersectionIdx> &depot_set,
                     const int &num_deliveries);
+
+// Given a std::list of found path, perform 2-opt on the list and test if the path is legal
+// The 2-opt cut the list in random order and reverse one of the sub-path. 
+// The function utilize checkPathLegal, and update the best_path list if best_time is lowered and the path is legal
+void greedyPath2Opt(std::list<IntersectionIdx> &test_path,
+                    float &best_time,
+                    const std::chrono::high_resolution_clock::time_point start_time,
+                    const std::unordered_map<IntersectionIdx, 
+                          std::unordered_map<IntersectionIdx, std::pair<float, std::vector<StreetSegmentIdx>>>> &Matrix,
+                    const std::unordered_map<IntersectionIdx, DeliveryPoint> &delivery_map,
+                    const std::unordered_set<IntersectionIdx> &pickUp_set,
+                    const std::unordered_set<IntersectionIdx> &depot_set);
 
 // Get the closest next legal travel point based on current_point
 // "Smart" if: path exist && (never visited & have something to pickUp || have at least 1 package to dropOff)
@@ -113,6 +131,8 @@ std::vector<CourierSubPath> travelingCourier(
     std::vector<IntersectionIdx> pickUp_vect;
     // All depots
     std::unordered_set<IntersectionIdx> depot_set;
+    // The start time of the program
+//    auto start_time = std::chrono::high_resolution_clock::now();
 
     // Fill in data
     for (int i = 0; i < deliveries.size(); i++)
@@ -448,6 +468,11 @@ std::vector<CourierSubPath> travelingCourier(
         }
     } // End of each first point
 
+    /***************************************************************
+     * Run 2-opt funciton
+     ***************************************************************/
+//    greedyPath2Opt(best_path, best_time, start_time, Matrix, delivery_map, pickUp_set, depot_set);
+    
     /***************************************************************
      * Generate result path
      ***************************************************************/
@@ -822,4 +847,211 @@ bool check_set_intersection (const std::unordered_set<int> &set1,
         }
     }
     return false;
+}
+
+
+
+//find better path by doing 2-opt
+void greedyPath2Opt(std::list<IntersectionIdx> &best_path,
+                    float &best_time,
+                    const std::chrono::high_resolution_clock::time_point start_time,
+                    const std::unordered_map<IntersectionIdx, 
+                          std::unordered_map<IntersectionIdx, std::pair<float, std::vector<StreetSegmentIdx>>>> &Matrix,
+                    const std::unordered_map<IntersectionIdx, DeliveryPoint> &delivery_map,
+                    const std::unordered_set<IntersectionIdx> &pickUp_set,
+                    const std::unordered_set<IntersectionIdx> &depot_set)
+{
+    if (best_path.size() <= 3)
+    {
+        return;
+    }
+    std::list<IntersectionIdx> test_path;
+    std::list<IntersectionIdx> cut_path_front;
+    std::list<IntersectionIdx> cut_path_middle;
+    std::list<IntersectionIdx> cut_path_end;
+    int num_deliveries = delivery_map.size();
+    int best_path_size = best_path.size() - 2;
+    bool timeout = false;
+    auto current_time = std::chrono::high_resolution_clock::now();
+    auto wall_clock = std::chrono::duration_cast<std::chrono::duration<double>> (current_time - start_time);
+    if (wall_clock.count() > 0.9 * TIME_LIMIT){
+        timeout = true;
+    }
+    
+    while (!timeout)
+    {
+        //update and check if the remaining time is sufficient for more 2-opt
+        current_time = std::chrono::high_resolution_clock::now();
+        wall_clock = std::chrono::duration_cast<std::chrono::duration<double>> (current_time - start_time);
+        if (wall_clock.count() > 0.9 * TIME_LIMIT){
+            timeout = true;
+        }
+        
+        //pre-process the best_path list for 2-opt
+        std::srand (time(NULL));
+        test_path = best_path;
+        test_path.pop_front();
+        test_path.pop_back();
+        int first_cut = std::rand() % (best_path_size - 1) + 1;
+        int second_cut = std::rand() % (best_path_size - 1) + 1;
+        int temp_cut = first_cut;
+        int local_best_time = 0;
+        if (first_cut > second_cut)
+        {
+            first_cut = second_cut;
+            second_cut = temp_cut;
+        } else if (first_cut == second_cut)
+        {
+            continue;
+        }
+        int counter = 0;
+        auto iterator = test_path.begin();
+        while (counter < first_cut)
+        {
+            cut_path_front.push_back(*iterator);
+            test_path.pop_front();
+            counter++;
+        }
+        while (counter < second_cut)
+        {
+            cut_path_middle.push_back(*iterator);
+            test_path.pop_front();
+            counter++;
+        }
+        while (counter < best_path_size)
+        {
+            cut_path_end.push_back(*iterator);
+            test_path.pop_front();
+            counter++;
+        }
+        
+        //2-opt
+        //reverse the first sub path
+        cut_path_front.reverse();
+        counter = 0;
+        iterator = cut_path_front.begin();
+        while (counter < first_cut)
+        {
+            test_path.push_back(*iterator);
+            iterator++;
+            counter++;
+        }
+        iterator = cut_path_middle.begin();
+        while (counter < second_cut)
+        {
+            test_path.push_back(*iterator);
+            iterator++;
+            counter++;
+        }
+        iterator = cut_path_middle.begin();
+        while (counter < best_path_size)
+        {
+            test_path.push_back(*iterator);
+            iterator++;
+            counter++;
+        }
+        test_path.push_front(best_path.front());
+        test_path.push_back(best_path.back());
+        if (checkPathLegal(best_path, Matrix, delivery_map, pickUp_set, depot_set, num_deliveries))
+        {
+            for (auto it = test_path.begin(); it != std::prev(test_path.end()); ++it)
+            {
+                local_best_time += Matrix.at(*it).at(*std::next(it)).first;
+            }
+            if (local_best_time < best_time)
+            {
+                best_time = local_best_time;
+                best_path = test_path;
+            }
+        }
+        
+        //reverse the middle sub path
+        test_path.clear();
+        cut_path_front.reverse();
+        cut_path_middle.reverse();
+        counter = 0;
+        iterator = cut_path_front.begin();
+        while (counter < first_cut)
+        {
+            test_path.push_back(*iterator);
+            iterator++;
+            counter++;
+        }
+        iterator = cut_path_middle.begin();
+        while (counter < second_cut)
+        {
+            test_path.push_back(*iterator);
+            iterator++;
+            counter++;
+        }
+        iterator = cut_path_middle.begin();
+        while (counter < best_path_size)
+        {
+            test_path.push_back(*iterator);
+            iterator++;
+            counter++;
+        }
+        test_path.push_front(best_path.front());
+        test_path.push_back(best_path.back());
+        if (checkPathLegal(best_path, Matrix, delivery_map, pickUp_set, depot_set, num_deliveries))
+        {
+            for (auto it = test_path.begin(); it != std::prev(test_path.end()); ++it)
+            {
+                local_best_time += Matrix.at(*it).at(*std::next(it)).first;
+            }
+            if (local_best_time < best_time)
+            {
+                best_time = local_best_time;
+                best_path = test_path;
+            }
+        }
+        
+        //reverse the end sub path
+        test_path.clear();
+        cut_path_middle.reverse();
+        cut_path_end.reverse();
+        counter = 0;
+        iterator = cut_path_front.begin();
+        while (counter < first_cut)
+        {
+            test_path.push_back(*iterator);
+            iterator++;
+            counter++;
+        }
+        iterator = cut_path_middle.begin();
+        while (counter < second_cut)
+        {
+            test_path.push_back(*iterator);
+            iterator++;
+            counter++;
+        }
+        iterator = cut_path_middle.begin();
+        while (counter < best_path_size)
+        {
+            test_path.push_back(*iterator);
+            iterator++;
+            counter++;
+        }
+        test_path.push_front(best_path.front());
+        test_path.push_back(best_path.back());
+        if (checkPathLegal(best_path, Matrix, delivery_map, pickUp_set, depot_set, num_deliveries))
+        {
+            for (auto it = test_path.begin(); it != std::prev(test_path.end()); ++it)
+            {
+                local_best_time += Matrix.at(*it).at(*std::next(it)).first;
+            }
+            if (local_best_time < best_time)
+            {
+                best_time = local_best_time;
+                best_path = test_path;
+            }
+        }
+        
+        //clear containers for the next loop
+        test_path.clear();
+        cut_path_front.clear();
+        cut_path_middle.clear();
+        cut_path_end.clear();
+    }
+    return;
 }
