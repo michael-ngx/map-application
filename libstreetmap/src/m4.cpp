@@ -491,7 +491,7 @@ std::vector<CourierSubPath> travelingCourier(
     int limit = 30000;
     if (CURRENT_MAP_PATH == "/cad2/ece297s/public/maps/toronto_canada.streets.bin" )
     {
-        limit = 5000;
+        limit = 4000;
     } else if (CURRENT_MAP_PATH == "/cad2/ece297s/public/maps/golden-horseshoe_canada.streets.bin")
     {
         limit = 3000;
