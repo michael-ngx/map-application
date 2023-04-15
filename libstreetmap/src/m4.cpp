@@ -470,6 +470,11 @@ std::vector<CourierSubPath> travelingCourier(
         }
     } // End of each first point
 
+    /***************************************************************
+     * Run 2-opt funciton
+     ***************************************************************/
+    // greedyPath2Opt(best_path, best_time, start_time, Matrix, delivery_map, pickUp_set, depot_set);
+
     /***********************************************************************************************
      * Randomly select an element (non-depot)
      * Try to fit the element somewhere else in the path for legality
@@ -531,11 +536,6 @@ std::vector<CourierSubPath> travelingCourier(
             }
         }
     }
-    
-    /***************************************************************
-     * Run 2-opt funciton
-     ***************************************************************/
-//    greedyPath2Opt(best_path, best_time, start_time, Matrix, delivery_map, pickUp_set, depot_set);
     
     /***************************************************************
      * Generate result path
@@ -1020,7 +1020,14 @@ void greedyPath2Opt(std::list<IntersectionIdx> &best_path,
         }
         test_path.push_front(best_path.front());
         test_path.push_back(best_path.back());
-        if (checkPathLegal(best_path, Matrix, delivery_map, pickUp_set, depot_set, num_deliveries))
+
+        // Copy to vector for checking legality
+        std::vector<IntersectionIdx> best_path_vect_temp_1;
+        std::copy(best_path.begin(), best_path.end(), std::back_inserter(best_path_vect_temp_1));
+
+        auto [legal_1, time_1] = checkPathLegal(best_path_vect_temp_1, Matrix, delivery_map, pickUp_set, depot_set, num_deliveries);
+
+        if (legal_1)
         {
             for (auto it = test_path.begin(); it != std::prev(test_path.end()); ++it)
             {
@@ -1061,7 +1068,12 @@ void greedyPath2Opt(std::list<IntersectionIdx> &best_path,
         }
         test_path.push_front(best_path.front());
         test_path.push_back(best_path.back());
-        if (checkPathLegal(best_path, Matrix, delivery_map, pickUp_set, depot_set, num_deliveries))
+        // Copy to vector for checking legality
+        std::vector<IntersectionIdx> best_path_vect_temp_2;
+        std::copy(best_path.begin(), best_path.end(), std::back_inserter(best_path_vect_temp_2));
+
+        auto [legal_2, time_2] = checkPathLegal(best_path_vect_temp_2, Matrix, delivery_map, pickUp_set, depot_set, num_deliveries);
+        if (legal_2)
         {
             for (auto it = test_path.begin(); it != std::prev(test_path.end()); ++it)
             {
@@ -1102,7 +1114,12 @@ void greedyPath2Opt(std::list<IntersectionIdx> &best_path,
         }
         test_path.push_front(best_path.front());
         test_path.push_back(best_path.back());
-        if (checkPathLegal(best_path, Matrix, delivery_map, pickUp_set, depot_set, num_deliveries))
+        // Copy to vector for checking legality
+        std::vector<IntersectionIdx> best_path_vect_temp_3;
+        std::copy(best_path.begin(), best_path.end(), std::back_inserter(best_path_vect_temp_3));
+
+        auto [legal_3, time_3] = checkPathLegal(best_path_vect_temp_3, Matrix, delivery_map, pickUp_set, depot_set, num_deliveries);
+        if (legal_3)
         {
             for (auto it = test_path.begin(); it != std::prev(test_path.end()); ++it)
             {
