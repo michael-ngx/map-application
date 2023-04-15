@@ -5,6 +5,7 @@
 #include <list>
 #include <unordered_set>
 #include <cfloat>
+#include <random>
 #include <chrono>
 #include <stdlib.h>
 #include <time.h>
@@ -52,13 +53,14 @@ bool multiDestinationDjakstra (
 // Given a std::list of found path, test if the path is legal
 // The check traverses through the whole path and return based on the deliveries
 // pickedUp and delivered
-bool checkPathLegal(const std::list<IntersectionIdx> &test_path,
-                    const std::unordered_map<IntersectionIdx, 
-                          std::unordered_map<IntersectionIdx, std::pair<float, std::vector<StreetSegmentIdx>>>> &Matrix,
-                    const std::unordered_map<IntersectionIdx, DeliveryPoint> &delivery_map,
-                    const std::unordered_set<IntersectionIdx> &pickUp_set,
-                    const std::unordered_set<IntersectionIdx> &depot_set,
-                    const int &num_deliveries);
+std::pair<bool, float> checkPathLegal(
+        const std::list<IntersectionIdx> &test_path,
+        const std::unordered_map<IntersectionIdx, 
+              std::unordered_map<IntersectionIdx, std::pair<float, std::vector<StreetSegmentIdx>>>> &Matrix,
+        const std::unordered_map<IntersectionIdx, DeliveryPoint> &delivery_map,
+        const std::unordered_set<IntersectionIdx> &pickUp_set,
+        const std::unordered_set<IntersectionIdx> &depot_set,
+        const int &num_deliveries);
 
 // Given a std::list of found path, perform 2-opt on the list and test if the path is legal
 // The 2-opt cut the list in random order and reverse one of the sub-path. 
@@ -459,6 +461,52 @@ std::vector<CourierSubPath> travelingCourier(
         best_time_local += min_begin_time;
         best_path_local.push_front(chosen_start_depot);
         
+        /***************************************************************
+         * Randomly select an element from the second half of the list
+         * Try to fit the element in first half if the new path is legal
+         ***************************************************************/
+        // for ()
+        // {
+            // Find the midpoint of the list
+            // auto midpoint = best_path_local.begin();
+            // std::advance(midpoint, std::distance(best_path_local.begin(), best_path_local.end()) / 2);
+
+            // // Create a sub-range iterator for the second half of the list
+            // auto second_half = std::make_pair(midpoint, best_path_local.end());
+
+            // // Seed the random number generator
+            // std::random_device rd;
+            // std::mt19937 gen(rd());
+            // std::uniform_int_distribution<> dist(std::distance(second_half.first, second_half.second) - 1, 0);
+
+            // // Select a random element from the second half of the list
+            // auto rand_iter = second_half.first;
+            // std::advance(rand_iter, dist(gen));
+
+            // // Traverse through the first half of the list and find a valid position for the randomly selected element
+            // auto it = std::next(best_path_local.begin());
+            // while (it != midpoint) 
+            // {
+            //     // Move the randomly selected element to the current position
+            //     auto moved_elem = *rand_iter;
+            //     best_path_local.erase(rand_iter);
+            //     best_path_local.insert(it, moved_elem);
+
+            //     // Check if the new list path is legal
+            //     auto [check, check_time] = checkPathLegal(best_path_local, Matrix, delivery_map, pickUp_set, depot_set, deliveries.size());
+            //     if (check) 
+            //     {
+            //         best_time_local = check_time;
+            //         break;
+            //     } else 
+            //     {
+            //         // Undo the move and try the next position
+            //         best_path_local.erase(it);
+            //         best_path_local.insert(rand_iter, moved_elem);
+            //         ++it;
+            //     }
+            // }
+        // }
 
         #pragma omp critical
         if (best_time_local < best_time)
@@ -488,6 +536,10 @@ std::vector<CourierSubPath> travelingCourier(
                                   Matrix.at(*it).at(*std::next(it)).second};
         result.push_back(subPath);
     }
+
+    auto [asd, asdasd] = checkPathLegal(best_path, Matrix, delivery_map, pickUp_set, depot_set, deliveries.size()); 
+    std::cout << "QOR " << asdasd << std::endl;
+
     return result;
 }
 
@@ -653,20 +705,22 @@ bool multiDestinationDjakstra (
 }
 
 // Check for legality of new path
-bool checkPathLegal(const std::list<IntersectionIdx> &test_path,
-                    const std::unordered_map<IntersectionIdx, 
-                          std::unordered_map<IntersectionIdx, std::pair<float, std::vector<StreetSegmentIdx>>>> &Matrix,
-                    const std::unordered_map<IntersectionIdx, DeliveryPoint> &delivery_map,
-                    const std::unordered_set<IntersectionIdx> &pickUp_set,
-                    const std::unordered_set<IntersectionIdx> &depot_set,
-                    const int &num_deliveries)
+std::pair<bool, float> checkPathLegal(
+        const std::list<IntersectionIdx> &test_path,
+        const std::unordered_map<IntersectionIdx, 
+              std::unordered_map<IntersectionIdx, std::pair<float, std::vector<StreetSegmentIdx>>>> &Matrix,
+        const std::unordered_map<IntersectionIdx, DeliveryPoint> &delivery_map,
+        const std::unordered_set<IntersectionIdx> &pickUp_set,
+        const std::unordered_set<IntersectionIdx> &depot_set,
+        const int &num_deliveries)
 {
     int deliveries_left = num_deliveries;
+    float time = 0;
     // If first point and last point is not a depot
     if (depot_set.find(*test_path.begin()) == depot_set.end()
         || depot_set.find(*std::prev(test_path.end())) == depot_set.end())
     {
-        return false;
+        return std::make_pair(false, time);
     }
     // Deliveries pickedUp so far
     std::unordered_set<int> carrying_ids;
@@ -676,7 +730,7 @@ bool checkPathLegal(const std::list<IntersectionIdx> &test_path,
         // If there are no path between it and std::next(it)
         if (Matrix.at(*it).find(*std::next(it)) == Matrix.at(*it).end())
         {
-            return false;
+            return std::make_pair(false, time);
         }
         
         // Pick Up if is a pickUp point
@@ -704,14 +758,17 @@ bool checkPathLegal(const std::list<IntersectionIdx> &test_path,
                 }
             }
         }
+
+        // Keep track of current path's QoR
+        time += Matrix.at(*it).at(*std::next(it)).first;
     }
     // Check for num_deliveries left
     if (deliveries_left != 0)
     {
-        return false;
+        return std::make_pair(false, time);
     } else
     {
-        return true;
+        return std::make_pair(true, time);
     }
 }
 
