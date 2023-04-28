@@ -27,6 +27,7 @@
 #include "draw/utilities.hpp"
 #include <cmath>
 #include <algorithm>
+#include <chrono>
 
 /*******************************************************************************************************************************
  * GLOBAL VARIABLES (M2)
@@ -178,6 +179,8 @@ void drawMap ()
  ********************************************************************************************************************************/
 void draw_main_canvas (ezgl::renderer *g)
 {
+    // Calculate FPS
+    auto start_time = std::chrono::high_resolution_clock::now();
     /********************************************************************************
     * Local variables of current canvas
     ********************************************************************************/
@@ -366,4 +369,9 @@ void draw_main_canvas (ezgl::renderer *g)
     * Draw the distance scale
     ********************************************************************************/
     draw_distance_scale (g, visible_world);
+
+    // End time
+    auto current_time = std::chrono::high_resolution_clock::now();
+    auto period = std::chrono::duration_cast<std::chrono::duration<double>> (current_time - start_time);
+    std::cout << "FPS: " << 1/period.count() << std::endl;
 }

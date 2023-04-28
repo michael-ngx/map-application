@@ -31,10 +31,11 @@
 #include <bits/stdc++.h>
 #include <cctype>
 
-Grid MapGrids[NUM_GRIDS][NUM_GRIDS];
 /*******************************************************************************************************************************
  * GLOBAL VARIABLES AND HELPER FUNCTION DECLARATION
  ********************************************************************************************************************************/
+// Main Grid for the whole map
+Grid MapGrids[NUM_GRIDS][NUM_GRIDS];
 
 // *******************************************************************
 // Helper function Declaration

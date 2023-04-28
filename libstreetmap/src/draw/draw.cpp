@@ -165,6 +165,9 @@ int get_street_width_pixel (std::string& street_type)
         {
             return 2;
         }
+    } else if (curr_world_width <= ZOOM_LIMIT_2)
+    {
+        return 5;
     }
     return 0;
 }
@@ -463,7 +466,7 @@ void draw_POIs (ezgl::renderer* g, POIDetailedInfo POI)
     // Drawing the icon
     g->set_text_rotation(0); 
     g->set_color(0, 0, 0);
-    g->format_font("Emoji", ezgl::font_slant::normal, ezgl::font_weight::normal, 25);
+    g->format_font("Emoji", ezgl::font_slant::normal, ezgl::font_weight::normal, 35);
     std::string icon = "\U00002B50";
     if (tempType == "fast_food")
     {
