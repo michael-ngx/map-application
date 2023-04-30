@@ -22,3 +22,4 @@ mapper
 libstreetmap.a
 test_libstreetmap
 null.d
+perf.data
