@@ -3,7 +3,7 @@ Geographic Information System (GIS) Project for [ECE297 - Software Design and Co
 
 <b><ins>Note</ins></b>: this repository is shared only for skill display purposes. Copying others work and any other means of plagiarizing are serious offenses at the University of Toronto. Viewing the source code while taking the course is also considered an academic offense. We are not responsible for any such actions committed by students.
 
-Take a look at our Final Presentation [here](https://docs.google.com/presentation/d/1JwBw1Ba6oGBfa2be1LEtnXdPn5XN4cSdRIS5KA9OF58/edit#slide=id.g23b65494bde_137_263)
+[Final Presentation](https://docs.google.com/presentation/d/1JwBw1Ba6oGBfa2be1LEtnXdPn5XN4cSdRIS5KA9OF58/edit#slide=id.g23b65494bde_137_263)
 
 ![image](https://user-images.githubusercontent.com/108838237/235533905-75917550-a16a-4b74-bf5c-5350cc3a994e.png)
 
